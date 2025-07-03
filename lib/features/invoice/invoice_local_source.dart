@@ -1,0 +1,380 @@
+import 'package:invois/core/database/objectbox.g.dart';
+import 'package:invois/core/database/objectbox_database.dart';
+import 'package:invois/core/database/objectbox_response.dart';
+import 'package:invois/features/item/item_model.dart';
+import 'package:invois/features/tax/tax_model.dart';
+import 'package:invois/features/term/term_model.dart';
+
+import 'invoice_model.dart';
+
+class InvoiceLocalSource {
+  final Store _store;
+  late final Box<Invoice> _invoiceBox;
+
+  static final InvoiceLocalSource _instance = InvoiceLocalSource._internal();
+  factory InvoiceLocalSource() => _instance;
+
+  InvoiceLocalSource._internal() : _store = ObjectBoxDatabase.instance {
+    _invoiceBox = _store.box<Invoice>();
+  }
+
+  InvoiceLocalSource.withDependencies({required Store store}) : _store = store {
+    _invoiceBox = _store.box<Invoice>();
+  }
+
+  // Get all invoices
+  Future<List<Invoice>> getInvoices() async {
+    return _invoiceBox.getAll();
+  }
+
+  // Get invoice by ID
+  Future<Invoice?> getInvoiceById(int id) async {
+    return _invoiceBox.get(id);
+  }
+
+  // Insert invoice
+  Future<ObjectBoxResponse<Invoice>> insertInvoice(Invoice invoice) async {
+    try {
+      final result = _invoiceBox.put(invoice);
+      if (result > 0) {
+        return ObjectBoxResponse.success(invoice);
+      } else {
+        return ObjectBoxResponse.failure(message: 'Failed to insert invoice');
+      }
+    } on Exception catch (e) {
+      return ObjectBoxResponse.failure(message: e.toString());
+    } on Error catch (e) {
+      return ObjectBoxResponse.failure(message: e.toString());
+    }
+  }
+
+  // Update invoice
+  Future<ObjectBoxResponse<Invoice>> updateInvoice(Invoice invoice) async {
+    try {
+      final result = _invoiceBox.put(invoice);
+      if (result > 0) {
+        return ObjectBoxResponse.success(invoice);
+      } else {
+        return ObjectBoxResponse.failure(message: 'Failed to update invoice');
+      }
+    } on Exception catch (e) {
+      return ObjectBoxResponse.failure(message: e.toString());
+    } on Error catch (e) {
+      return ObjectBoxResponse.failure(message: e.toString());
+    }
+  }
+
+  // Delete invoice
+  Future<bool> deleteInvoiceById(int id) async {
+    return _invoiceBox.remove(id);
+  }
+
+  // Delete multiple invoices
+  Future<int> deleteInvoices(List<int> ids) async {
+    int deletedCount = 0;
+    for (int id in ids) {
+      if (_invoiceBox.remove(id)) {
+        deletedCount++;
+      }
+    }
+    return deletedCount;
+  }
+
+  // Search invoices by invoice number
+  Future<List<Invoice>> searchInvoicesByNumber(String query) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices
+        .where(
+          (invoice) =>
+              invoice.invoiceNumber.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList();
+  }
+
+  // Search invoices (combined search)
+  Future<List<Invoice>> searchInvoices(
+    String query, {
+    InvoiceStatus? status,
+    PaymentStatus? paymentStatus,
+    InvoiceType? invoiceType,
+  }) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices.where((invoice) {
+      bool matchesQuery =
+          invoice.invoiceNumber.toLowerCase().contains(query.toLowerCase()) ||
+          (invoice.reference?.toLowerCase().contains(query.toLowerCase()) ??
+              false) ||
+          (invoice.notes?.toLowerCase().contains(query.toLowerCase()) ?? false);
+
+      if (status != null && invoice.status != status.name) return false;
+      if (paymentStatus != null &&
+          invoice.paymentStatus != paymentStatus.name) {
+        return false;
+      }
+      if (invoiceType != null && invoice.invoiceType != invoiceType.name) {
+        return false;
+      }
+
+      return matchesQuery;
+    }).toList();
+  }
+
+  // Get invoices by business ID
+  Future<List<Invoice>> getInvoicesByBusinessId(int businessId) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices
+        .where((invoice) => invoice.businessId == businessId)
+        .toList();
+  }
+
+  // Get invoices by client ID
+  Future<List<Invoice>> getInvoicesByClientId(int clientId) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices
+        .where((invoice) => invoice.clientId == clientId)
+        .toList();
+  }
+
+  // Get invoices by status
+  Future<List<Invoice>> getInvoicesByStatus(InvoiceStatus status) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices
+        .where((invoice) => invoice.status == status.name)
+        .toList();
+  }
+
+  // Get invoices by payment status
+  Future<List<Invoice>> getInvoicesByPaymentStatus(
+    PaymentStatus paymentStatus,
+  ) async {
+    final allInvoices = _invoiceBox.getAll();
+    return allInvoices
+        .where((invoice) => invoice.paymentStatus == paymentStatus.name)
+        .toList();
+  }
+
+  // Count total invoices
+  Future<int> countInvoices() async {
+    return _invoiceBox.count();
+  }
+
+  // Update invoice fields
+  Future<bool> updateInvoiceFields(
+    int id, {
+    String? invoiceNumber,
+    String? invoiceNumberPrefix,
+    String? reference,
+    String? invoiceType,
+    String? status,
+    String? paymentStatus,
+    String? notes,
+    DateTime? issueDate,
+    DateTime? dueDate,
+    DateTime? sentDate,
+    DateTime? viewedDate,
+    DateTime? paidDate,
+    int? businessId,
+    int? clientId,
+    double? subtotal,
+    double? discountRate,
+    double? discountAmount,
+    double? taxAmount,
+    double? total,
+    double? paidAmount,
+    double? balanceDue,
+    String? currency,
+    bool? isRecurring,
+    String? recurringFrequency,
+    int? recurringInterval,
+    DateTime? recurringEndDate,
+    DateTime? updatedAt,
+  }) async {
+    final invoice = _invoiceBox.get(id);
+    if (invoice == null) return false;
+
+    final updatedInvoice = invoice.copyWith(
+      invoiceNumber: invoiceNumber,
+      invoiceNumberPrefix: invoiceNumberPrefix,
+      reference: reference,
+      invoiceType: invoiceType,
+      status: status,
+      paymentStatus: paymentStatus,
+      notes: notes,
+      issueDate: issueDate,
+      dueDate: dueDate,
+      sentDate: sentDate,
+      viewedDate: viewedDate,
+      paidDate: paidDate,
+      businessId: businessId,
+      clientId: clientId,
+      subtotal: subtotal,
+      discountRate: discountRate,
+      discountAmount: discountAmount,
+      taxAmount: taxAmount,
+      total: total,
+      paidAmount: paidAmount,
+      balanceDue: balanceDue,
+      currency: currency,
+      isRecurring: isRecurring,
+      recurringFrequency: recurringFrequency,
+      recurringInterval: recurringInterval,
+      recurringEndDate: recurringEndDate,
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+
+    final result = _invoiceBox.put(updatedInvoice);
+    return result > 0;
+  }
+
+  // Update invoice status
+  Future<bool> updateInvoiceStatus(int id, InvoiceStatus status) async {
+    return updateInvoiceFields(id, status: status.name);
+  }
+
+  // Update payment status
+  Future<bool> updatePaymentStatus(int id, PaymentStatus paymentStatus) async {
+    return updateInvoiceFields(id, paymentStatus: paymentStatus.name);
+  }
+
+  // Mark invoice as sent
+  Future<bool> markAsSent(int id) async {
+    return updateInvoiceFields(
+      id,
+      status: InvoiceStatus.sent.name,
+      sentDate: DateTime.now(),
+    );
+  }
+
+  // Mark invoice as viewed
+  Future<bool> markAsViewed(int id) async {
+    return updateInvoiceFields(
+      id,
+      status: InvoiceStatus.viewed.name,
+      viewedDate: DateTime.now(),
+    );
+  }
+
+  // Mark invoice as paid
+  Future<bool> markAsPaid(int id, {double? paidAmount}) async {
+    final invoice = _invoiceBox.get(id);
+    if (invoice == null) return false;
+
+    final newPaidAmount = paidAmount ?? invoice.total;
+    final newBalanceDue = invoice.total - newPaidAmount;
+    final newPaymentStatus = newBalanceDue <= 0
+        ? PaymentStatus.paid
+        : PaymentStatus.partiallyPaid;
+
+    return updateInvoiceFields(
+      id,
+      status: InvoiceStatus.paid.name,
+      paymentStatus: newPaymentStatus.name,
+      paidAmount: newPaidAmount,
+      balanceDue: newBalanceDue,
+      paidDate: DateTime.now(),
+    );
+  }
+
+  // Update invoice amounts
+  Future<bool> updateInvoiceAmounts(
+    int id, {
+    double? subtotal,
+    double? discountRate,
+    double? discountAmount,
+    double? taxAmount,
+    double? total,
+  }) async {
+    return updateInvoiceFields(
+      id,
+      subtotal: subtotal,
+      discountRate: discountRate,
+      discountAmount: discountAmount,
+      taxAmount: taxAmount,
+      total: total,
+    );
+  }
+
+  // ================================
+  //    MARK: Tax
+  // ================================
+
+  Future<void> addTaxToInvoice(int invoiceId, Tax tax) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.addTax(tax);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> removeTaxFromInvoice(int invoiceId, Tax tax) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.removeTax(tax);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> clearTaxesFromInvoice(int invoiceId) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.clearTaxes();
+    _invoiceBox.put(invoice);
+  }
+
+  // ================================
+  //    MARK: Term
+  // ================================
+
+  Future<void> addTermToInvoice(int invoiceId, Term term) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.addTerm(term);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> removeTermFromInvoice(int invoiceId, Term term) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.removeTerm(term);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> clearTermsFromInvoice(int invoiceId) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.clearTerms();
+    _invoiceBox.put(invoice);
+  }
+
+  // ================================
+  //    MARK: Item
+  // ================================
+
+  Future<List<Item>> getInvoiceItems(int invoiceId) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return [];
+    return invoice.items.toList();
+  }
+
+  Future<void> addItemToInvoice(int invoiceId, Item item) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.addItem(item);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> removeItemFromInvoice(int invoiceId, Item item) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.removeItem(item);
+    _invoiceBox.put(invoice);
+  }
+
+  Future<void> clearItemsFromInvoice(int invoiceId) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+    invoice.clearItems();
+    _invoiceBox.put(invoice);
+  }
+
+  // Expose invoice box for repository advanced queries
+  Box<Invoice> get invoiceBox => _invoiceBox;
+}
