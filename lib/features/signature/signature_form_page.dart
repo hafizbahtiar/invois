@@ -73,7 +73,6 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
       await ref
           .read(signatureFormProvider.notifier)
           .init(widget.signatureId, widget.type);
-      ref.read(businessListProvider.notifier).getActiveBusinesses();
       final state = ref.read(signatureFormProvider);
 
       if (state.signature != null) {
@@ -308,7 +307,11 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
 
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(signatureFormProvider);
-    final businessState = ref.watch(businessListProvider);
+    final businesses =
+        ref
+            .watch(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const [];
 
     return Expanded(
       child: ListView(
@@ -419,17 +422,17 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   isReadOnly: _isReadOnly,
                   onSelected: (value) => _onSelectBusiness(value),
                   value:
-                      businessState.businesses.isNotEmpty &&
+                      businesses.isNotEmpty &&
                           state.signature?.businessId != null
-                      ? businessState.businesses
+                      ? businesses
                             .firstWhere(
                               (business) =>
                                   business.id == state.signature?.businessId,
-                              orElse: () => businessState.businesses.first,
+                              orElse: () => businesses.first,
                             )
                             .name
                       : null,
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem<int>(
                           value: business.id!,

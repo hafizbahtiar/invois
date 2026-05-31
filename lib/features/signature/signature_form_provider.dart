@@ -1,16 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'signature_list_provider.dart';
-import 'signature_form_repository.dart';
 import 'signature_form_state.dart';
 import 'signature_model.dart';
+import 'signature_repository.dart';
 
 class SignatureFormNotifier extends StateNotifier<SignatureFormState> {
-  final SignatureFormRepository _repository;
-  final Ref _ref;
+  final SignatureRepository _repository;
 
-  SignatureFormNotifier(this._repository, this._ref)
-    : super(SignatureFormState());
+  SignatureFormNotifier(this._repository) : super(SignatureFormState());
 
   //============================================
   // MARK: - Init
@@ -38,56 +35,48 @@ class SignatureFormNotifier extends StateNotifier<SignatureFormState> {
     );
   }
 
-  // Set the business to a new business
+  // Set a new signature
   Future<void> setSignature() async {
     state = state.copyWith(signature: Signature(name: ''));
   }
 
-  // Upsert business
+  // Upsert signature. List updates reactively (ADR-0003) — no manual refresh.
   Future<bool> onUpsert(Signature signature) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    // Update business
-    if (signature.id != null && signature.id! > 0) {
-      final result = await _repository.updateSignature(signature);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshSignatureList();
-      return result.success;
-    } else {
-      // Insert business
-      final result = await _repository.insertSignature(signature);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshSignatureList();
-      return result.success;
-    }
+    final result = (signature.id != null && signature.id! > 0)
+        ? await _repository.update(signature)
+        : await _repository.create(signature);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   // Delete signature by id
   Future<bool> deleteSignature(int id) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      await _repository.deleteSignature(id);
-      state = state.copyWith(isLoading: false);
-
-      // Refresh the signature list
-      _refreshSignatureList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
-  }
-
-  // Refresh the signature list
-  void _refreshSignatureList() {
-    _ref.read(signatureListProvider.notifier).getSignatures();
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 }
 
-// Provider for BusinessFormNotifier
+// Provider for SignatureFormNotifier
 final signatureFormProvider =
     StateNotifierProvider<SignatureFormNotifier, SignatureFormState>((ref) {
-      return SignatureFormNotifier(SignatureFormRepository(), ref);
+      return SignatureFormNotifier(ref.watch(signatureRepositoryProvider));
     });

@@ -3,6 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
 import 'signature_model.dart';
+import 'signature_query_provider.dart';
 
 class SignatureLocalSource {
   final Store _store;
@@ -24,6 +25,28 @@ class SignatureLocalSource {
   // Get all signatures
   Future<List<Signature>> getSignatures() async {
     return _signatureBox.getAll();
+  }
+
+  /// Reactive, filtered signature stream (ADR-0003). Emits on every matching write.
+  Stream<List<Signature>> watchSignatures(SignatureQuery q) {
+    Condition<Signature>? condition;
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      condition = Signature_.name.contains(search, caseSensitive: false);
+    }
+    if (q.isActive != null) {
+      final c = Signature_.isActive.equals(q.isActive!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.isDefault != null) {
+      final c = Signature_.isDefault.equals(q.isDefault!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    final builder = condition == null
+        ? _signatureBox.query()
+        : _signatureBox.query(condition);
+    builder.order(Signature_.name);
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get signature by ID

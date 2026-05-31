@@ -68,7 +68,6 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
       await ref
           .read(clientFormProvider.notifier)
           .init(widget.clientId, widget.type);
-      ref.read(businessListProvider.notifier).getActiveBusinesses();
 
       final state = ref.read(clientFormProvider);
       if (state.client != null) {
@@ -277,7 +276,7 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
 
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(clientFormProvider);
-    final businessState = ref.watch(businessListProvider);
+    final businesses = ref.watch(businessListProvider(const BusinessQuery(isActive: true))).valueOrNull ?? const [];
 
     return Expanded(
       child: ListView(
@@ -342,17 +341,17 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   isReadOnly: _isReadOnly,
                   onSelected: (value) => _onSelectBusiness(value),
                   value:
-                      businessState.businesses.isNotEmpty &&
+                      businesses.isNotEmpty &&
                           state.client?.businessId != null
-                      ? businessState.businesses
+                      ? businesses
                             .firstWhere(
                               (business) =>
                                   business.id == state.client?.businessId,
-                              orElse: () => businessState.businesses.first,
+                              orElse: () => businesses.first,
                             )
                             .name
                       : null,
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem<int>(
                           value: business.id!,

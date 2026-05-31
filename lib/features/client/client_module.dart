@@ -1,10 +1,9 @@
 export 'client_form_page.dart';
 export 'client_form_provider.dart';
-export 'client_form_repository.dart';
 export 'client_form_state.dart';
 export 'client_list_page.dart';
 export 'client_list_provider.dart';
-export 'client_list_repository.dart';
-export 'client_list_state.dart';
 export 'client_local_source.dart';
 export 'client_model.dart';
+export 'client_query_provider.dart';
+export 'client_repository.dart';

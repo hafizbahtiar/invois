@@ -3,6 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
 import 'term_model.dart';
+import 'term_query_provider.dart';
 
 class TermLocalSource {
   final Store _store;
@@ -22,6 +23,28 @@ class TermLocalSource {
   // Get all terms
   Future<List<Term>> getTerms() async {
     return _termBox.getAll();
+  }
+
+  /// Reactive, filtered term stream (ADR-0003). Emits on every matching write.
+  Stream<List<Term>> watchTerms(TermQuery q) {
+    Condition<Term>? condition;
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      condition = Term_.name.contains(search, caseSensitive: false);
+    }
+    if (q.isActive != null) {
+      final c = Term_.isActive.equals(q.isActive!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.isDefault != null) {
+      final c = Term_.isDefault.equals(q.isDefault!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    final builder = condition == null
+        ? _termBox.query()
+        : _termBox.query(condition);
+    builder.order(Term_.name);
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get term by ID

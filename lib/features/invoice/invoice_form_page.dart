@@ -15,7 +15,6 @@ import 'package:invois/features/shared/widgets/my_selector_field.dart';
 import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
-import 'package:invois/features/signature/signature_module.dart';
 import 'package:invois/features/tax/tax_module.dart';
 import 'package:invois/features/term/term_module.dart';
 
@@ -99,11 +98,11 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       await ref
           .read(invoiceFormProvider.notifier)
           .init(widget.invoiceId, widget.type);
-      await ref.read(businessListProvider.notifier).getActiveBusinesses();
-      await ref.read(clientListProvider.notifier).getActiveClients();
-      await ref.read(taxListProvider.notifier).getActiveTaxes();
-      await ref.read(signatureListProvider.notifier).getActiveSignatures();
-      await ref.read(termListProvider.notifier).getActiveTerms();
+      // Active businesses load reactively via businessListProvider(const BusinessQuery(isActive: true)).
+      // Active clients load reactively via clientListProvider(const ClientQuery(isActive: true)).
+      // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
+      // Active signatures load reactively via signatureListProvider(const SignatureQuery(isActive: true)).
+      // Active terms load reactively via termListProvider(const TermQuery(isActive: true)).
 
       final state = ref.read(invoiceFormProvider);
       final settingState = ref.read(settingsProvider);
@@ -390,14 +389,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     // Save the invoice first
     final result = await notifier.onUpsert(invoice);
 
-    if (result.success == true && mounted) Navigator.pop(context);
+    if (result.isOk && mounted) Navigator.pop(context);
     if (mounted) {
       MySnackBar.show(
         context,
-        message: result.message ?? 'Invoice saved',
-        type: result.success == true
-            ? MySnackbarType.success
-            : MySnackbarType.failed,
+        message: result.failureOrNull?.message ?? 'Invoice saved',
+        type: result.isOk ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
   }
@@ -405,34 +402,41 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   Future<void> _onSelectBusiness(int? businessId) async {
     if (_isReadOnly) return;
     if (businessId == null) return;
-    final business = ref
-        .read(businessListProvider)
-        .businesses
-        .firstWhere(
-          (business) => business.id == businessId,
-          orElse: () => Business(name: ''),
-        );
+    final businesses =
+        ref
+            .read(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const <Business>[];
+    final business = businesses.firstWhere(
+      (business) => business.id == businessId,
+      orElse: () => Business(name: ''),
+    );
     ref.read(invoiceFormProvider.notifier).setBusiness(business);
   }
 
   Future<void> _onSelectClient(int? clientId) async {
     if (_isReadOnly) return;
     if (clientId == null) return;
-    final client = ref
-        .read(clientListProvider)
-        .clients
-        .firstWhere(
-          (client) => client.id == clientId,
-          orElse: () => Client(name: ''),
-        );
+    final clients =
+        ref
+            .read(clientListProvider(const ClientQuery(isActive: true)))
+            .valueOrNull ??
+        const <Client>[];
+    final client = clients.firstWhere(
+      (client) => client.id == clientId,
+      orElse: () => Client(name: ''),
+    );
     ref.read(invoiceFormProvider.notifier).setClient(client);
   }
 
   void _onSelectTerms(List<dynamic> terms) {
     if (_isReadOnly) return;
-    final selectedTerms = ref
-        .read(termListProvider)
-        .terms
+    final activeTerms =
+        ref
+            .read(termListProvider(const TermQuery(isActive: true)))
+            .valueOrNull ??
+        const <Term>[];
+    final selectedTerms = activeTerms
         .where((term) => terms.contains(term.id))
         .toList();
     ref.read(invoiceFormProvider.notifier).setTerms(selectedTerms);
@@ -440,9 +444,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
   void _onSelectTaxes(List<dynamic> taxes) {
     if (_isReadOnly) return;
-    final selectedTaxes = ref
-        .read(taxListProvider)
-        .taxes
+    final activeTaxes =
+        ref.read(taxListProvider(const TaxQuery(isActive: true))).valueOrNull ??
+        const <Tax>[];
+    final selectedTaxes = activeTaxes
         .where((tax) => taxes.contains(tax.id))
         .toList();
     ref.read(invoiceFormProvider.notifier).setTaxes(selectedTaxes);
@@ -726,10 +731,20 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   // MARK: - Form
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(invoiceFormProvider);
-    final businessState = ref.watch(businessListProvider);
-    final clientState = ref.watch(clientListProvider);
-    final termState = ref.watch(termListProvider);
-    final taxState = ref.watch(taxListProvider);
+    final businesses =
+        ref
+            .watch(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const <Business>[];
+    final clients =
+        ref
+            .watch(clientListProvider(const ClientQuery(isActive: true)))
+            .valueOrNull ??
+        const <Client>[];
+    final termState = ref.watch(
+      termListProvider(const TermQuery(isActive: true)),
+    );
+    final taxState = ref.watch(taxListProvider(const TaxQuery(isActive: true)));
 
     return Expanded(
       child: ListView(
@@ -965,7 +980,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   selectedValue: state.business?.id,
                   hintText: state.business?.name ?? 'Select Business',
                   onSelected: (value) => _onSelectBusiness(value),
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem(
                           label: business.name,
@@ -982,7 +997,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   selectedValue: state.client?.id,
                   hintText: state.client?.name ?? 'Select Client',
                   onSelected: (value) => _onSelectClient(value),
-                  selectItems: clientState.clients
+                  selectItems: clients
                       .map(
                         (client) =>
                             SelectItem(label: client.name, value: client.id),
@@ -1006,7 +1021,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Tax',
                   selectedValues: state.taxes?.map((tax) => tax.id).toList(),
                   onMultiSelected: (value) => _onSelectTaxes(value),
-                  multiSelectItems: taxState.taxes
+                  multiSelectItems: (taxState.valueOrNull ?? const <Tax>[])
                       .map(
                         (tax) => MultiSelectItem<int?>(
                           label: tax.name,
@@ -1090,7 +1105,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Terms',
                   selectedValues: state.terms?.map((term) => term.id).toList(),
                   onMultiSelected: (value) => _onSelectTerms(value),
-                  multiSelectItems: termState.terms
+                  multiSelectItems: (termState.valueOrNull ?? const <Term>[])
                       .map(
                         (term) => MultiSelectItem<int?>(
                           label: term.name,

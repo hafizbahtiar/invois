@@ -3,6 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
 import 'client_model.dart';
+import 'client_query_provider.dart';
 
 class ClientLocalSource {
   final Store _store;
@@ -22,6 +23,28 @@ class ClientLocalSource {
   // Get all clients
   Future<List<Client>> getClients() async {
     return _clientBox.getAll();
+  }
+
+  /// Reactive, filtered client stream (ADR-0003). Emits on every matching write.
+  Stream<List<Client>> watchClients(ClientQuery q) {
+    Condition<Client>? condition;
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      condition = Client_.name.contains(search, caseSensitive: false);
+    }
+    if (q.isActive != null) {
+      final c = Client_.isActive.equals(q.isActive!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.isDefault != null) {
+      final c = Client_.isDefault.equals(q.isDefault!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    final builder = condition == null
+        ? _clientBox.query()
+        : _clientBox.query(condition);
+    builder.order(Client_.name);
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get client by ID

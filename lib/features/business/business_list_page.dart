@@ -6,10 +6,12 @@ import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 import 'business_model.dart';
 
 import 'business_list_provider.dart';
+import 'business_query_provider.dart';
 
 class BusinessListPage extends ConsumerStatefulWidget {
   const BusinessListPage({super.key});
@@ -31,14 +33,6 @@ class _BusinessListPageState extends ConsumerState<BusinessListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(businessListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -48,54 +42,42 @@ class _BusinessListPageState extends ConsumerState<BusinessListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadBusinesses() async {
+  // Maps the selected chip to the business query; the reactive list rebuilds.
+  void _applyFilter() {
+    final notifier = ref.read(businessQueryProvider.notifier);
     switch (_selectedFilter) {
       case ListFilterType.active:
-        await ref
-            .read(businessListProvider.notifier)
-            .filter(query: _searchController.text, isActive: true);
+        notifier.setFilter(isActive: true);
         break;
       case ListFilterType.inactive:
-        await ref
-            .read(businessListProvider.notifier)
-            .filter(query: _searchController.text, isActive: false);
+        notifier.setFilter(isActive: false);
         break;
       case ListFilterType.defaultStatus:
-        await ref
-            .read(businessListProvider.notifier)
-            .filter(query: _searchController.text, isDefault: true);
+        notifier.setFilter(isDefault: true);
         break;
       default:
-        await ref
-            .read(businessListProvider.notifier)
-            .filter(query: _searchController.text);
+        notifier.setFilter();
         break;
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(businessListProvider.notifier).getBusinesses();
+    ref.invalidate(businessListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(businessListProvider.notifier).getBusinesses();
-    } else {
-      await ref
-          .read(businessListProvider.notifier)
-          .searchBusinessesByName(value);
-    }
+    ref.read(businessQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(ListFilterType filter) {
     setState(() => _selectedFilter = filter);
-    _loadBusinesses();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = ListFilterType.all);
-    _loadBusinesses();
+    ref.read(businessQueryProvider.notifier).reset();
   }
 
   //============================================
@@ -150,16 +132,21 @@ class _BusinessListPageState extends ConsumerState<BusinessListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(businessListProvider);
+    final query = ref.watch(businessQueryProvider);
+    final async = ref.watch(businessListProvider(query));
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Business>(
-            items: state.businesses,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load businesses')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:

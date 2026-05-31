@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/core/error/failure_mapper.dart';
 import 'package:invois/core/providers/objectbox_providers.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax_module.dart';
@@ -27,9 +27,8 @@ final invoiceRepositoryProvider = Provider<InvoiceRepository>(
 /// Boundary contract:
 /// - Reactive reads return a [Stream] that throws [AppFailure] on error
 ///   (surfaced as `AsyncError` by `StreamProvider`).
-/// - `delete` returns [Result] (S1 Result adoption).
-/// - Write/compose methods still return `ObjectBoxResponse` — TRANSITIONAL for
-///   S1; they converge on [Result] in S2 with the form `AsyncNotifier`.
+/// - `create`/`update`/`updateStatus`/`delete` return [Result].
+/// - Relation helpers (items/taxes/terms) are fire-and-forget mutations.
 class InvoiceRepository {
   final InvoiceLocalSource _local;
 
@@ -68,28 +67,47 @@ class InvoiceRepository {
   }
 
   // ============================================================
-  // Write/compose — TRANSITIONAL ObjectBoxResponse (migrates to Result in S2)
+  // Write/compose — Result
   // ============================================================
 
-  Future<ObjectBoxResponse<Invoice>> createCompleteInvoice(Invoice invoice) {
-    final now = DateTime.now();
-    return _local.insertInvoice(
-      invoice.copyWith(createdAt: now, updatedAt: now),
-    );
+  Future<Result<Invoice>> create(Invoice invoice) async {
+    try {
+      final now = DateTime.now();
+      final r = await _local.insertInvoice(
+        invoice.copyWith(createdAt: now, updatedAt: now),
+      );
+      final data = r.data;
+      return (r.success && data != null)
+          ? Ok(data)
+          : Err(DatabaseFailure(r.message ?? 'Failed to insert invoice'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
   }
 
-  Future<ObjectBoxResponse<Invoice>> updateCompleteInvoice(Invoice invoice) {
-    return _local.updateInvoice(invoice.copyWith(updatedAt: DateTime.now()));
+  Future<Result<Invoice>> update(Invoice invoice) async {
+    try {
+      final r = await _local.updateInvoice(
+        invoice.copyWith(updatedAt: DateTime.now()),
+      );
+      final data = r.data;
+      return (r.success && data != null)
+          ? Ok(data)
+          : Err(DatabaseFailure(r.message ?? 'Failed to update invoice'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
   }
 
-  Future<ObjectBoxResponse<bool>> updateInvoiceStatus(
-    int id,
-    InvoiceStatus status,
-  ) async {
-    final ok = await _local.updateInvoiceStatus(id, status);
-    return ok
-        ? ObjectBoxResponse.success(true)
-        : ObjectBoxResponse.failure(message: 'Failed to update invoice status');
+  Future<Result<void>> updateStatus(int id, InvoiceStatus status) async {
+    try {
+      final ok = await _local.updateInvoiceStatus(id, status);
+      return ok
+          ? const Ok(null)
+          : const Err(DatabaseFailure('Failed to update invoice status'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
   }
 
   // ---- Items ----

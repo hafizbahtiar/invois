@@ -1,16 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 
-import 'client_list_provider.dart';
-import 'client_form_repository.dart';
 import 'client_form_state.dart';
 import 'client_model.dart';
+import 'client_repository.dart';
 
 class ClientFormNotifier extends StateNotifier<ClientFormState> {
-  final ClientFormRepository _repository;
-  final Ref _ref;
+  final ClientRepository _repository;
 
-  ClientFormNotifier(this._repository, this._ref) : super(ClientFormState());
+  ClientFormNotifier(this._repository) : super(ClientFormState());
 
   //============================================
   // MARK: - Init
@@ -42,45 +40,38 @@ class ClientFormNotifier extends StateNotifier<ClientFormState> {
     state = state.copyWith(client: updatedClient);
   }
 
-  // Upsert tax
+  // Upsert client. List updates reactively (ADR-0003) — no manual refresh.
   Future<bool> onUpsert(Client client) async {
     state = state.copyWith(isLoading: true, error: null);
-    // Update tax
-    if (client.id != null && client.id! > 0) {
-      final result = await _repository.updateClient(client);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshClientList();
-      return result.success;
-    } else {
-      // Insert tax
-      final result = await _repository.insertClient(client);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshClientList();
-      return result.success;
-    }
+    final result = (client.id != null && client.id! > 0)
+        ? await _repository.update(client)
+        : await _repository.create(client);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
-  // Delete tax by id
+  // Delete client by id
   Future<bool> deleteClientById(int id) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      await _repository.deleteClientById(id);
-      state = state.copyWith(isLoading: false);
-
-      // Refresh the client list
-      _refreshClientList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
-  }
-
-  // Refresh the client list
-  void _refreshClientList() {
-    _ref.read(clientListProvider.notifier).getClients();
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   /// Clear error message
@@ -92,5 +83,5 @@ class ClientFormNotifier extends StateNotifier<ClientFormState> {
 // Provider for ClientFormNotifier
 final clientFormProvider =
     StateNotifierProvider<ClientFormNotifier, ClientFormState>(
-      (ref) => ClientFormNotifier(ClientFormRepository(), ref),
+      (ref) => ClientFormNotifier(ref.watch(clientRepositoryProvider)),
     );

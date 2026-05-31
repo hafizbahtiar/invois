@@ -7,10 +7,12 @@ import 'package:invois/core/constants/list_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 import 'tax_model.dart';
 
 import 'tax_list_provider.dart';
+import 'tax_query_provider.dart';
 
 class TaxListPage extends ConsumerStatefulWidget {
   final ListType listType;
@@ -34,14 +36,6 @@ class _TaxListPageState extends ConsumerState<TaxListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(taxListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -51,52 +45,43 @@ class _TaxListPageState extends ConsumerState<TaxListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadTaxes() async {
+  // Maps the selected chip to invoiceQueryProvider-style filters; the reactive
+  // list rebuilds automatically.
+  void _applyFilter() {
+    final notifier = ref.read(taxQueryProvider.notifier);
     switch (_selectedFilter) {
       case ListFilterType.active:
-        await ref
-            .read(taxListProvider.notifier)
-            .filter(query: _searchController.text, isActive: true);
+        notifier.setFilter(isActive: true);
         break;
       case ListFilterType.inactive:
-        await ref
-            .read(taxListProvider.notifier)
-            .filter(query: _searchController.text, isActive: false);
+        notifier.setFilter(isActive: false);
         break;
       case ListFilterType.defaultStatus:
-        await ref
-            .read(taxListProvider.notifier)
-            .filter(query: _searchController.text, isDefault: true);
+        notifier.setFilter(isDefault: true);
         break;
       default:
-        await ref
-            .read(taxListProvider.notifier)
-            .filter(query: _searchController.text);
+        notifier.setFilter();
         break;
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(taxListProvider.notifier).getTaxes();
+    ref.invalidate(taxListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(taxListProvider.notifier).getTaxes();
-    } else {
-      await ref.read(taxListProvider.notifier).searchTaxesByName(value);
-    }
+    ref.read(taxQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(ListFilterType filter) {
     setState(() => _selectedFilter = filter);
-    _loadTaxes();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = ListFilterType.all);
-    _loadTaxes();
+    ref.read(taxQueryProvider.notifier).reset();
   }
 
   //============================================
@@ -151,16 +136,21 @@ class _TaxListPageState extends ConsumerState<TaxListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(taxListProvider);
+    final query = ref.watch(taxQueryProvider);
+    final async = ref.watch(taxListProvider(query));
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Tax>(
-            items: state.taxes,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load taxes')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:
