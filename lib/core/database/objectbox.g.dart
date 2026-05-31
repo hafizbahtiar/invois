@@ -120,87 +120,6 @@ final _entities = <obx_int.ModelEntity>[
       relations: <obx_int.ModelRelation>[],
       backlinks: <obx_int.ModelBacklink>[]),
   obx_int.ModelEntity(
-      id: const obx_int.IdUid(12, 4734287980909752497),
-      name: 'Signature',
-      lastPropertyId: const obx_int.IdUid(14, 7533582861629511189),
-      flags: 0,
-      properties: <obx_int.ModelProperty>[
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(1, 8761881416931105035),
-            name: 'id',
-            type: 6,
-            flags: 1),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(2, 2633281056688445860),
-            name: 'name',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(3, 7107008304953385808),
-            name: 'title',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(4, 9017125769450678391),
-            name: 'signatureData',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(5, 4286590447440702594),
-            name: 'email',
-            type: 9,
-            flags: 2080,
-            indexId: const obx_int.IdUid(13, 8244338466329868475)),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(6, 8645363722477152481),
-            name: 'phone',
-            type: 9,
-            flags: 2080,
-            indexId: const obx_int.IdUid(14, 1060680464721705105)),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(7, 6040013688249527116),
-            name: 'company',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(8, 4994341333210003401),
-            name: 'website',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(9, 1244373024451526399),
-            name: 'notes',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(10, 1492786822200346441),
-            name: 'isActive',
-            type: 1,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(11, 7057961076753204483),
-            name: 'isDefault',
-            type: 1,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(12, 5568497648775839839),
-            name: 'businessId',
-            type: 6,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(13, 4180143083131131293),
-            name: 'createdAt',
-            type: 10,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(14, 7533582861629511189),
-            name: 'updatedAt',
-            type: 10,
-            flags: 0)
-      ],
-      relations: <obx_int.ModelRelation>[],
-      backlinks: <obx_int.ModelBacklink>[]),
-  obx_int.ModelEntity(
       id: const obx_int.IdUid(13, 6022764485764882268),
       name: 'Tax',
       lastPropertyId: const obx_int.IdUid(12, 8178959546373570945),
@@ -880,6 +799,87 @@ final _entities = <obx_int.ModelEntity>[
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
+      backlinks: <obx_int.ModelBacklink>[]),
+  obx_int.ModelEntity(
+      id: const obx_int.IdUid(19, 1637471470037547940),
+      name: 'Signature',
+      lastPropertyId: const obx_int.IdUid(14, 160235966933542896),
+      flags: 0,
+      properties: <obx_int.ModelProperty>[
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(1, 2249301920592606436),
+            name: 'id',
+            type: 6,
+            flags: 1),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(2, 5575891205058028667),
+            name: 'name',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(3, 3232989717451840729),
+            name: 'title',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(4, 7224647517713707058),
+            name: 'signatureData',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(5, 1711720495029591732),
+            name: 'email',
+            type: 9,
+            flags: 2080,
+            indexId: const obx_int.IdUid(21, 1009636550082759560)),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(6, 3969562006830402048),
+            name: 'phone',
+            type: 9,
+            flags: 2080,
+            indexId: const obx_int.IdUid(22, 8656462993882657750)),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(7, 6777268452257702941),
+            name: 'company',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(8, 8590999821393703233),
+            name: 'website',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(9, 1478604352478016541),
+            name: 'notes',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(10, 7975792477932862041),
+            name: 'isActive',
+            type: 1,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(11, 2885685667140634984),
+            name: 'isDefault',
+            type: 1,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(12, 9008881049069192303),
+            name: 'businessId',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(13, 191510868799149397),
+            name: 'createdAt',
+            type: 10,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(14, 160235966933542896),
+            name: 'updatedAt',
+            type: 10,
+            flags: 0)
+      ],
+      relations: <obx_int.ModelRelation>[],
       backlinks: <obx_int.ModelBacklink>[])
 ];
 
@@ -918,8 +918,8 @@ Future<obx.Store> openStore(
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
       entities: _entities,
-      lastEntityId: const obx_int.IdUid(18, 18681990011544788),
-      lastIndexId: const obx_int.IdUid(20, 8689499188339062898),
+      lastEntityId: const obx_int.IdUid(19, 1637471470037547940),
+      lastIndexId: const obx_int.IdUid(22, 8656462993882657750),
       lastRelationId: const obx_int.IdUid(6, 914202053874196970),
       lastSequenceId: const obx_int.IdUid(0, 0),
       retiredEntityUids: const [
@@ -932,7 +932,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         6566788881636554836,
         5080769272235289446,
         7403736669522191328,
-        2641663556485893302
+        2641663556485893302,
+        4734287980909752497
       ],
       retiredIndexUids: const [
         620451906796018960,
@@ -1126,7 +1127,21 @@ obx_int.ModelDefinition getObjectBoxModel() {
         6215035041636785799,
         6251384197010631285,
         7462401745629306242,
-        6443844944487353190
+        6443844944487353190,
+        8761881416931105035,
+        2633281056688445860,
+        7107008304953385808,
+        9017125769450678391,
+        4286590447440702594,
+        8645363722477152481,
+        6040013688249527116,
+        4994341333210003401,
+        1244373024451526399,
+        1492786822200346441,
+        7057961076753204483,
+        5568497648775839839,
+        4180143083131131293,
+        7533582861629511189
       ],
       retiredRelationUids: const [2534977731844685035, 5398901958912359251],
       modelVersion: 5,
@@ -1252,107 +1267,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
 
           return object;
         }),
-    Signature: obx_int.EntityDefinition<Signature>(
-        model: _entities[1],
-        toOneRelations: (Signature object) => [],
-        toManyRelations: (Signature object) => {},
-        getId: (Signature object) => object.id,
-        setId: (Signature object, int id) {
-          object.id = id;
-        },
-        objectToFB: (Signature object, fb.Builder fbb) {
-          final nameOffset = fbb.writeString(object.name);
-          final titleOffset =
-              object.title == null ? null : fbb.writeString(object.title!);
-          final signatureDataOffset = object.signatureData == null
-              ? null
-              : fbb.writeString(object.signatureData!);
-          final emailOffset =
-              object.email == null ? null : fbb.writeString(object.email!);
-          final phoneOffset =
-              object.phone == null ? null : fbb.writeString(object.phone!);
-          final companyOffset =
-              object.company == null ? null : fbb.writeString(object.company!);
-          final websiteOffset =
-              object.website == null ? null : fbb.writeString(object.website!);
-          final notesOffset =
-              object.notes == null ? null : fbb.writeString(object.notes!);
-          fbb.startTable(15);
-          fbb.addInt64(0, object.id ?? 0);
-          fbb.addOffset(1, nameOffset);
-          fbb.addOffset(2, titleOffset);
-          fbb.addOffset(3, signatureDataOffset);
-          fbb.addOffset(4, emailOffset);
-          fbb.addOffset(5, phoneOffset);
-          fbb.addOffset(6, companyOffset);
-          fbb.addOffset(7, websiteOffset);
-          fbb.addOffset(8, notesOffset);
-          fbb.addBool(9, object.isActive);
-          fbb.addBool(10, object.isDefault);
-          fbb.addInt64(11, object.businessId);
-          fbb.addInt64(12, object.createdAt?.millisecondsSinceEpoch);
-          fbb.addInt64(13, object.updatedAt?.millisecondsSinceEpoch);
-          fbb.finish(fbb.endTable());
-          return object.id ?? 0;
-        },
-        objectFromFB: (obx.Store store, ByteData fbData) {
-          final buffer = fb.BufferContext(fbData);
-          final rootOffset = buffer.derefObject(0);
-          final createdAtValue =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 28);
-          final updatedAtValue =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 30);
-          final idParam =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 4);
-          final nameParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 6, '');
-          final titleParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 8);
-          final signatureDataParam =
-              const fb.StringReader(asciiOptimization: true)
-                  .vTableGetNullable(buffer, rootOffset, 10);
-          final emailParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 12);
-          final phoneParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 14);
-          final companyParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 16);
-          final websiteParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 18);
-          final notesParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 20);
-          final isActiveParam =
-              const fb.BoolReader().vTableGet(buffer, rootOffset, 22, false);
-          final isDefaultParam =
-              const fb.BoolReader().vTableGet(buffer, rootOffset, 24, false);
-          final businessIdParam =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 26);
-          final createdAtParam = createdAtValue == null
-              ? null
-              : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
-          final updatedAtParam = updatedAtValue == null
-              ? null
-              : DateTime.fromMillisecondsSinceEpoch(updatedAtValue);
-          final object = Signature(
-              id: idParam,
-              name: nameParam,
-              title: titleParam,
-              signatureData: signatureDataParam,
-              email: emailParam,
-              phone: phoneParam,
-              company: companyParam,
-              website: websiteParam,
-              notes: notesParam,
-              isActive: isActiveParam,
-              isDefault: isDefaultParam,
-              businessId: businessIdParam,
-              createdAt: createdAtParam,
-              updatedAt: updatedAtParam);
-
-          return object;
-        }),
     Tax: obx_int.EntityDefinition<Tax>(
-        model: _entities[2],
+        model: _entities[1],
         toOneRelations: (Tax object) => [object.invoice],
         toManyRelations: (Tax object) => {},
         getId: (Tax object) => object.id,
@@ -1428,7 +1344,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     Term: obx_int.EntityDefinition<Term>(
-        model: _entities[3],
+        model: _entities[2],
         toOneRelations: (Term object) => [object.invoice],
         toManyRelations: (Term object) => {},
         getId: (Term object) => object.id,
@@ -1499,7 +1415,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     Client: obx_int.EntityDefinition<Client>(
-        model: _entities[4],
+        model: _entities[3],
         toOneRelations: (Client object) => [],
         toManyRelations: (Client object) => {
               obx_int.RelInfo<Address>.toOneBacklink(
@@ -1635,7 +1551,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     Address: obx_int.EntityDefinition<Address>(
-        model: _entities[5],
+        model: _entities[4],
         toOneRelations: (Address object) => [object.business, object.client],
         toManyRelations: (Address object) => {},
         getId: (Address object) => object.id,
@@ -1765,7 +1681,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     Invoice: obx_int.EntityDefinition<Invoice>(
-        model: _entities[6],
+        model: _entities[5],
         toOneRelations: (Invoice object) => [],
         toManyRelations: (Invoice object) => {
               obx_int.RelInfo<Invoice>.toMany(4, object.id!): object.items,
@@ -1956,7 +1872,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     Item: obx_int.EntityDefinition<Item>(
-        model: _entities[7],
+        model: _entities[6],
         toOneRelations: (Item object) => [object.invoice],
         toManyRelations: (Item object) => {},
         getId: (Item object) => object.id,
@@ -2143,6 +2059,105 @@ obx_int.ModelDefinition getObjectBoxModel() {
               const fb.Int64Reader().vTableGet(buffer, rootOffset, 62, 0);
           object.invoice.attach(store);
           return object;
+        }),
+    Signature: obx_int.EntityDefinition<Signature>(
+        model: _entities[7],
+        toOneRelations: (Signature object) => [],
+        toManyRelations: (Signature object) => {},
+        getId: (Signature object) => object.id,
+        setId: (Signature object, int id) {
+          object.id = id;
+        },
+        objectToFB: (Signature object, fb.Builder fbb) {
+          final nameOffset = fbb.writeString(object.name);
+          final titleOffset =
+              object.title == null ? null : fbb.writeString(object.title!);
+          final signatureDataOffset = object.signatureData == null
+              ? null
+              : fbb.writeString(object.signatureData!);
+          final emailOffset =
+              object.email == null ? null : fbb.writeString(object.email!);
+          final phoneOffset =
+              object.phone == null ? null : fbb.writeString(object.phone!);
+          final companyOffset =
+              object.company == null ? null : fbb.writeString(object.company!);
+          final websiteOffset =
+              object.website == null ? null : fbb.writeString(object.website!);
+          final notesOffset =
+              object.notes == null ? null : fbb.writeString(object.notes!);
+          fbb.startTable(15);
+          fbb.addInt64(0, object.id ?? 0);
+          fbb.addOffset(1, nameOffset);
+          fbb.addOffset(2, titleOffset);
+          fbb.addOffset(3, signatureDataOffset);
+          fbb.addOffset(4, emailOffset);
+          fbb.addOffset(5, phoneOffset);
+          fbb.addOffset(6, companyOffset);
+          fbb.addOffset(7, websiteOffset);
+          fbb.addOffset(8, notesOffset);
+          fbb.addBool(9, object.isActive);
+          fbb.addBool(10, object.isDefault);
+          fbb.addInt64(11, object.businessId);
+          fbb.addInt64(12, object.createdAt?.millisecondsSinceEpoch);
+          fbb.addInt64(13, object.updatedAt?.millisecondsSinceEpoch);
+          fbb.finish(fbb.endTable());
+          return object.id ?? 0;
+        },
+        objectFromFB: (obx.Store store, ByteData fbData) {
+          final buffer = fb.BufferContext(fbData);
+          final rootOffset = buffer.derefObject(0);
+          final createdAtValue =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 28);
+          final updatedAtValue =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 30);
+          final idParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 4);
+          final nameParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGet(buffer, rootOffset, 6, '');
+          final titleParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 8);
+          final signatureDataParam =
+              const fb.StringReader(asciiOptimization: true)
+                  .vTableGetNullable(buffer, rootOffset, 10);
+          final emailParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 12);
+          final phoneParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 14);
+          final companyParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 16);
+          final websiteParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 18);
+          final notesParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 20);
+          final isActiveParam =
+              const fb.BoolReader().vTableGet(buffer, rootOffset, 22, false);
+          final isDefaultParam =
+              const fb.BoolReader().vTableGet(buffer, rootOffset, 24, false);
+          final businessIdParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 26);
+          final createdAtParam = createdAtValue == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+          final updatedAtParam = updatedAtValue == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(updatedAtValue);
+          final object = Signature(
+              id: idParam,
+              name: nameParam,
+              title: titleParam,
+              signatureData: signatureDataParam,
+              email: emailParam,
+              phone: phoneParam,
+              company: companyParam,
+              website: websiteParam,
+              notes: notesParam,
+              isActive: isActiveParam,
+              isDefault: isDefaultParam,
+              businessId: businessIdParam,
+              createdAt: createdAtParam,
+              updatedAt: updatedAtParam);
+
+          return object;
         })
   };
 
@@ -2216,223 +2231,164 @@ class Business_ {
       obx.QueryStringProperty<Business>(_entities[0].properties[15]);
 }
 
-/// [Signature] entity fields to define ObjectBox queries.
-class Signature_ {
-  /// see [Signature.id]
-  static final id =
-      obx.QueryIntegerProperty<Signature>(_entities[1].properties[0]);
-
-  /// see [Signature.name]
-  static final name =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[1]);
-
-  /// see [Signature.title]
-  static final title =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[2]);
-
-  /// see [Signature.signatureData]
-  static final signatureData =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[3]);
-
-  /// see [Signature.email]
-  static final email =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[4]);
-
-  /// see [Signature.phone]
-  static final phone =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[5]);
-
-  /// see [Signature.company]
-  static final company =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[6]);
-
-  /// see [Signature.website]
-  static final website =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[7]);
-
-  /// see [Signature.notes]
-  static final notes =
-      obx.QueryStringProperty<Signature>(_entities[1].properties[8]);
-
-  /// see [Signature.isActive]
-  static final isActive =
-      obx.QueryBooleanProperty<Signature>(_entities[1].properties[9]);
-
-  /// see [Signature.isDefault]
-  static final isDefault =
-      obx.QueryBooleanProperty<Signature>(_entities[1].properties[10]);
-
-  /// see [Signature.businessId]
-  static final businessId =
-      obx.QueryIntegerProperty<Signature>(_entities[1].properties[11]);
-
-  /// see [Signature.createdAt]
-  static final createdAt =
-      obx.QueryDateProperty<Signature>(_entities[1].properties[12]);
-
-  /// see [Signature.updatedAt]
-  static final updatedAt =
-      obx.QueryDateProperty<Signature>(_entities[1].properties[13]);
-}
-
 /// [Tax] entity fields to define ObjectBox queries.
 class Tax_ {
   /// see [Tax.id]
-  static final id = obx.QueryIntegerProperty<Tax>(_entities[2].properties[0]);
+  static final id = obx.QueryIntegerProperty<Tax>(_entities[1].properties[0]);
 
   /// see [Tax.name]
-  static final name = obx.QueryStringProperty<Tax>(_entities[2].properties[1]);
+  static final name = obx.QueryStringProperty<Tax>(_entities[1].properties[1]);
 
   /// see [Tax.description]
   static final description =
-      obx.QueryStringProperty<Tax>(_entities[2].properties[2]);
+      obx.QueryStringProperty<Tax>(_entities[1].properties[2]);
 
   /// see [Tax.rate]
-  static final rate = obx.QueryDoubleProperty<Tax>(_entities[2].properties[3]);
+  static final rate = obx.QueryDoubleProperty<Tax>(_entities[1].properties[3]);
 
   /// see [Tax.isActive]
   static final isActive =
-      obx.QueryBooleanProperty<Tax>(_entities[2].properties[4]);
+      obx.QueryBooleanProperty<Tax>(_entities[1].properties[4]);
 
   /// see [Tax.isDefault]
   static final isDefault =
-      obx.QueryBooleanProperty<Tax>(_entities[2].properties[5]);
+      obx.QueryBooleanProperty<Tax>(_entities[1].properties[5]);
 
   /// see [Tax.businessId]
   static final businessId =
-      obx.QueryIntegerProperty<Tax>(_entities[2].properties[6]);
+      obx.QueryIntegerProperty<Tax>(_entities[1].properties[6]);
 
   /// see [Tax.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Tax>(_entities[2].properties[7]);
+      obx.QueryDateProperty<Tax>(_entities[1].properties[7]);
 
   /// see [Tax.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Tax>(_entities[2].properties[8]);
+      obx.QueryDateProperty<Tax>(_entities[1].properties[8]);
 
   /// see [Tax.invoice]
   static final invoice =
-      obx.QueryRelationToOne<Tax, Invoice>(_entities[2].properties[9]);
+      obx.QueryRelationToOne<Tax, Invoice>(_entities[1].properties[9]);
 
   /// see [Tax.taxType]
   static final taxType =
-      obx.QueryStringProperty<Tax>(_entities[2].properties[10]);
+      obx.QueryStringProperty<Tax>(_entities[1].properties[10]);
 }
 
 /// [Term] entity fields to define ObjectBox queries.
 class Term_ {
   /// see [Term.id]
-  static final id = obx.QueryIntegerProperty<Term>(_entities[3].properties[0]);
+  static final id = obx.QueryIntegerProperty<Term>(_entities[2].properties[0]);
 
   /// see [Term.name]
-  static final name = obx.QueryStringProperty<Term>(_entities[3].properties[1]);
+  static final name = obx.QueryStringProperty<Term>(_entities[2].properties[1]);
 
   /// see [Term.content]
   static final content =
-      obx.QueryStringProperty<Term>(_entities[3].properties[2]);
+      obx.QueryStringProperty<Term>(_entities[2].properties[2]);
 
   /// see [Term.description]
   static final description =
-      obx.QueryStringProperty<Term>(_entities[3].properties[3]);
+      obx.QueryStringProperty<Term>(_entities[2].properties[3]);
 
   /// see [Term.isActive]
   static final isActive =
-      obx.QueryBooleanProperty<Term>(_entities[3].properties[4]);
+      obx.QueryBooleanProperty<Term>(_entities[2].properties[4]);
 
   /// see [Term.isDefault]
   static final isDefault =
-      obx.QueryBooleanProperty<Term>(_entities[3].properties[5]);
+      obx.QueryBooleanProperty<Term>(_entities[2].properties[5]);
 
   /// see [Term.businessId]
   static final businessId =
-      obx.QueryIntegerProperty<Term>(_entities[3].properties[6]);
+      obx.QueryIntegerProperty<Term>(_entities[2].properties[6]);
 
   /// see [Term.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Term>(_entities[3].properties[7]);
+      obx.QueryDateProperty<Term>(_entities[2].properties[7]);
 
   /// see [Term.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Term>(_entities[3].properties[8]);
+      obx.QueryDateProperty<Term>(_entities[2].properties[8]);
 
   /// see [Term.invoice]
   static final invoice =
-      obx.QueryRelationToOne<Term, Invoice>(_entities[3].properties[9]);
+      obx.QueryRelationToOne<Term, Invoice>(_entities[2].properties[9]);
 }
 
 /// [Client] entity fields to define ObjectBox queries.
 class Client_ {
   /// see [Client.id]
   static final id =
-      obx.QueryIntegerProperty<Client>(_entities[4].properties[0]);
+      obx.QueryIntegerProperty<Client>(_entities[3].properties[0]);
 
   /// see [Client.name]
   static final name =
-      obx.QueryStringProperty<Client>(_entities[4].properties[1]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[1]);
 
   /// see [Client.description]
   static final description =
-      obx.QueryStringProperty<Client>(_entities[4].properties[2]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[2]);
 
   /// see [Client.email]
   static final email =
-      obx.QueryStringProperty<Client>(_entities[4].properties[3]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[3]);
 
   /// see [Client.phone]
   static final phone =
-      obx.QueryStringProperty<Client>(_entities[4].properties[4]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[4]);
 
   /// see [Client.company]
   static final company =
-      obx.QueryStringProperty<Client>(_entities[4].properties[5]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[5]);
 
   /// see [Client.website]
   static final website =
-      obx.QueryStringProperty<Client>(_entities[4].properties[6]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[6]);
 
   /// see [Client.isActive]
   static final isActive =
-      obx.QueryBooleanProperty<Client>(_entities[4].properties[7]);
+      obx.QueryBooleanProperty<Client>(_entities[3].properties[7]);
 
   /// see [Client.isDefault]
   static final isDefault =
-      obx.QueryBooleanProperty<Client>(_entities[4].properties[8]);
+      obx.QueryBooleanProperty<Client>(_entities[3].properties[8]);
 
   /// see [Client.businessId]
   static final businessId =
-      obx.QueryIntegerProperty<Client>(_entities[4].properties[9]);
+      obx.QueryIntegerProperty<Client>(_entities[3].properties[9]);
 
   /// see [Client.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Client>(_entities[4].properties[10]);
+      obx.QueryDateProperty<Client>(_entities[3].properties[10]);
 
   /// see [Client.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Client>(_entities[4].properties[11]);
+      obx.QueryDateProperty<Client>(_entities[3].properties[11]);
 
   /// see [Client.streetAddress1]
   static final streetAddress1 =
-      obx.QueryStringProperty<Client>(_entities[4].properties[12]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[12]);
 
   /// see [Client.streetAddress2]
   static final streetAddress2 =
-      obx.QueryStringProperty<Client>(_entities[4].properties[13]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[13]);
 
   /// see [Client.city]
   static final city =
-      obx.QueryStringProperty<Client>(_entities[4].properties[14]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[14]);
 
   /// see [Client.state]
   static final state =
-      obx.QueryStringProperty<Client>(_entities[4].properties[15]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[15]);
 
   /// see [Client.postalCode]
   static final postalCode =
-      obx.QueryStringProperty<Client>(_entities[4].properties[16]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[16]);
 
   /// see [Client.country]
   static final country =
-      obx.QueryStringProperty<Client>(_entities[4].properties[17]);
+      obx.QueryStringProperty<Client>(_entities[3].properties[17]);
 
   /// see [Client.addresses]
   static final addresses =
@@ -2443,339 +2399,398 @@ class Client_ {
 class Address_ {
   /// see [Address.id]
   static final id =
-      obx.QueryIntegerProperty<Address>(_entities[5].properties[0]);
+      obx.QueryIntegerProperty<Address>(_entities[4].properties[0]);
 
   /// see [Address.label]
   static final label =
-      obx.QueryStringProperty<Address>(_entities[5].properties[1]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[1]);
 
   /// see [Address.streetAddress1]
   static final streetAddress1 =
-      obx.QueryStringProperty<Address>(_entities[5].properties[2]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[2]);
 
   /// see [Address.streetAddress2]
   static final streetAddress2 =
-      obx.QueryStringProperty<Address>(_entities[5].properties[3]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[3]);
 
   /// see [Address.city]
   static final city =
-      obx.QueryStringProperty<Address>(_entities[5].properties[4]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[4]);
 
   /// see [Address.state]
   static final state =
-      obx.QueryStringProperty<Address>(_entities[5].properties[5]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[5]);
 
   /// see [Address.postalCode]
   static final postalCode =
-      obx.QueryStringProperty<Address>(_entities[5].properties[6]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[6]);
 
   /// see [Address.country]
   static final country =
-      obx.QueryStringProperty<Address>(_entities[5].properties[7]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[7]);
 
   /// see [Address.countryCode]
   static final countryCode =
-      obx.QueryStringProperty<Address>(_entities[5].properties[8]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[8]);
 
   /// see [Address.notes]
   static final notes =
-      obx.QueryStringProperty<Address>(_entities[5].properties[9]);
+      obx.QueryStringProperty<Address>(_entities[4].properties[9]);
 
   /// see [Address.isDefault]
   static final isDefault =
-      obx.QueryBooleanProperty<Address>(_entities[5].properties[10]);
+      obx.QueryBooleanProperty<Address>(_entities[4].properties[10]);
 
   /// see [Address.isActive]
   static final isActive =
-      obx.QueryBooleanProperty<Address>(_entities[5].properties[11]);
+      obx.QueryBooleanProperty<Address>(_entities[4].properties[11]);
 
   /// see [Address.isBillingAddress]
   static final isBillingAddress =
-      obx.QueryBooleanProperty<Address>(_entities[5].properties[12]);
+      obx.QueryBooleanProperty<Address>(_entities[4].properties[12]);
 
   /// see [Address.isShippingAddress]
   static final isShippingAddress =
-      obx.QueryBooleanProperty<Address>(_entities[5].properties[13]);
+      obx.QueryBooleanProperty<Address>(_entities[4].properties[13]);
 
   /// see [Address.latitude]
   static final latitude =
-      obx.QueryDoubleProperty<Address>(_entities[5].properties[14]);
+      obx.QueryDoubleProperty<Address>(_entities[4].properties[14]);
 
   /// see [Address.longitude]
   static final longitude =
-      obx.QueryDoubleProperty<Address>(_entities[5].properties[15]);
+      obx.QueryDoubleProperty<Address>(_entities[4].properties[15]);
 
   /// see [Address.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Address>(_entities[5].properties[16]);
+      obx.QueryDateProperty<Address>(_entities[4].properties[16]);
 
   /// see [Address.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Address>(_entities[5].properties[17]);
+      obx.QueryDateProperty<Address>(_entities[4].properties[17]);
 
   /// see [Address.business]
   static final business =
-      obx.QueryRelationToOne<Address, Business>(_entities[5].properties[18]);
+      obx.QueryRelationToOne<Address, Business>(_entities[4].properties[18]);
 
   /// see [Address.client]
   static final client =
-      obx.QueryRelationToOne<Address, Client>(_entities[5].properties[19]);
+      obx.QueryRelationToOne<Address, Client>(_entities[4].properties[19]);
 }
 
 /// [Invoice] entity fields to define ObjectBox queries.
 class Invoice_ {
   /// see [Invoice.id]
   static final id =
-      obx.QueryIntegerProperty<Invoice>(_entities[6].properties[0]);
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[0]);
 
   /// see [Invoice.invoiceNumber]
   static final invoiceNumber =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[1]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[1]);
 
   /// see [Invoice.invoiceNumberPrefix]
   static final invoiceNumberPrefix =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[2]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[2]);
 
   /// see [Invoice.reference]
   static final reference =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[3]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[3]);
 
   /// see [Invoice.notes]
   static final notes =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[4]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[4]);
 
   /// see [Invoice.issueDate]
   static final issueDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[5]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[5]);
 
   /// see [Invoice.dueDate]
   static final dueDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[6]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[6]);
 
   /// see [Invoice.sentDate]
   static final sentDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[7]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[7]);
 
   /// see [Invoice.viewedDate]
   static final viewedDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[8]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[8]);
 
   /// see [Invoice.paidDate]
   static final paidDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[9]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[9]);
 
   /// see [Invoice.businessId]
   static final businessId =
-      obx.QueryIntegerProperty<Invoice>(_entities[6].properties[10]);
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[10]);
 
   /// see [Invoice.clientId]
   static final clientId =
-      obx.QueryIntegerProperty<Invoice>(_entities[6].properties[11]);
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[11]);
 
   /// see [Invoice.subtotal]
   static final subtotal =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[12]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[12]);
 
   /// see [Invoice.discountRate]
   static final discountRate =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[13]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[13]);
 
   /// see [Invoice.discountAmount]
   static final discountAmount =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[14]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[14]);
 
   /// see [Invoice.taxAmount]
   static final taxAmount =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[15]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[15]);
 
   /// see [Invoice.total]
   static final total =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[16]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[16]);
 
   /// see [Invoice.paidAmount]
   static final paidAmount =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[17]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[17]);
 
   /// see [Invoice.balanceDue]
   static final balanceDue =
-      obx.QueryDoubleProperty<Invoice>(_entities[6].properties[18]);
+      obx.QueryDoubleProperty<Invoice>(_entities[5].properties[18]);
 
   /// see [Invoice.currency]
   static final currency =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[19]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[19]);
 
   /// see [Invoice.isRecurring]
   static final isRecurring =
-      obx.QueryBooleanProperty<Invoice>(_entities[6].properties[20]);
+      obx.QueryBooleanProperty<Invoice>(_entities[5].properties[20]);
 
   /// see [Invoice.recurringFrequency]
   static final recurringFrequency =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[21]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[21]);
 
   /// see [Invoice.recurringInterval]
   static final recurringInterval =
-      obx.QueryIntegerProperty<Invoice>(_entities[6].properties[22]);
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[22]);
 
   /// see [Invoice.recurringEndDate]
   static final recurringEndDate =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[23]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[23]);
 
   /// see [Invoice.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[24]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[24]);
 
   /// see [Invoice.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Invoice>(_entities[6].properties[25]);
+      obx.QueryDateProperty<Invoice>(_entities[5].properties[25]);
 
   /// see [Invoice.invoiceType]
   static final invoiceType =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[26]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[26]);
 
   /// see [Invoice.status]
   static final status =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[27]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[27]);
 
   /// see [Invoice.paymentStatus]
   static final paymentStatus =
-      obx.QueryStringProperty<Invoice>(_entities[6].properties[28]);
+      obx.QueryStringProperty<Invoice>(_entities[5].properties[28]);
 
   /// see [Invoice.items]
   static final items =
-      obx.QueryRelationToMany<Invoice, Item>(_entities[6].relations[0]);
+      obx.QueryRelationToMany<Invoice, Item>(_entities[5].relations[0]);
 
   /// see [Invoice.taxes]
   static final taxes =
-      obx.QueryRelationToMany<Invoice, Tax>(_entities[6].relations[1]);
+      obx.QueryRelationToMany<Invoice, Tax>(_entities[5].relations[1]);
 
   /// see [Invoice.terms]
   static final terms =
-      obx.QueryRelationToMany<Invoice, Term>(_entities[6].relations[2]);
+      obx.QueryRelationToMany<Invoice, Term>(_entities[5].relations[2]);
 }
 
 /// [Item] entity fields to define ObjectBox queries.
 class Item_ {
   /// see [Item.id]
-  static final id = obx.QueryIntegerProperty<Item>(_entities[7].properties[0]);
+  static final id = obx.QueryIntegerProperty<Item>(_entities[6].properties[0]);
 
   /// see [Item.name]
-  static final name = obx.QueryStringProperty<Item>(_entities[7].properties[1]);
+  static final name = obx.QueryStringProperty<Item>(_entities[6].properties[1]);
 
   /// see [Item.description]
   static final description =
-      obx.QueryStringProperty<Item>(_entities[7].properties[2]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[2]);
 
   /// see [Item.sku]
-  static final sku = obx.QueryStringProperty<Item>(_entities[7].properties[3]);
+  static final sku = obx.QueryStringProperty<Item>(_entities[6].properties[3]);
 
   /// see [Item.barcode]
   static final barcode =
-      obx.QueryStringProperty<Item>(_entities[7].properties[4]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[4]);
 
   /// see [Item.category]
   static final category =
-      obx.QueryStringProperty<Item>(_entities[7].properties[5]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[5]);
 
   /// see [Item.brand]
   static final brand =
-      obx.QueryStringProperty<Item>(_entities[7].properties[6]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[6]);
 
   /// see [Item.model]
   static final model =
-      obx.QueryStringProperty<Item>(_entities[7].properties[7]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[7]);
 
   /// see [Item.color]
   static final color =
-      obx.QueryStringProperty<Item>(_entities[7].properties[8]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[8]);
 
   /// see [Item.size]
-  static final size = obx.QueryStringProperty<Item>(_entities[7].properties[9]);
+  static final size = obx.QueryStringProperty<Item>(_entities[6].properties[9]);
 
   /// see [Item.weight]
   static final weight =
-      obx.QueryStringProperty<Item>(_entities[7].properties[10]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[10]);
 
   /// see [Item.dimensions]
   static final dimensions =
-      obx.QueryStringProperty<Item>(_entities[7].properties[11]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[11]);
 
   /// see [Item.unitPrice]
   static final unitPrice =
-      obx.QueryDoubleProperty<Item>(_entities[7].properties[12]);
+      obx.QueryDoubleProperty<Item>(_entities[6].properties[12]);
 
   /// see [Item.costPrice]
   static final costPrice =
-      obx.QueryDoubleProperty<Item>(_entities[7].properties[13]);
+      obx.QueryDoubleProperty<Item>(_entities[6].properties[13]);
 
   /// see [Item.wholesalePrice]
   static final wholesalePrice =
-      obx.QueryDoubleProperty<Item>(_entities[7].properties[14]);
+      obx.QueryDoubleProperty<Item>(_entities[6].properties[14]);
 
   /// see [Item.currency]
   static final currency =
-      obx.QueryStringProperty<Item>(_entities[7].properties[15]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[15]);
 
   /// see [Item.isTaxable]
   static final isTaxable =
-      obx.QueryBooleanProperty<Item>(_entities[7].properties[16]);
+      obx.QueryBooleanProperty<Item>(_entities[6].properties[16]);
 
   /// see [Item.taxRate]
   static final taxRate =
-      obx.QueryDoubleProperty<Item>(_entities[7].properties[17]);
+      obx.QueryDoubleProperty<Item>(_entities[6].properties[17]);
 
   /// see [Item.isTaxInclusive]
   static final isTaxInclusive =
-      obx.QueryBooleanProperty<Item>(_entities[7].properties[18]);
+      obx.QueryBooleanProperty<Item>(_entities[6].properties[18]);
 
   /// see [Item.stockQuantity]
   static final stockQuantity =
-      obx.QueryIntegerProperty<Item>(_entities[7].properties[19]);
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[19]);
 
   /// see [Item.minStockLevel]
   static final minStockLevel =
-      obx.QueryIntegerProperty<Item>(_entities[7].properties[20]);
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[20]);
 
   /// see [Item.maxStockLevel]
   static final maxStockLevel =
-      obx.QueryIntegerProperty<Item>(_entities[7].properties[21]);
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[21]);
 
   /// see [Item.trackInventory]
   static final trackInventory =
-      obx.QueryBooleanProperty<Item>(_entities[7].properties[22]);
+      obx.QueryBooleanProperty<Item>(_entities[6].properties[22]);
 
   /// see [Item.isActive]
   static final isActive =
-      obx.QueryBooleanProperty<Item>(_entities[7].properties[23]);
+      obx.QueryBooleanProperty<Item>(_entities[6].properties[23]);
 
   /// see [Item.isDefault]
   static final isDefault =
-      obx.QueryBooleanProperty<Item>(_entities[7].properties[24]);
+      obx.QueryBooleanProperty<Item>(_entities[6].properties[24]);
 
   /// see [Item.customUnit]
   static final customUnit =
-      obx.QueryStringProperty<Item>(_entities[7].properties[25]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[25]);
 
   /// see [Item.businessId]
   static final businessId =
-      obx.QueryIntegerProperty<Item>(_entities[7].properties[26]);
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[26]);
 
   /// see [Item.invoice]
   static final invoice =
-      obx.QueryRelationToOne<Item, Invoice>(_entities[7].properties[27]);
+      obx.QueryRelationToOne<Item, Invoice>(_entities[6].properties[27]);
 
   /// see [Item.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<Item>(_entities[7].properties[28]);
+      obx.QueryDateProperty<Item>(_entities[6].properties[28]);
 
   /// see [Item.updatedAt]
   static final updatedAt =
-      obx.QueryDateProperty<Item>(_entities[7].properties[29]);
+      obx.QueryDateProperty<Item>(_entities[6].properties[29]);
 
   /// see [Item.itemType]
   static final itemType =
-      obx.QueryStringProperty<Item>(_entities[7].properties[30]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[30]);
 
   /// see [Item.unit]
   static final unit =
-      obx.QueryStringProperty<Item>(_entities[7].properties[31]);
+      obx.QueryStringProperty<Item>(_entities[6].properties[31]);
+}
+
+/// [Signature] entity fields to define ObjectBox queries.
+class Signature_ {
+  /// see [Signature.id]
+  static final id =
+      obx.QueryIntegerProperty<Signature>(_entities[7].properties[0]);
+
+  /// see [Signature.name]
+  static final name =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[1]);
+
+  /// see [Signature.title]
+  static final title =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[2]);
+
+  /// see [Signature.signatureData]
+  static final signatureData =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[3]);
+
+  /// see [Signature.email]
+  static final email =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[4]);
+
+  /// see [Signature.phone]
+  static final phone =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[5]);
+
+  /// see [Signature.company]
+  static final company =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[6]);
+
+  /// see [Signature.website]
+  static final website =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[7]);
+
+  /// see [Signature.notes]
+  static final notes =
+      obx.QueryStringProperty<Signature>(_entities[7].properties[8]);
+
+  /// see [Signature.isActive]
+  static final isActive =
+      obx.QueryBooleanProperty<Signature>(_entities[7].properties[9]);
+
+  /// see [Signature.isDefault]
+  static final isDefault =
+      obx.QueryBooleanProperty<Signature>(_entities[7].properties[10]);
+
+  /// see [Signature.businessId]
+  static final businessId =
+      obx.QueryIntegerProperty<Signature>(_entities[7].properties[11]);
+
+  /// see [Signature.createdAt]
+  static final createdAt =
+      obx.QueryDateProperty<Signature>(_entities[7].properties[12]);
+
+  /// see [Signature.updatedAt]
+  static final updatedAt =
+      obx.QueryDateProperty<Signature>(_entities[7].properties[13]);
 }

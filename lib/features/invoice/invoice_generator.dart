@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:invois/core/utils/currency_utils.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:signature/signature.dart' as signature_lib;
 
 import 'package:invois/features/business/business_model.dart';
 import 'package:invois/features/client/client_model.dart';
@@ -29,6 +34,11 @@ class InvoiceGenerator {
 
     // Create PDF document
     final pdf = pw.Document();
+
+    // Signatures are stored as JSON drawing points, not image bytes. Render them
+    // to a PNG up-front so the (synchronous) page builders can embed real image
+    // data. Returns null when there is no signature or the data can't be rendered.
+    final Uint8List? signatureImage = await _renderSignatureImage(signature);
 
     // Define colors
     final primaryColor = PdfColors.blueGrey800;
@@ -113,6 +123,7 @@ class InvoiceGenerator {
         business: business,
         client: client,
         signature: signature,
+        signatureImage: signatureImage,
         pageFormat: pageFormat,
         font: font,
         fontBold: fontBold,
@@ -144,6 +155,7 @@ class InvoiceGenerator {
         business: business,
         client: client,
         signature: signature,
+        signatureImage: signatureImage,
         pageFormat: pageFormat,
         font: font,
         fontBold: fontBold,
@@ -169,6 +181,54 @@ class InvoiceGenerator {
 
     // Return the PDF document as bytes
     return pdf.save();
+  }
+
+  /// Render a stored signature into PNG bytes.
+  ///
+  /// Signatures are persisted as a JSON list of drawing points
+  /// (`[{dx, dy, type, pressure}, ...]`). This rebuilds a [SignatureController]
+  /// from those points and exports a PNG so it can be embedded in the PDF.
+  ///
+  /// Returns `null` when there is no signature, the data is empty, or it can't be
+  /// parsed/rendered (e.g. legacy or corrupt data) so PDF generation degrades
+  /// gracefully to "no signature image" instead of crashing.
+  static Future<Uint8List?> _renderSignatureImage(Signature? signature) async {
+    final data = signature?.signatureData;
+    if (data == null || data.trim().isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(data);
+      if (decoded is! List || decoded.isEmpty) return null;
+
+      final points = decoded.map<signature_lib.Point>((point) {
+        return signature_lib.Point(
+          Offset(
+            (point['dx'] as num).toDouble(),
+            (point['dy'] as num).toDouble(),
+          ),
+          signature_lib.PointType.values[(point['type'] as int?) ?? 0],
+          (point['pressure'] as num?)?.toDouble() ?? 1.0,
+        );
+      }).toList();
+
+      if (points.isEmpty) return null;
+
+      final controller = signature_lib.SignatureController(
+        penStrokeWidth: 3,
+        penColor: Colors.black,
+        exportBackgroundColor: Colors.white,
+        points: points,
+      );
+
+      try {
+        return await controller.toPngBytes();
+      } finally {
+        controller.dispose();
+      }
+    } catch (_) {
+      // Legacy/corrupt/non-JSON signature data — skip the image.
+      return null;
+    }
   }
 
   /// More conservative estimation of items per page
@@ -224,6 +284,7 @@ class InvoiceGenerator {
     required Business business,
     required Client client,
     Signature? signature,
+    Uint8List? signatureImage,
     required PdfPageFormat pageFormat,
     required pw.Font font,
     required pw.Font fontBold,
@@ -311,10 +372,11 @@ class InvoiceGenerator {
               ),
 
               // Signature section with reduced spacing
-              if (signature != null && signature.signatureData != null) ...[
+              if (signature != null && signatureImage != null) ...[
                 pw.SizedBox(height: 15), // Reduced from 20
                 _buildCompactSignatureSection(
                   signature: signature,
+                  signatureImage: signatureImage,
                   subheaderStyle: subheaderStyle,
                   bodyStyle: bodyStyle,
                   bodyBoldStyle: bodyBoldStyle,
@@ -338,6 +400,7 @@ class InvoiceGenerator {
     required Business business,
     required Client client,
     Signature? signature,
+    Uint8List? signatureImage,
     required PdfPageFormat pageFormat,
     required pw.Font font,
     required pw.Font fontBold,
@@ -365,7 +428,7 @@ class InvoiceGenerator {
     // ignore: unused_local_variable
     final hasNotes = invoice.notes != null && invoice.notes!.isNotEmpty;
     final hasTerms = invoice.terms.isNotEmpty;
-    final hasSignature = signature != null && signature.signatureData != null;
+    final hasSignature = signature != null && signatureImage != null;
 
     // More conservative first page item count to leave room for header content
     int firstPageItems = estimatedItemsPerPage - 3;
@@ -570,6 +633,7 @@ class InvoiceGenerator {
                     if (hasSignature)
                       _buildSignatureSection(
                         signature: signature,
+                        signatureImage: signatureImage,
                         subheaderStyle: subheaderStyle,
                         bodyStyle: bodyStyle,
                         bodyBoldStyle: bodyBoldStyle,
@@ -621,6 +685,7 @@ class InvoiceGenerator {
                   if (hasSignature)
                     _buildSignatureSection(
                       signature: signature,
+                      signatureImage: signatureImage,
                       subheaderStyle: subheaderStyle,
                       bodyStyle: bodyStyle,
                       bodyBoldStyle: bodyBoldStyle,
@@ -1478,6 +1543,7 @@ class InvoiceGenerator {
   /// Build signature section
   static pw.Widget _buildSignatureSection({
     required Signature signature,
+    required Uint8List signatureImage,
     required pw.TextStyle subheaderStyle,
     required pw.TextStyle bodyStyle,
     required pw.TextStyle bodyBoldStyle,
@@ -1500,9 +1566,7 @@ class InvoiceGenerator {
                   borderRadius: pw.BorderRadius.circular(4),
                 ),
                 child: pw.Image(
-                  pw.MemoryImage(
-                    Uint8List.fromList(signature.signatureData!.codeUnits),
-                  ),
+                  pw.MemoryImage(signatureImage),
                   fit: pw.BoxFit.contain,
                 ),
               ),
@@ -1520,6 +1584,7 @@ class InvoiceGenerator {
   /// Build compact signature section for single page
   static pw.Widget _buildCompactSignatureSection({
     required Signature signature,
+    required Uint8List signatureImage,
     required pw.TextStyle subheaderStyle,
     required pw.TextStyle bodyStyle,
     required pw.TextStyle bodyBoldStyle,
@@ -1544,9 +1609,7 @@ class InvoiceGenerator {
                   borderRadius: pw.BorderRadius.circular(4),
                 ),
                 child: pw.Image(
-                  pw.MemoryImage(
-                    Uint8List.fromList(signature.signatureData!.codeUnits),
-                  ),
+                  pw.MemoryImage(signatureImage),
                   fit: pw.BoxFit.contain,
                 ),
               ),
@@ -1708,8 +1771,12 @@ class InvoiceGenerator {
     );
   }
 
-  /// Save the invoice to a file
-  static Future<void> saveInvoice({
+  /// Save the invoice to a file on disk and return the absolute file path.
+  ///
+  /// Writes the PDF to the platform Downloads directory when available (desktop),
+  /// otherwise to the application documents directory (mobile). Unlike
+  /// [shareInvoice], this does not open the OS share sheet.
+  static Future<String> saveInvoice({
     required Invoice invoice,
     required Business business,
     required Client client,
@@ -1724,10 +1791,21 @@ class InvoiceGenerator {
       pageFormat: pageFormat,
     );
 
-    await Printing.sharePdf(
-      bytes: pdfData,
-      filename:
-          '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}.pdf',
-    );
+    final filename =
+        '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}.pdf';
+
+    // Prefer Downloads (desktop); it is unsupported on mobile (throws/returns
+    // null) so fall back to the app documents directory.
+    Directory? directory;
+    try {
+      directory = await getDownloadsDirectory();
+    } catch (_) {
+      directory = null;
+    }
+    directory ??= await getApplicationDocumentsDirectory();
+
+    final file = File(p.join(directory.path, filename));
+    await file.writeAsBytes(pdfData);
+    return file.path;
   }
 }

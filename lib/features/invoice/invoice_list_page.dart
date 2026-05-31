@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/my_bottom_sheet.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
@@ -13,6 +14,7 @@ import 'package:invois/features/shared/widgets/simple_list.dart';
 import 'invoice_form_provider.dart';
 import 'invoice_list_provider.dart';
 import 'invoice_model.dart';
+import 'invoice_query_provider.dart';
 
 class InvoiceListPage extends ConsumerStatefulWidget {
   const InvoiceListPage({super.key});
@@ -34,14 +36,6 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(invoiceListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -51,39 +45,35 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadInvoices() async {
+  // Pushes the selected status filter into invoiceQueryProvider; the reactive
+  // list rebuilds automatically.
+  void _applyFilter() {
+    final notifier = ref.read(invoiceQueryProvider.notifier);
     if (_selectedFilter == InvoiceListFilterType.all) {
-      await ref.read(invoiceListProvider.notifier).getInvoices();
+      notifier.setStatus(null);
     } else {
-      await ref
-          .read(invoiceListProvider.notifier)
-          .getInvoicesByStatus(
-            InvoiceStatus.values.byName(_selectedFilter.name),
-          );
+      notifier.setStatus(InvoiceStatus.values.byName(_selectedFilter.name));
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(invoiceListProvider.notifier).getInvoices();
+    // List is reactive; re-subscribe to satisfy the pull-to-refresh gesture.
+    ref.invalidate(invoiceListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(invoiceListProvider.notifier).getInvoices();
-    } else {
-      await ref.read(invoiceListProvider.notifier).searchInvoices(value);
-    }
+    ref.read(invoiceQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(InvoiceListFilterType filter) {
     setState(() => _selectedFilter = filter);
-    _loadInvoices();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = InvoiceListFilterType.all);
-    _loadInvoices();
+    ref.read(invoiceQueryProvider.notifier).reset();
   }
 
   void _onDeleteInvoice(invoice) async {
@@ -410,16 +400,20 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(invoiceListProvider);
+    final async = ref.watch(invoiceListProvider);
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Invoice>(
-            items: state.invoices,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load invoices')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:

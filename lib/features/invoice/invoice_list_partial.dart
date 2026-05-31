@@ -26,7 +26,9 @@ List<Widget> buildInvoiceListSlivers(
   required String Function(Invoice) getSubtitle,
   required Widget Function(Invoice) buildTrailing,
 }) {
-  final state = ref.watch(invoiceListProvider);
+  final async = ref.watch(invoiceListProvider);
+  final invoices = async.valueOrNull ?? const <Invoice>[];
+  final isLoading = async.isLoading;
   final slivers = <Widget>[];
 
   slivers.add(
@@ -45,11 +47,11 @@ List<Widget> buildInvoiceListSlivers(
     ),
   );
 
-  if (state.isLoading) {
+  if (isLoading) {
     slivers.add(
       SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
     );
-  } else if (state.invoices.isEmpty) {
+  } else if (invoices.isEmpty) {
     slivers.add(
       SliverFillRemaining(
         child:
@@ -72,7 +74,7 @@ List<Widget> buildInvoiceListSlivers(
     slivers.add(
       SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          final invoice = state.invoices[index];
+          final invoice = invoices[index];
           return MyTile(
             isRounded: true,
             showChevron: true,
@@ -90,7 +92,7 @@ List<Widget> buildInvoiceListSlivers(
               );
             },
           );
-        }, childCount: state.invoices.length),
+        }, childCount: invoices.length),
       ),
     );
   }

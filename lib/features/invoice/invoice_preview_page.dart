@@ -109,7 +109,7 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
     if (!_canShowPreview()) return;
 
     try {
-      await InvoiceGenerator.saveInvoice(
+      final savedPath = await InvoiceGenerator.saveInvoice(
         invoice: state.invoice!,
         business: state.business!,
         client: state.client!,
@@ -118,8 +118,8 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invoice saved successfully!'),
+          SnackBar(
+            content: Text('Saved to $savedPath'),
             backgroundColor: Colors.green,
           ),
         );

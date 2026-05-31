@@ -9,13 +9,12 @@ import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
-import 'invoice_form_repository.dart';
 import 'invoice_form_state.dart';
-import 'invoice_list_provider.dart';
 import 'invoice_model.dart';
+import 'invoice_repository.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
-  final InvoiceFormRepository _repository;
+  final InvoiceRepository _repository;
   final Ref _ref;
 
   InvoiceFormNotifier(this._repository, this._ref) : super(InvoiceFormState());
@@ -180,10 +179,23 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   Future<ObjectBoxResponse<Invoice>> onUpsert(Invoice invoice) async {
     state = state.copyWith(isLoading: true, error: null);
 
+    // Guard against missing business/client before force-unwrapping.
+    final business = state.business;
+    final client = state.client;
+    if (business == null || client == null) {
+      final message = business == null && client == null
+          ? 'Please select a business and a client before saving.'
+          : business == null
+          ? 'Please select a business before saving.'
+          : 'Please select a client before saving.';
+      state = state.copyWith(isLoading: false, error: message);
+      return ObjectBoxResponse.failure(message: message);
+    }
+
     // Update the invoice with business and client IDs
     final updatedInvoice = invoice.copyWith(
-      businessId: state.business!.id,
-      clientId: state.client!.id,
+      businessId: business.id,
+      clientId: client.id,
       subtotal: calculateSubtotal(),
       total: calculateSubtotal(),
     );
@@ -210,9 +222,9 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       }
 
       // Save taxes
+      // Always clear existing taxes first so removing all taxes persists.
+      await _repository.clearTaxesFromInvoice(savedInvoice.id!);
       if (state.taxes != null && state.taxes!.isNotEmpty) {
-        // Clear existing taxes first
-        await _repository.clearTaxesFromInvoice(savedInvoice.id!);
         // Add new taxes
         for (final tax in state.taxes!) {
           await _repository.addTaxToInvoice(savedInvoice.id!, tax);
@@ -220,9 +232,9 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       }
 
       // Save terms
+      // Always clear existing terms first so removing all terms persists.
+      await _repository.clearTermsFromInvoice(savedInvoice.id!);
       if (state.terms != null && state.terms!.isNotEmpty) {
-        // Clear existing terms first
-        await _repository.clearTermsFromInvoice(savedInvoice.id!);
         // Add new terms
         for (final term in state.terms!) {
           await _repository.addTermToInvoice(savedInvoice.id!, term);
@@ -231,40 +243,35 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     }
 
     state = state.copyWith(isLoading: false, error: result.message);
-    _refreshInvoiceList();
+    // List updates reactively via invoiceListProvider (ADR-0003) — no manual refresh.
     return result;
   }
 
   Future<bool> deleteInvoiceById(int id) async {
     state = state.copyWith(isLoading: true, error: null);
 
-    try {
-      final result = await _repository.deleteInvoice(id);
-      state = state.copyWith(isLoading: false, error: result.message);
-
-      _refreshInvoiceList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
     final result = await _repository.updateInvoiceStatus(id, status);
     state = state.copyWith(isLoading: false, error: result.message);
-    _refreshInvoiceList();
-  }
-
-  // Refresh the invoice list
-  void _refreshInvoiceList() {
-    _ref.read(invoiceListProvider.notifier).getInvoices();
   }
 }
 
 // Provider for InvoiceFormNotifier
 final invoiceFormProvider =
     StateNotifierProvider<InvoiceFormNotifier, InvoiceFormState>(
-      (ref) => InvoiceFormNotifier(InvoiceFormRepository(), ref),
+      (ref) =>
+          InvoiceFormNotifier(ref.watch(invoiceRepositoryProvider), ref),
     );

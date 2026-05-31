@@ -6,6 +6,7 @@ import 'package:invois/features/tax/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
 import 'invoice_model.dart';
+import 'invoice_query_provider.dart';
 
 class InvoiceLocalSource {
   final Store _store;
@@ -25,6 +26,41 @@ class InvoiceLocalSource {
   // Get all invoices
   Future<List<Invoice>> getInvoices() async {
     return _invoiceBox.getAll();
+  }
+
+  /// Reactive, filtered invoice stream (ADR-0003).
+  ///
+  /// Emits immediately and again on every matching write. Search runs in-query
+  /// (no `getAll().where()` full scan). The query/subscription is closed by
+  /// ObjectBox when the stream subscription is cancelled (autoDispose handles
+  /// this at the provider level).
+  Stream<List<Invoice>> watchInvoices(InvoiceQuery q) {
+    Condition<Invoice>? condition;
+
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      final searchCondition = Invoice_.invoiceNumber
+          .contains(search, caseSensitive: false)
+          .or(Invoice_.reference.contains(search, caseSensitive: false))
+          .or(Invoice_.notes.contains(search, caseSensitive: false));
+      condition = searchCondition;
+    }
+
+    if (q.status != null) {
+      final c = Invoice_.status.equals(q.status!.name);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.paymentStatus != null) {
+      final c = Invoice_.paymentStatus.equals(q.paymentStatus!.name);
+      condition = condition == null ? c : condition.and(c);
+    }
+
+    final builder = condition == null
+        ? _invoiceBox.query()
+        : _invoiceBox.query(condition);
+    builder.order(Invoice_.createdAt, flags: Order.descending);
+
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get invoice by ID
