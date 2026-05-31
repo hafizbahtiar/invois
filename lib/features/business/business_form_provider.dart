@@ -1,17 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'package:invois/core/database/objectbox_response.dart';
-import 'business_list_provider.dart';
-import 'business_form_repository.dart';
 import 'business_form_state.dart';
 import 'business_model.dart';
+import 'business_repository.dart';
 
 class BusinessFormNotifier extends StateNotifier<BusinessFormState> {
-  final BusinessFormRepository _repository;
-  final Ref _ref;
+  final BusinessRepository _repository;
 
-  BusinessFormNotifier(this._repository, this._ref)
-    : super(BusinessFormState());
+  BusinessFormNotifier(this._repository) : super(BusinessFormState());
 
   //============================================
   // MARK: - Init
@@ -39,63 +35,41 @@ class BusinessFormNotifier extends StateNotifier<BusinessFormState> {
 
   // Set the business to a new business
   Future<void> setBusiness() async {
-    state = state.copyWith(
-      business: Business(name: ''),
-      isReadOnly: false,
-    );
+    state = state.copyWith(business: Business(name: ''), isReadOnly: false);
   }
 
-  // Upsert business
+  // Upsert business. List updates reactively (ADR-0003) — no manual refresh.
   Future<bool> onUpsert(Business business) async {
     state = state.copyWith(isLoading: true, error: null);
-    try {
-      ObjectBoxResponse<Business> result;
-      if (business.id != null && business.id! > 0) {
-        // Update
-        result = await _repository.updateBusiness(business);
-      } else {
-        // Insert
-        result = await _repository.insertBusiness(business);
-      }
-
-      state = state.copyWith(
-        isLoading: false,
-        error: result.success ? null : result.message,
-        business: result.data,
-      );
-
-      if (result.success) {
-        _refreshBusinessList();
-      }
-
-      return result.success;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
+    final result = (business.id != null && business.id! > 0)
+        ? await _repository.update(business)
+        : await _repository.create(business);
+    return result.fold(
+      (saved) {
+        state = state.copyWith(isLoading: false, error: null, business: saved);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   // Delete business by id
   Future<bool> deleteBusiness(int id) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      final result = await _repository.deleteBusiness(id);
-      state = state.copyWith(isLoading: false, error: result.message);
-
-      // Refresh the business list
-      _refreshBusinessList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
-  }
-
-  // Refresh the business list
-  void _refreshBusinessList() {
-    _ref.read(businessListProvider.notifier).getBusinesses();
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   /// Clear error message
@@ -107,5 +81,5 @@ class BusinessFormNotifier extends StateNotifier<BusinessFormState> {
 // Provider for BusinessFormNotifier
 final businessFormProvider =
     StateNotifierProvider<BusinessFormNotifier, BusinessFormState>((ref) {
-      return BusinessFormNotifier(BusinessFormRepository(), ref);
+      return BusinessFormNotifier(ref.watch(businessRepositoryProvider));
     });

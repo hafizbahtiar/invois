@@ -98,7 +98,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       await ref
           .read(invoiceFormProvider.notifier)
           .init(widget.invoiceId, widget.type);
-      await ref.read(businessListProvider.notifier).getActiveBusinesses();
+      // Active businesses load reactively via businessListProvider(const BusinessQuery(isActive: true)).
       await ref.read(clientListProvider.notifier).getActiveClients();
       // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
       // Active signatures load reactively via signatureListProvider(const SignatureQuery(isActive: true)).
@@ -404,13 +404,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   Future<void> _onSelectBusiness(int? businessId) async {
     if (_isReadOnly) return;
     if (businessId == null) return;
-    final business = ref
-        .read(businessListProvider)
-        .businesses
-        .firstWhere(
-          (business) => business.id == businessId,
-          orElse: () => Business(name: ''),
-        );
+    final businesses =
+        ref
+            .read(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const <Business>[];
+    final business = businesses.firstWhere(
+      (business) => business.id == businessId,
+      orElse: () => Business(name: ''),
+    );
     ref.read(invoiceFormProvider.notifier).setBusiness(business);
   }
 
@@ -729,7 +731,11 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   // MARK: - Form
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(invoiceFormProvider);
-    final businessState = ref.watch(businessListProvider);
+    final businesses =
+        ref
+            .watch(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const <Business>[];
     final clientState = ref.watch(clientListProvider);
     final termState = ref.watch(
       termListProvider(const TermQuery(isActive: true)),
@@ -970,7 +976,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   selectedValue: state.business?.id,
                   hintText: state.business?.name ?? 'Select Business',
                   onSelected: (value) => _onSelectBusiness(value),
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem(
                           label: business.name,

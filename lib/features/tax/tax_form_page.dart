@@ -59,7 +59,6 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
       }
 
       await ref.read(taxFormProvider.notifier).init(widget.taxId, widget.type);
-      ref.read(businessListProvider.notifier).getActiveBusinesses();
       final state = ref.read(taxFormProvider);
       if (state.tax != null) {
         _nameController.text = state.tax!.name;
@@ -249,7 +248,7 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
 
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(taxFormProvider);
-    final businessState = ref.watch(businessListProvider);
+    final businesses = ref.watch(businessListProvider(const BusinessQuery(isActive: true))).valueOrNull ?? const [];
 
     return Expanded(
       child: ListView(
@@ -315,17 +314,17 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
                   isReadOnly: _isReadOnly,
                   onSelected: (value) => _onSelectBusiness(value),
                   value:
-                      businessState.businesses.isNotEmpty &&
+                      businesses.isNotEmpty &&
                           state.tax?.businessId != null
-                      ? businessState.businesses
+                      ? businesses
                             .firstWhere(
                               (business) =>
                                   business.id == state.tax?.businessId,
-                              orElse: () => businessState.businesses.first,
+                              orElse: () => businesses.first,
                             )
                             .name
                       : null,
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem<int>(
                           value: business.id!,

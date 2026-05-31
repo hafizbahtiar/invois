@@ -3,6 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
 import 'business_model.dart';
+import 'business_query_provider.dart';
 
 class BusinessLocalSource {
   final Store _store;
@@ -23,6 +24,28 @@ class BusinessLocalSource {
   // Get all businesses
   Future<List<Business>> getAllBusinesses() async {
     return _businessBox.getAll();
+  }
+
+  /// Reactive, filtered business stream (ADR-0003). Emits on every matching write.
+  Stream<List<Business>> watchBusinesses(BusinessQuery q) {
+    Condition<Business>? condition;
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      condition = Business_.name.contains(search, caseSensitive: false);
+    }
+    if (q.isActive != null) {
+      final c = Business_.isActive.equals(q.isActive!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.isDefault != null) {
+      final c = Business_.isDefault.equals(q.isDefault!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    final builder = condition == null
+        ? _businessBox.query()
+        : _businessBox.query(condition);
+    builder.order(Business_.name);
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get business by ID

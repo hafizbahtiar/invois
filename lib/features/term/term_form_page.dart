@@ -57,7 +57,6 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
       await ref
           .read(termFormProvider.notifier)
           .init(widget.termId, widget.type);
-      ref.read(businessListProvider.notifier).getActiveBusinesses();
       final state = ref.read(termFormProvider);
       if (state.term != null) {
         _nameController.text = state.term!.name;
@@ -237,7 +236,7 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
 
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(termFormProvider);
-    final businessState = ref.watch(businessListProvider);
+    final businesses = ref.watch(businessListProvider(const BusinessQuery(isActive: true))).valueOrNull ?? const [];
 
     return Expanded(
       child: ListView(
@@ -305,17 +304,17 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
                   isReadOnly: _isReadOnly,
                   onSelected: (value) => _onSelectBusiness(value),
                   value:
-                      businessState.businesses.isNotEmpty &&
+                      businesses.isNotEmpty &&
                           state.term?.businessId != null
-                      ? businessState.businesses
+                      ? businesses
                             .firstWhere(
                               (business) =>
                                   business.id == state.term?.businessId,
-                              orElse: () => businessState.businesses.first,
+                              orElse: () => businesses.first,
                             )
                             .name
                       : null,
-                  selectItems: businessState.businesses
+                  selectItems: businesses
                       .map(
                         (business) => SelectItem<int>(
                           value: business.id!,

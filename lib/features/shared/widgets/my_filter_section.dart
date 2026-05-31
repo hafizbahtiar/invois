@@ -143,8 +143,11 @@ class MyFilterSection<T> extends ConsumerWidget {
   }
 
   Widget _buildFilterChips(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(businessListProvider);
-    final businesses = state.businesses;
+    final businesses =
+        ref
+            .watch(businessListProvider(const BusinessQuery(isActive: true)))
+            .valueOrNull ??
+        const [];
 
     // Find the selected business name
     String? selectedBusinessName;

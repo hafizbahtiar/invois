@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/features/business/business_form_provider.dart';
-import 'package:invois/features/business/business_list_provider.dart';
+import 'package:invois/features/business/business_repository.dart';
 import 'package:invois/features/client/client_form_provider.dart';
 import 'package:invois/features/client/client_list_provider.dart';
 import 'package:invois/features/item/item_model.dart';
@@ -91,7 +91,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   // Get the default business
   Future<void> getDefaultBusiness() async {
     final business = await _ref
-        .read(businessListProvider.notifier)
+        .read(businessRepositoryProvider)
         .getDefaultBusiness();
     state = state.copyWith(business: business);
     if (business != null) {
