@@ -9,11 +9,27 @@ may be reordered by product priority.
 | Sprint | Plan | Objective | Status |
 |---|---|---|---|
 | S1 | [`s1-foundation-plan.md`](s1-foundation-plan.md) | Result/Failure, reactive reads, invoice repo collapse | ✅ Done (branch `s1-foundation`) |
-| S2 | [`s2-feature-propagation-plan.md`](s2-feature-propagation-plan.md) | Propagate S1 pattern to all features; `AsyncNotifier`; converge writes to `Result` | ⬜ Planned |
-| S3 | [`s3-entities-and-money-plan.md`](s3-entities-and-money-plan.md) | Sync-ready entities, `int` cents, indexes, relations, pagination, soft-delete | ⬜ Planned |
+| S2 | [`s2-feature-propagation-plan.md`](s2-feature-propagation-plan.md) | Propagate S1 pattern to all features; reactive lists; converge writes to `Result` | ✅ Done (verified 2026-05-31) |
+| S3 | [`s3-entities-and-money-plan.md`](s3-entities-and-money-plan.md) | Money safety: additive cents fields, backfill, cents reads/writes, rollback dual-write | ✅ Done (isolated smoke passed 2026-06-01) |
 | S4 | [`s4-signature-system-plan.md`](s4-signature-system-plan.md) | Store render-ready PNG; fix PDF embed at the source | ⬜ Planned |
 | S5 | [`s5-pdf-engine-plan.md`](s5-pdf-engine-plan.md) | Decompose generator; isolate + bundled fonts + MultiPage | ⬜ Planned |
 | S6 | [`s6-hardening-plan.md`](s6-hardening-plan.md) | Tests, settings→template, perf, analyzer-zero | ⬜ Planned |
+
+## Current verification
+- S1/S2 verified against code on 2026-05-31.
+- `~/flutter/bin/flutter test` passes.
+- `~/flutter/bin/flutter analyze lib` reports 3 known S6 hardening infos only:
+  deprecated `value` in `home_page.dart` / `invoice_list_page.dart`, and
+  undeclared `skeletonizer` dependency in `my_list.dart`.
+- Form notifiers intentionally remain `StateNotifier` after S2; reactive list
+  providers + unified repositories + `Result` write boundaries are the completed
+  S2 target.
+- `ObjectBoxResponse` may still exist inside local sources as an internal adapter,
+  but feature repositories expose `Result` for imperative writes.
+- S3 money safety verified on 2026-06-01 against an isolated temp ObjectBox store:
+  legacy double rows backfilled, new/edit invoice flows dual-write cents+doubles,
+  and PDF generation succeeded for migrated and new invoices. `~/flutter/bin/flutter test`
+  passes; analyzer reports the same known S6 infos only.
 
 ## Conventions (all sprints)
 - Dedicated branch per sprint (`s2-…`, `s3-…`); green-at-each-step commits.

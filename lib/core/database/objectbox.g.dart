@@ -465,7 +465,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
       id: const obx_int.IdUid(17, 5633441594679883037),
       name: 'Invoice',
-      lastPropertyId: const obx_int.IdUid(32, 559531292487014323),
+      lastPropertyId: const obx_int.IdUid(38, 2161841124433991434),
       flags: 0,
       properties: <obx_int.ModelProperty>[
         obx_int.ModelProperty(
@@ -612,6 +612,36 @@ final _entities = <obx_int.ModelEntity>[
             id: const obx_int.IdUid(32, 559531292487014323),
             name: 'paymentStatus',
             type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(33, 3581206751514459239),
+            name: 'subtotalCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(34, 7504668347650617621),
+            name: 'discountAmountCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(35, 5290263299227526640),
+            name: 'taxAmountCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(36, 7568643616983394390),
+            name: 'totalCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(37, 2577157049169920458),
+            name: 'paidAmountCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(38, 2161841124433991434),
+            name: 'balanceDueCents',
+            type: 6,
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[
@@ -632,7 +662,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
       id: const obx_int.IdUid(18, 18681990011544788),
       name: 'Item',
-      lastPropertyId: const obx_int.IdUid(34, 8712497552133791678),
+      lastPropertyId: const obx_int.IdUid(37, 1329880932070851295),
       flags: 0,
       properties: <obx_int.ModelProperty>[
         obx_int.ModelProperty(
@@ -796,6 +826,21 @@ final _entities = <obx_int.ModelEntity>[
             id: const obx_int.IdUid(34, 8712497552133791678),
             name: 'unit',
             type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(35, 2204659945621481105),
+            name: 'unitPriceCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(36, 8101733691537711554),
+            name: 'costPriceCents',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(37, 1329880932070851295),
+            name: 'wholesalePriceCents',
+            type: 6,
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
@@ -1716,7 +1761,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           final paymentStatusOffset = object.paymentStatus == null
               ? null
               : fbb.writeString(object.paymentStatus!);
-          fbb.startTable(33);
+          fbb.startTable(39);
           fbb.addInt64(0, object.id ?? 0);
           fbb.addOffset(1, invoiceNumberOffset);
           fbb.addOffset(2, invoiceNumberPrefixOffset);
@@ -1746,6 +1791,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fbb.addOffset(29, invoiceTypeOffset);
           fbb.addOffset(30, statusOffset);
           fbb.addOffset(31, paymentStatusOffset);
+          fbb.addInt64(32, object.subtotalCents);
+          fbb.addInt64(33, object.discountAmountCents);
+          fbb.addInt64(34, object.taxAmountCents);
+          fbb.addInt64(35, object.totalCents);
+          fbb.addInt64(36, object.paidAmountCents);
+          fbb.addInt64(37, object.balanceDueCents);
           fbb.finish(fbb.endTable());
           return object.id ?? 0;
         },
@@ -1817,6 +1868,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
               const fb.Float64Reader().vTableGet(buffer, rootOffset, 46, 0);
           final currencyParam = const fb.StringReader(asciiOptimization: true)
               .vTableGetNullable(buffer, rootOffset, 48);
+          final subtotalCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 68);
+          final discountAmountCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 70);
+          final taxAmountCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 72);
+          final totalCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 74);
+          final paidAmountCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 76);
+          final balanceDueCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 78);
           final isRecurringParam =
               const fb.BoolReader().vTableGet(buffer, rootOffset, 50, false);
           final recurringFrequencyParam =
@@ -1857,6 +1920,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
               paidAmount: paidAmountParam,
               balanceDue: balanceDueParam,
               currency: currencyParam,
+              subtotalCents: subtotalCentsParam,
+              discountAmountCents: discountAmountCentsParam,
+              taxAmountCents: taxAmountCentsParam,
+              totalCents: totalCentsParam,
+              paidAmountCents: paidAmountCentsParam,
+              balanceDueCents: balanceDueCentsParam,
               isRecurring: isRecurringParam,
               recurringFrequency: recurringFrequencyParam,
               recurringInterval: recurringIntervalParam,
@@ -1915,7 +1984,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
               : fbb.writeString(object.itemType!);
           final unitOffset =
               object.unit == null ? null : fbb.writeString(object.unit!);
-          fbb.startTable(35);
+          fbb.startTable(38);
           fbb.addInt64(0, object.id ?? 0);
           fbb.addOffset(1, nameOffset);
           fbb.addOffset(2, descriptionOffset);
@@ -1948,6 +2017,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fbb.addInt64(31, object.updatedAt?.millisecondsSinceEpoch);
           fbb.addOffset(32, itemTypeOffset);
           fbb.addOffset(33, unitOffset);
+          fbb.addInt64(34, object.unitPriceCents);
+          fbb.addInt64(35, object.costPriceCents);
+          fbb.addInt64(36, object.wholesalePriceCents);
           fbb.finish(fbb.endTable());
           return object.id ?? 0;
         },
@@ -1997,6 +2069,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
               .vTableGetNullable(buffer, rootOffset, 38);
           final isTaxInclusiveParam =
               const fb.BoolReader().vTableGet(buffer, rootOffset, 40, false);
+          final unitPriceCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 72);
+          final costPriceCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 74);
+          final wholesalePriceCentsParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 76);
           final stockQuantityParam =
               const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 42);
           final minStockLevelParam =
@@ -2043,6 +2121,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
               isTaxable: isTaxableParam,
               taxRate: taxRateParam,
               isTaxInclusive: isTaxInclusiveParam,
+              unitPriceCents: unitPriceCentsParam,
+              costPriceCents: costPriceCentsParam,
+              wholesalePriceCents: wholesalePriceCentsParam,
               stockQuantity: stockQuantityParam,
               minStockLevel: minStockLevelParam,
               maxStockLevel: maxStockLevelParam,
@@ -2596,6 +2677,30 @@ class Invoice_ {
   static final paymentStatus =
       obx.QueryStringProperty<Invoice>(_entities[5].properties[28]);
 
+  /// see [Invoice.subtotalCents]
+  static final subtotalCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[29]);
+
+  /// see [Invoice.discountAmountCents]
+  static final discountAmountCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[30]);
+
+  /// see [Invoice.taxAmountCents]
+  static final taxAmountCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[31]);
+
+  /// see [Invoice.totalCents]
+  static final totalCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[32]);
+
+  /// see [Invoice.paidAmountCents]
+  static final paidAmountCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[33]);
+
+  /// see [Invoice.balanceDueCents]
+  static final balanceDueCents =
+      obx.QueryIntegerProperty<Invoice>(_entities[5].properties[34]);
+
   /// see [Invoice.items]
   static final items =
       obx.QueryRelationToMany<Invoice, Item>(_entities[5].relations[0]);
@@ -2734,6 +2839,18 @@ class Item_ {
   /// see [Item.unit]
   static final unit =
       obx.QueryStringProperty<Item>(_entities[6].properties[31]);
+
+  /// see [Item.unitPriceCents]
+  static final unitPriceCents =
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[32]);
+
+  /// see [Item.costPriceCents]
+  static final costPriceCents =
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[33]);
+
+  /// see [Item.wholesalePriceCents]
+  static final wholesalePriceCents =
+      obx.QueryIntegerProperty<Item>(_entities[6].properties[34]);
 }
 
 /// [Signature] entity fields to define ObjectBox queries.

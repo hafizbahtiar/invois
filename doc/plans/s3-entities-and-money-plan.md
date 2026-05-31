@@ -4,6 +4,15 @@
 > **HIGHEST-RISK sprint** — it changes the ObjectBox schema and money
 > representation on live data. **Requires `build_runner` + a data migration.**
 > Do this on a branch, back up the `.mdb` first, test on a copy.
+>
+> **Implementation status (2026-06-01):** S3 was deliberately narrowed to the
+> money-safety spine and is complete after isolated smoke testing. Implemented:
+> additive nullable cents fields for `Invoice`/`Item`, `Money` value object,
+> startup backfill from legacy doubles, cents-first invoice calculations,
+> repository dual-write to legacy doubles for rollback, and PDF/list/overview
+> compatibility. Not implemented in this pass: sync metadata, indexes,
+> `ToOne` relation migration, soft-delete, or pagination; keep those as future
+> schema work because they are independent risks.
 
 Covers blueprint §8 (ObjectBox spec) + §13 entity prep (ADR-0005) + the
 `double → int cents` debt (R5).
@@ -90,6 +99,40 @@ Add `@Index()` to fields used in filters/sorts/joins:
 - Manual: create/list/search/paginate; delete hides via tombstone; relations resolve;
   totals identical pre/post cents conversion on a sample invoice.
 - Query plans use indexes (no full scans) — spot check large-list scroll perf.
+
+### 8.1 Isolated smoke result (2026-06-01)
+
+Smoke test used a fresh isolated ObjectBox store, not real production/dev data:
+`/private/tmp/invois-s3-smoke-1780245093975-55324`.
+
+Executed scenarios:
+- Seeded a pre-S3 invoice with only legacy double money fields.
+- Ran `S3MoneyBackfill`; report:
+  `invoicesScanned: 1, invoicesUpdated: 1, itemsScanned: 2, itemsUpdated: 2`.
+- Verified migrated old invoice totals:
+  `subtotal=3060`, `discount=500`, `tax=154`, `total=2714`,
+  `balanceDue=1714`.
+- Created a new invoice through `InvoiceRepository`; verified cents fields and
+  rollback doubles were both written.
+- Edited a migrated invoice; verified reopened totals stayed stable.
+- Generated PDFs for a migrated old invoice and a new invoice.
+- Confirmed rollback safety: legacy `double` total and item unit price remain
+  populated with reasonable equivalent values.
+
+Smoke output:
+```text
+OK: Old invoice: total=MYR27.14, balance=MYR17.14
+OK: New invoice: total=MYR23.30, item=MYR10.99
+OK: Edited old invoice: total=MYR38.16, balance=MYR28.16
+OK: PDF bytes: old=13350, new=13311
+S3_SMOKE_PASS
+```
+
+Non-blocking notes:
+- The host VM initially lacked `libobjectbox.dylib`; the official ObjectBox
+  installer was used temporarily, then downloaded repo artifacts were removed.
+- PDF generation printed a non-fatal `AssetManifest.json` binding warning while
+  still producing both PDFs. PDF engine/font work remains S5.
 
 ## 9. Rollback
 - Per-phase commits; revert in reverse. 3e is the only destructive one — revert

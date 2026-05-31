@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/invoice/invoice_model.dart';
 import 'package:objectbox/objectbox.dart';
@@ -50,6 +51,12 @@ class Item extends Equatable {
   final double? taxRate;
   final bool isTaxInclusive;
 
+  // Stage A S3: additive integer minor-unit fields. Old double fields remain
+  // during S3 for rollback-compatible dual writes.
+  int? unitPriceCents;
+  int? costPriceCents;
+  int? wholesalePriceCents;
+
   // Inventory
   final int? stockQuantity;
   final int? minStockLevel;
@@ -96,6 +103,9 @@ class Item extends Equatable {
     this.isTaxable = true,
     this.taxRate,
     this.isTaxInclusive = false,
+    this.unitPriceCents,
+    this.costPriceCents,
+    this.wholesalePriceCents,
     this.stockQuantity,
     this.minStockLevel,
     this.maxStockLevel,
@@ -131,6 +141,9 @@ class Item extends Equatable {
     isTaxable,
     taxRate,
     isTaxInclusive,
+    unitPriceCents,
+    costPriceCents,
+    wholesalePriceCents,
     stockQuantity,
     minStockLevel,
     maxStockLevel,
@@ -165,6 +178,9 @@ class Item extends Equatable {
     bool? isTaxable,
     double? taxRate,
     bool? isTaxInclusive,
+    int? unitPriceCents,
+    int? costPriceCents,
+    int? wholesalePriceCents,
     int? stockQuantity,
     int? minStockLevel,
     int? maxStockLevel,
@@ -198,6 +214,9 @@ class Item extends Equatable {
       isTaxable: isTaxable ?? this.isTaxable,
       taxRate: taxRate ?? this.taxRate,
       isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
+      unitPriceCents: unitPriceCents ?? this.unitPriceCents,
+      costPriceCents: costPriceCents ?? this.costPriceCents,
+      wholesalePriceCents: wholesalePriceCents ?? this.wholesalePriceCents,
       stockQuantity: stockQuantity ?? this.stockQuantity,
       minStockLevel: minStockLevel ?? this.minStockLevel,
       maxStockLevel: maxStockLevel ?? this.maxStockLevel,
@@ -234,6 +253,9 @@ class Item extends Equatable {
       'isTaxable': isTaxable,
       'taxRate': taxRate,
       'isTaxInclusive': isTaxInclusive,
+      'unitPriceCents': unitPriceCents,
+      'costPriceCents': costPriceCents,
+      'wholesalePriceCents': wholesalePriceCents,
       'stockQuantity': stockQuantity,
       'minStockLevel': minStockLevel,
       'maxStockLevel': maxStockLevel,
@@ -270,6 +292,9 @@ class Item extends Equatable {
       isTaxable: SafeParse.boolean(map['isTaxable'], fallback: true),
       taxRate: SafeParse.decimal(map['taxRate']),
       isTaxInclusive: SafeParse.boolean(map['isTaxInclusive'], fallback: false),
+      unitPriceCents: SafeParse.integer(map['unitPriceCents']),
+      costPriceCents: SafeParse.integer(map['costPriceCents']),
+      wholesalePriceCents: SafeParse.integer(map['wholesalePriceCents']),
       stockQuantity: SafeParse.integer(map['stockQuantity']),
       minStockLevel: SafeParse.integer(map['minStockLevel']),
       maxStockLevel: SafeParse.integer(map['maxStockLevel']),
@@ -294,9 +319,23 @@ class Item extends Equatable {
   //    MARK: Helper Methods
   // ================================
 
+  String get moneyCurrencyCode => currency ?? 'MYR';
+
+  int get effectiveUnitPriceCents =>
+      unitPriceCents ?? Money.fromDouble(unitPrice).minorUnits;
+  int? get effectiveCostPriceCents =>
+      costPriceCents ??
+      (costPrice == null ? null : Money.fromDouble(costPrice!).minorUnits);
+  int? get effectiveWholesalePriceCents =>
+      wholesalePriceCents ??
+      (wholesalePrice == null
+          ? null
+          : Money.fromDouble(wholesalePrice!).minorUnits);
+
   /// Get the display unit (custom unit if specified, otherwise enum name)
   String get displayUnit {
-    if (ItemUnit.values.byName(unit ?? '') == ItemUnit.custom && customUnit != null) {
+    if (ItemUnit.values.byName(unit ?? '') == ItemUnit.custom &&
+        customUnit != null) {
       return customUnit!;
     }
     return unit ?? '';
@@ -305,13 +344,13 @@ class Item extends Equatable {
   /// Calculate price with tax
   double get priceWithTax {
     if (!isTaxable || taxRate == null || taxRate == 0) {
-      return unitPrice;
+      return Money(effectiveUnitPriceCents).toDouble();
     }
 
     if (isTaxInclusive) {
-      return unitPrice;
+      return Money(effectiveUnitPriceCents).toDouble();
     } else {
-      return unitPrice + (unitPrice * taxRate! / 100);
+      return Money(effectiveUnitPriceCents).percent(100 + taxRate!).toDouble();
     }
   }
 
@@ -322,9 +361,11 @@ class Item extends Equatable {
     }
 
     if (isTaxInclusive) {
-      return unitPrice - (unitPrice / (1 + taxRate! / 100));
+      final gross = Money(effectiveUnitPriceCents);
+      final netCents = (gross.minorUnits / (1 + taxRate! / 100)).round();
+      return Money(gross.minorUnits - netCents).toDouble();
     } else {
-      return unitPrice * taxRate! / 100;
+      return Money(effectiveUnitPriceCents).percent(taxRate!).toDouble();
     }
   }
 
@@ -346,20 +387,21 @@ class Item extends Equatable {
 
   /// Get profit margin percentage
   double? get profitMargin {
-    if (costPrice == null || costPrice == 0) return null;
-    return ((unitPrice - costPrice!) / costPrice!) * 100;
+    final costCents = effectiveCostPriceCents;
+    if (costCents == null || costCents == 0) return null;
+    return ((effectiveUnitPriceCents - costCents) / costCents) * 100;
   }
 
   /// Get formatted price with currency
   String get formattedPrice {
     final currencySymbol = currency ?? '\$';
-    return '$currencySymbol${unitPrice.toStringAsFixed(2)}';
+    return Money(effectiveUnitPriceCents).format(symbol: currencySymbol);
   }
 
   /// Get formatted price with tax
   String get formattedPriceWithTax {
     final currencySymbol = currency ?? '\$';
-    return '$currencySymbol${priceWithTax.toStringAsFixed(2)}';
+    return Money.fromDouble(priceWithTax).format(symbol: currencySymbol);
   }
 
   /// Get stock status text
@@ -373,7 +415,7 @@ class Item extends Equatable {
 
   /// Check if item has all required fields for invoice
   bool get isCompleteForInvoice {
-    return name.isNotEmpty && unitPrice > 0;
+    return name.isNotEmpty && effectiveUnitPriceCents > 0;
   }
 
   /// Get a short description for display

@@ -559,9 +559,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     final parts = <String>[];
 
     // Add total amount
-    if (invoice.total > 0) {
+    if (invoice.effectiveTotalCents > 0) {
       parts.add(
-        '${CurrencyUtils.currencies[invoice.currency ?? 'MYR']?.symbol ?? ''}${invoice.total.toStringAsFixed(2)}',
+        '${CurrencyUtils.currencies[invoice.currency ?? 'MYR']?.symbol ?? ''}${(invoice.effectiveTotalCents / 100).toStringAsFixed(2)}',
       );
     }
 
