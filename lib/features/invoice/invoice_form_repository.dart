@@ -45,15 +45,12 @@ class InvoiceFormRepository {
   }
 
   Future<ObjectBoxResponse<bool>> deleteInvoice(int id) async {
-    // Delete related data first
-    await _localSource.deleteInvoiceById(id);
-
-    // Now delete the business (addresses will be handled in local source)
+    // Remove the invoice (related relations are handled in the local source).
     final result = await _localSource.deleteInvoiceById(id);
     if (result) {
       return ObjectBoxResponse.success(true);
     } else {
-      return ObjectBoxResponse.failure(message: 'Failed to delete business');
+      return ObjectBoxResponse.failure(message: 'Failed to delete invoice');
     }
   }
 

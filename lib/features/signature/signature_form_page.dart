@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
+import 'package:invois/core/utils/string_utils.dart';
 import 'package:invois/features/business/business_module.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
@@ -198,12 +199,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
       id: (widget.signatureId != null && widget.signatureId! > 0)
           ? widget.signatureId!
           : null,
-      name: _nameController.text,
-      title: _titleController.text,
-      email: _emailController.text,
-      phone: _phoneController.text,
-      company: _companyController.text,
-      website: _websiteController.text,
+      name: _nameController.text.trim(),
+      title: StringUtils.nullIfBlank(_titleController.text),
+      email: StringUtils.nullIfBlank(_emailController.text),
+      phone: StringUtils.nullIfBlank(_phoneController.text),
+      company: StringUtils.nullIfBlank(_companyController.text),
+      website: StringUtils.nullIfBlank(_websiteController.text),
       signatureData: pointsJson,
       businessId: state.signature?.businessId,
       isDefault: _isDefault,

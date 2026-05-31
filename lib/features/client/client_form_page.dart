@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
+import 'package:invois/core/utils/string_utils.dart';
 import 'package:invois/features/business/business_module.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
@@ -163,17 +164,17 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
       id: (widget.clientId != null && widget.clientId! > 0)
           ? widget.clientId!
           : null,
-      name: _nameController.text,
-      description: _descriptionController.text,
-      email: _emailController.text,
-      phone: _phoneController.text,
-      company: _companyController.text,
-      website: _websiteController.text,
-      streetAddress1: _addressController.text,
-      streetAddress2: _address2Controller.text,
-      city: _cityController.text,
-      state: _stateController.text,
-      postalCode: _postalCodeController.text,
+      name: _nameController.text.trim(),
+      description: StringUtils.nullIfBlank(_descriptionController.text),
+      email: StringUtils.nullIfBlank(_emailController.text),
+      phone: StringUtils.nullIfBlank(_phoneController.text),
+      company: StringUtils.nullIfBlank(_companyController.text),
+      website: StringUtils.nullIfBlank(_websiteController.text),
+      streetAddress1: StringUtils.nullIfBlank(_addressController.text),
+      streetAddress2: StringUtils.nullIfBlank(_address2Controller.text),
+      city: StringUtils.nullIfBlank(_cityController.text),
+      state: StringUtils.nullIfBlank(_stateController.text),
+      postalCode: StringUtils.nullIfBlank(_postalCodeController.text),
       businessId: state.client?.businessId,
       isDefault: _isDefault,
       isActive: _isActive,

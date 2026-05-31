@@ -180,10 +180,23 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   Future<ObjectBoxResponse<Invoice>> onUpsert(Invoice invoice) async {
     state = state.copyWith(isLoading: true, error: null);
 
+    // Guard against missing business/client before force-unwrapping.
+    final business = state.business;
+    final client = state.client;
+    if (business == null || client == null) {
+      final message = business == null && client == null
+          ? 'Please select a business and a client before saving.'
+          : business == null
+          ? 'Please select a business before saving.'
+          : 'Please select a client before saving.';
+      state = state.copyWith(isLoading: false, error: message);
+      return ObjectBoxResponse.failure(message: message);
+    }
+
     // Update the invoice with business and client IDs
     final updatedInvoice = invoice.copyWith(
-      businessId: state.business!.id,
-      clientId: state.client!.id,
+      businessId: business.id,
+      clientId: client.id,
       subtotal: calculateSubtotal(),
       total: calculateSubtotal(),
     );
@@ -210,9 +223,9 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       }
 
       // Save taxes
+      // Always clear existing taxes first so removing all taxes persists.
+      await _repository.clearTaxesFromInvoice(savedInvoice.id!);
       if (state.taxes != null && state.taxes!.isNotEmpty) {
-        // Clear existing taxes first
-        await _repository.clearTaxesFromInvoice(savedInvoice.id!);
         // Add new taxes
         for (final tax in state.taxes!) {
           await _repository.addTaxToInvoice(savedInvoice.id!, tax);
@@ -220,9 +233,9 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       }
 
       // Save terms
+      // Always clear existing terms first so removing all terms persists.
+      await _repository.clearTermsFromInvoice(savedInvoice.id!);
       if (state.terms != null && state.terms!.isNotEmpty) {
-        // Clear existing terms first
-        await _repository.clearTermsFromInvoice(savedInvoice.id!);
         // Add new terms
         for (final term in state.terms!) {
           await _repository.addTermToInvoice(savedInvoice.id!, term);
