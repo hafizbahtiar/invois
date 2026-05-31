@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax_module.dart';
@@ -135,6 +136,15 @@ class Invoice extends Equatable {
   final double balanceDue;
   final String? currency;
 
+  // Stage A S3: additive integer minor-unit fields. These remain nullable
+  // until the migration backfills existing rows and read paths switch over.
+  final int? subtotalCents;
+  final int? discountAmountCents;
+  final int? taxAmountCents;
+  final int? totalCents;
+  final int? paidAmountCents;
+  final int? balanceDueCents;
+
   // Additional Information
   final bool isRecurring;
   final String? recurringFrequency; // daily, weekly, monthly, yearly
@@ -183,6 +193,12 @@ class Invoice extends Equatable {
     this.paidAmount = 0.0,
     this.balanceDue = 0.0,
     this.currency,
+    this.subtotalCents,
+    this.discountAmountCents,
+    this.taxAmountCents,
+    this.totalCents,
+    this.paidAmountCents,
+    this.balanceDueCents,
     this.isRecurring = false,
     this.recurringFrequency,
     this.recurringInterval,
@@ -216,6 +232,12 @@ class Invoice extends Equatable {
     paidAmount,
     balanceDue,
     currency,
+    subtotalCents,
+    discountAmountCents,
+    taxAmountCents,
+    totalCents,
+    paidAmountCents,
+    balanceDueCents,
     isRecurring,
     recurringFrequency,
     recurringInterval,
@@ -248,6 +270,12 @@ class Invoice extends Equatable {
     double? paidAmount,
     double? balanceDue,
     String? currency,
+    int? subtotalCents,
+    int? discountAmountCents,
+    int? taxAmountCents,
+    int? totalCents,
+    int? paidAmountCents,
+    int? balanceDueCents,
     bool? isRecurring,
     String? recurringFrequency,
     int? recurringInterval,
@@ -281,6 +309,12 @@ class Invoice extends Equatable {
       paidAmount: paidAmount ?? this.paidAmount,
       balanceDue: balanceDue ?? this.balanceDue,
       currency: currency ?? this.currency,
+      subtotalCents: subtotalCents ?? this.subtotalCents,
+      discountAmountCents: discountAmountCents ?? this.discountAmountCents,
+      taxAmountCents: taxAmountCents ?? this.taxAmountCents,
+      totalCents: totalCents ?? this.totalCents,
+      paidAmountCents: paidAmountCents ?? this.paidAmountCents,
+      balanceDueCents: balanceDueCents ?? this.balanceDueCents,
       isRecurring: isRecurring ?? this.isRecurring,
       recurringFrequency: recurringFrequency ?? this.recurringFrequency,
       recurringInterval: recurringInterval ?? this.recurringInterval,
@@ -316,6 +350,12 @@ class Invoice extends Equatable {
       'paidAmount': paidAmount,
       'balanceDue': balanceDue,
       'currency': currency,
+      'subtotalCents': subtotalCents,
+      'discountAmountCents': discountAmountCents,
+      'taxAmountCents': taxAmountCents,
+      'totalCents': totalCents,
+      'paidAmountCents': paidAmountCents,
+      'balanceDueCents': balanceDueCents,
       'isRecurring': isRecurring,
       'recurringFrequency': recurringFrequency,
       'recurringInterval': recurringInterval,
@@ -350,6 +390,12 @@ class Invoice extends Equatable {
       paidAmount: SafeParse.decimal(map['paidAmount'], fallback: 0.0),
       balanceDue: SafeParse.decimal(map['balanceDue'], fallback: 0.0),
       currency: SafeParse.string(map['currency']),
+      subtotalCents: SafeParse.integer(map['subtotalCents']),
+      discountAmountCents: SafeParse.integer(map['discountAmountCents']),
+      taxAmountCents: SafeParse.integer(map['taxAmountCents']),
+      totalCents: SafeParse.integer(map['totalCents']),
+      paidAmountCents: SafeParse.integer(map['paidAmountCents']),
+      balanceDueCents: SafeParse.integer(map['balanceDueCents']),
       isRecurring: SafeParse.boolean(map['isRecurring'], fallback: false),
       recurringFrequency: SafeParse.string(map['recurringFrequency']),
       recurringInterval: SafeParse.integer(map['recurringInterval']),
@@ -418,6 +464,21 @@ class Invoice extends Equatable {
   String get formattedCurrency {
     return currency ?? '\$';
   }
+
+  String get moneyCurrencyCode => currency ?? 'MYR';
+
+  int get effectiveSubtotalCents =>
+      subtotalCents ?? Money.fromDouble(subtotal).minorUnits;
+  int get effectiveDiscountAmountCents =>
+      discountAmountCents ?? Money.fromDouble(discountAmount).minorUnits;
+  int get effectiveTaxAmountCents =>
+      taxAmountCents ?? Money.fromDouble(taxAmount).minorUnits;
+  int get effectiveTotalCents =>
+      totalCents ?? Money.fromDouble(total).minorUnits;
+  int get effectivePaidAmountCents =>
+      paidAmountCents ?? Money.fromDouble(paidAmount).minorUnits;
+  int get effectiveBalanceDueCents =>
+      balanceDueCents ?? Money.fromDouble(balanceDue).minorUnits;
 
   /// Get formatted total
   String get formattedTotal {

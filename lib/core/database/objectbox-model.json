@@ -445,7 +445,7 @@
     },
     {
       "id": "17:5633441594679883037",
-      "lastPropertyId": "32:559531292487014323",
+      "lastPropertyId": "38:2161841124433991434",
       "name": "Invoice",
       "properties": [
         {
@@ -593,6 +593,36 @@
           "id": "32:559531292487014323",
           "name": "paymentStatus",
           "type": 9
+        },
+        {
+          "id": "33:3581206751514459239",
+          "name": "subtotalCents",
+          "type": 6
+        },
+        {
+          "id": "34:7504668347650617621",
+          "name": "discountAmountCents",
+          "type": 6
+        },
+        {
+          "id": "35:5290263299227526640",
+          "name": "taxAmountCents",
+          "type": 6
+        },
+        {
+          "id": "36:7568643616983394390",
+          "name": "totalCents",
+          "type": 6
+        },
+        {
+          "id": "37:2577157049169920458",
+          "name": "paidAmountCents",
+          "type": 6
+        },
+        {
+          "id": "38:2161841124433991434",
+          "name": "balanceDueCents",
+          "type": 6
         }
       ],
       "relations": [
@@ -615,7 +645,7 @@
     },
     {
       "id": "18:18681990011544788",
-      "lastPropertyId": "34:8712497552133791678",
+      "lastPropertyId": "37:1329880932070851295",
       "name": "Item",
       "properties": [
         {
@@ -781,6 +811,21 @@
           "id": "34:8712497552133791678",
           "name": "unit",
           "type": 9
+        },
+        {
+          "id": "35:2204659945621481105",
+          "name": "unitPriceCents",
+          "type": 6
+        },
+        {
+          "id": "36:8101733691537711554",
+          "name": "costPriceCents",
+          "type": 6
+        },
+        {
+          "id": "37:1329880932070851295",
+          "name": "wholesalePriceCents",
+          "type": 6
         }
       ],
       "relations": []
