@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/generate_route.dart';
 import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
+import 'package:invois/features/invoice/invoice_money_backfill.dart';
 import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
 import 'package:invois/features/setting/presentation/providers/settings_state.dart';
 import 'package:invois/features/splash/splash_page.dart';
@@ -10,6 +11,10 @@ import 'package:invois/features/splash/splash_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ObjectBoxDatabase.init();
+  final moneyBackfill = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
+  if (moneyBackfill.hasChanges) {
+    debugPrint('S3 money backfill completed: $moneyBackfill');
+  }
   runApp(const ProviderScope(child: MyApp()));
 }
 

@@ -53,9 +53,9 @@ class Item extends Equatable {
 
   // Stage A S3: additive integer minor-unit fields. Old double fields remain
   // during S3 for rollback-compatible dual writes.
-  final int? unitPriceCents;
-  final int? costPriceCents;
-  final int? wholesalePriceCents;
+  int? unitPriceCents;
+  int? costPriceCents;
+  int? wholesalePriceCents;
 
   // Inventory
   final int? stockQuantity;

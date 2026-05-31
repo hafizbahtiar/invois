@@ -138,12 +138,12 @@ class Invoice extends Equatable {
 
   // Stage A S3: additive integer minor-unit fields. These remain nullable
   // until the migration backfills existing rows and read paths switch over.
-  final int? subtotalCents;
-  final int? discountAmountCents;
-  final int? taxAmountCents;
-  final int? totalCents;
-  final int? paidAmountCents;
-  final int? balanceDueCents;
+  int? subtotalCents;
+  int? discountAmountCents;
+  int? taxAmountCents;
+  int? totalCents;
+  int? paidAmountCents;
+  int? balanceDueCents;
 
   // Additional Information
   final bool isRecurring;
