@@ -9,12 +9,12 @@ import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
-import 'invoice_form_repository.dart';
 import 'invoice_form_state.dart';
 import 'invoice_model.dart';
+import 'invoice_repository.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
-  final InvoiceFormRepository _repository;
+  final InvoiceRepository _repository;
   final Ref _ref;
 
   InvoiceFormNotifier(this._repository, this._ref) : super(InvoiceFormState());
@@ -250,14 +250,17 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   Future<bool> deleteInvoiceById(int id) async {
     state = state.copyWith(isLoading: true, error: null);
 
-    try {
-      final result = await _repository.deleteInvoice(id);
-      state = state.copyWith(isLoading: false, error: result.message);
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
@@ -269,5 +272,6 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
 // Provider for InvoiceFormNotifier
 final invoiceFormProvider =
     StateNotifierProvider<InvoiceFormNotifier, InvoiceFormState>(
-      (ref) => InvoiceFormNotifier(InvoiceFormRepository(), ref),
+      (ref) =>
+          InvoiceFormNotifier(ref.watch(invoiceRepositoryProvider), ref),
     );
