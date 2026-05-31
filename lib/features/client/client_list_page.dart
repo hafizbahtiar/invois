@@ -6,10 +6,12 @@ import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 
 import 'client_list_provider.dart';
 import 'client_model.dart';
+import 'client_query_provider.dart';
 
 class ClientListPage extends ConsumerStatefulWidget {
   const ClientListPage({super.key});
@@ -31,14 +33,6 @@ class _ClientListPageState extends ConsumerState<ClientListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(clientListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -48,52 +42,42 @@ class _ClientListPageState extends ConsumerState<ClientListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadSignatures() async {
+  // Maps the selected chip to the client query; the reactive list rebuilds.
+  void _applyFilter() {
+    final notifier = ref.read(clientQueryProvider.notifier);
     switch (_selectedFilter) {
       case ListFilterType.active:
-        await ref
-            .read(clientListProvider.notifier)
-            .filter(query: _searchController.text, isActive: true);
+        notifier.setFilter(isActive: true);
         break;
       case ListFilterType.inactive:
-        await ref
-            .read(clientListProvider.notifier)
-            .filter(query: _searchController.text, isActive: false);
+        notifier.setFilter(isActive: false);
         break;
       case ListFilterType.defaultStatus:
-        await ref
-            .read(clientListProvider.notifier)
-            .filter(query: _searchController.text, isDefault: true);
+        notifier.setFilter(isDefault: true);
         break;
       default:
-        await ref
-            .read(clientListProvider.notifier)
-            .filter(query: _searchController.text);
+        notifier.setFilter();
         break;
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(clientListProvider.notifier).getClients();
+    ref.invalidate(clientListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(clientListProvider.notifier).getClients();
-    } else {
-      await ref.read(clientListProvider.notifier).searchClientsByName(value);
-    }
+    ref.read(clientQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(ListFilterType filter) {
     setState(() => _selectedFilter = filter);
-    _loadSignatures();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = ListFilterType.all);
-    _loadSignatures();
+    ref.read(clientQueryProvider.notifier).reset();
   }
 
   //============================================
@@ -148,16 +132,21 @@ class _ClientListPageState extends ConsumerState<ClientListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(clientListProvider);
+    final query = ref.watch(clientQueryProvider);
+    final async = ref.watch(clientListProvider(query));
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Client>(
-            items: state.clients,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load clients')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:

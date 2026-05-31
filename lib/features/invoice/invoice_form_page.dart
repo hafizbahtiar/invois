@@ -99,7 +99,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
           .read(invoiceFormProvider.notifier)
           .init(widget.invoiceId, widget.type);
       // Active businesses load reactively via businessListProvider(const BusinessQuery(isActive: true)).
-      await ref.read(clientListProvider.notifier).getActiveClients();
+      // Active clients load reactively via clientListProvider(const ClientQuery(isActive: true)).
       // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
       // Active signatures load reactively via signatureListProvider(const SignatureQuery(isActive: true)).
       // Active terms load reactively via termListProvider(const TermQuery(isActive: true)).
@@ -389,14 +389,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     // Save the invoice first
     final result = await notifier.onUpsert(invoice);
 
-    if (result.success == true && mounted) Navigator.pop(context);
+    if (result.isOk && mounted) Navigator.pop(context);
     if (mounted) {
       MySnackBar.show(
         context,
-        message: result.message ?? 'Invoice saved',
-        type: result.success == true
-            ? MySnackbarType.success
-            : MySnackbarType.failed,
+        message: result.failureOrNull?.message ?? 'Invoice saved',
+        type: result.isOk ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
   }
@@ -419,13 +417,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   Future<void> _onSelectClient(int? clientId) async {
     if (_isReadOnly) return;
     if (clientId == null) return;
-    final client = ref
-        .read(clientListProvider)
-        .clients
-        .firstWhere(
-          (client) => client.id == clientId,
-          orElse: () => Client(name: ''),
-        );
+    final clients =
+        ref
+            .read(clientListProvider(const ClientQuery(isActive: true)))
+            .valueOrNull ??
+        const <Client>[];
+    final client = clients.firstWhere(
+      (client) => client.id == clientId,
+      orElse: () => Client(name: ''),
+    );
     ref.read(invoiceFormProvider.notifier).setClient(client);
   }
 
@@ -736,7 +736,11 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
             .valueOrNull ??
         const <Business>[];
-    final clientState = ref.watch(clientListProvider);
+    final clients =
+        ref
+            .watch(clientListProvider(const ClientQuery(isActive: true)))
+            .valueOrNull ??
+        const <Client>[];
     final termState = ref.watch(
       termListProvider(const TermQuery(isActive: true)),
     );
@@ -993,7 +997,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   selectedValue: state.client?.id,
                   hintText: state.client?.name ?? 'Select Client',
                   onSelected: (value) => _onSelectClient(value),
-                  selectItems: clientState.clients
+                  selectItems: clients
                       .map(
                         (client) =>
                             SelectItem(label: client.name, value: client.id),
