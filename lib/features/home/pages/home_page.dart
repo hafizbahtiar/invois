@@ -8,6 +8,7 @@ import 'package:invois/features/invoice/invoice_form_provider.dart';
 import 'package:invois/features/invoice/invoice_model.dart';
 import 'package:invois/features/invoice/invoice_overview.dart';
 import 'package:invois/features/invoice/invoice_list_provider.dart';
+import 'package:invois/features/invoice/invoice_query_provider.dart';
 import 'package:invois/features/shared/widgets/my_bottom_sheet.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
@@ -36,29 +37,21 @@ class _HomePageState extends ConsumerState<HomePage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(invoiceListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
+  // Pushes the selected status filter into invoiceQueryProvider; the reactive
+  // list rebuilds automatically. Returns a Future so it can back the
+  // pull-to-refresh gesture.
   Future<void> _loadInvoices() async {
+    final notifier = ref.read(invoiceQueryProvider.notifier);
     if (_selectedFilter == InvoiceListFilterType.all) {
-      await ref.read(invoiceListProvider.notifier).getInvoices();
+      notifier.setStatus(null);
     } else {
-      await ref
-          .read(invoiceListProvider.notifier)
-          .getInvoicesByStatus(
-            InvoiceStatus.values.byName(_selectedFilter.name),
-          );
+      notifier.setStatus(InvoiceStatus.values.byName(_selectedFilter.name));
     }
   }
 
@@ -67,11 +60,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   //============================================
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(invoiceListProvider.notifier).getInvoices();
-    } else {
-      await ref.read(invoiceListProvider.notifier).searchInvoices(value);
-    }
+    ref.read(invoiceQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(InvoiceListFilterType filter) {
@@ -82,7 +71,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = InvoiceListFilterType.all);
-    _loadInvoices();
+    ref.read(invoiceQueryProvider.notifier).reset();
   }
 
   void _onDeleteInvoice(invoice) async {
@@ -416,7 +405,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   //============================================
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(invoiceListProvider);
+    final invoices =
+        ref.watch(invoiceListProvider).valueOrNull ?? const <Invoice>[];
     return SafeArea(
       bottom: false,
       child: RefreshIndicator.adaptive(
@@ -446,7 +436,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             SliverToBoxAdapter(child: SizedBox(height: 32)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: state.invoices.isEmpty
+              sliver: invoices.isEmpty
                   ? SliverToBoxAdapter(
                       child: Center(
                         child:
@@ -466,9 +456,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     )
                   : SliverList.builder(
-                      itemCount: state.invoices.length,
+                      itemCount: invoices.length,
                       itemBuilder: (context, index) {
-                        final invoice = state.invoices[index];
+                        final invoice = invoices[index];
                         return MyTile(
                           isRounded: true,
                           showChevron: true,

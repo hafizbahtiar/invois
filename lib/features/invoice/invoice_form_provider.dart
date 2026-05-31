@@ -11,7 +11,6 @@ import 'package:invois/features/term/term_model.dart';
 
 import 'invoice_form_repository.dart';
 import 'invoice_form_state.dart';
-import 'invoice_list_provider.dart';
 import 'invoice_model.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
@@ -244,7 +243,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     }
 
     state = state.copyWith(isLoading: false, error: result.message);
-    _refreshInvoiceList();
+    // List updates reactively via invoiceListProvider (ADR-0003) — no manual refresh.
     return result;
   }
 
@@ -254,9 +253,6 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     try {
       final result = await _repository.deleteInvoice(id);
       state = state.copyWith(isLoading: false, error: result.message);
-
-      _refreshInvoiceList();
-
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -267,12 +263,6 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
     final result = await _repository.updateInvoiceStatus(id, status);
     state = state.copyWith(isLoading: false, error: result.message);
-    _refreshInvoiceList();
-  }
-
-  // Refresh the invoice list
-  void _refreshInvoiceList() {
-    _ref.read(invoiceListProvider.notifier).getInvoices();
   }
 }
 

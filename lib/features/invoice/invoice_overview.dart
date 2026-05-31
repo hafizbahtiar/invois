@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
 import 'invoice_list_provider.dart';
+import 'invoice_model.dart';
 
 // ===============================
 //    MARK: Simple
@@ -13,9 +14,9 @@ class SimpleInvoiceOverview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(invoiceListProvider);
+    final invoices =
+        ref.watch(invoiceListProvider).valueOrNull ?? const <Invoice>[];
     final settingState = ref.watch(settingsProvider);
-    final invoices = state.invoices;
     final defaultCurrency = settingState.currencyCode;
     final filteredInvoices = invoices
         .where((inv) => inv.currency == defaultCurrency)
