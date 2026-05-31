@@ -10,7 +10,7 @@ may be reordered by product priority.
 |---|---|---|---|
 | S1 | [`s1-foundation-plan.md`](s1-foundation-plan.md) | Result/Failure, reactive reads, invoice repo collapse | ✅ Done (branch `s1-foundation`) |
 | S2 | [`s2-feature-propagation-plan.md`](s2-feature-propagation-plan.md) | Propagate S1 pattern to all features; reactive lists; converge writes to `Result` | ✅ Done (verified 2026-05-31) |
-| S3 | [`s3-entities-and-money-plan.md`](s3-entities-and-money-plan.md) | Sync-ready entities, `int` cents, indexes, relations, pagination, soft-delete | ⬜ Planned |
+| S3 | [`s3-entities-and-money-plan.md`](s3-entities-and-money-plan.md) | Money safety: additive cents fields, backfill, cents reads/writes, rollback dual-write | ✅ Done (isolated smoke passed 2026-06-01) |
 | S4 | [`s4-signature-system-plan.md`](s4-signature-system-plan.md) | Store render-ready PNG; fix PDF embed at the source | ⬜ Planned |
 | S5 | [`s5-pdf-engine-plan.md`](s5-pdf-engine-plan.md) | Decompose generator; isolate + bundled fonts + MultiPage | ⬜ Planned |
 | S6 | [`s6-hardening-plan.md`](s6-hardening-plan.md) | Tests, settings→template, perf, analyzer-zero | ⬜ Planned |
@@ -26,6 +26,10 @@ may be reordered by product priority.
   S2 target.
 - `ObjectBoxResponse` may still exist inside local sources as an internal adapter,
   but feature repositories expose `Result` for imperative writes.
+- S3 money safety verified on 2026-06-01 against an isolated temp ObjectBox store:
+  legacy double rows backfilled, new/edit invoice flows dual-write cents+doubles,
+  and PDF generation succeeded for migrated and new invoices. `~/flutter/bin/flutter test`
+  passes; analyzer reports the same known S6 infos only.
 
 ## Conventions (all sprints)
 - Dedicated branch per sprint (`s2-…`, `s3-…`); green-at-each-step commits.
