@@ -101,7 +101,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
           .init(widget.invoiceId, widget.type);
       await ref.read(businessListProvider.notifier).getActiveBusinesses();
       await ref.read(clientListProvider.notifier).getActiveClients();
-      await ref.read(taxListProvider.notifier).getActiveTaxes();
+      // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
       await ref.read(signatureListProvider.notifier).getActiveSignatures();
       await ref.read(termListProvider.notifier).getActiveTerms();
 
@@ -440,9 +440,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
   void _onSelectTaxes(List<dynamic> taxes) {
     if (_isReadOnly) return;
-    final selectedTaxes = ref
-        .read(taxListProvider)
-        .taxes
+    final activeTaxes =
+        ref.read(taxListProvider(const TaxQuery(isActive: true))).valueOrNull ??
+        const <Tax>[];
+    final selectedTaxes = activeTaxes
         .where((tax) => taxes.contains(tax.id))
         .toList();
     ref.read(invoiceFormProvider.notifier).setTaxes(selectedTaxes);
@@ -729,7 +730,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final businessState = ref.watch(businessListProvider);
     final clientState = ref.watch(clientListProvider);
     final termState = ref.watch(termListProvider);
-    final taxState = ref.watch(taxListProvider);
+    final taxState = ref.watch(taxListProvider(const TaxQuery(isActive: true)));
 
     return Expanded(
       child: ListView(
@@ -1006,7 +1007,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Tax',
                   selectedValues: state.taxes?.map((tax) => tax.id).toList(),
                   onMultiSelected: (value) => _onSelectTaxes(value),
-                  multiSelectItems: taxState.taxes
+                  multiSelectItems: (taxState.valueOrNull ?? const <Tax>[])
                       .map(
                         (tax) => MultiSelectItem<int?>(
                           label: tax.name,

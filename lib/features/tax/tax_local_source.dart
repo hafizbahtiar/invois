@@ -3,6 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
 import 'tax_model.dart';
+import 'tax_query_provider.dart';
 
 class TaxLocalSource {
   final Store _store;
@@ -22,6 +23,28 @@ class TaxLocalSource {
   // Get all taxes
   Future<List<Tax>> getTaxes() async {
     return _taxBox.getAll();
+  }
+
+  /// Reactive, filtered tax stream (ADR-0003). Emits on every matching write.
+  Stream<List<Tax>> watchTaxes(TaxQuery q) {
+    Condition<Tax>? condition;
+    final search = q.search;
+    if (search != null && search.isNotEmpty) {
+      condition = Tax_.name.contains(search, caseSensitive: false);
+    }
+    if (q.isActive != null) {
+      final c = Tax_.isActive.equals(q.isActive!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    if (q.isDefault != null) {
+      final c = Tax_.isDefault.equals(q.isDefault!);
+      condition = condition == null ? c : condition.and(c);
+    }
+    final builder = condition == null
+        ? _taxBox.query()
+        : _taxBox.query(condition);
+    builder.order(Tax_.name);
+    return builder.watch(triggerImmediately: true).map((query) => query.find());
   }
 
   // Get tax by ID

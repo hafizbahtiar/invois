@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'tax_list_provider.dart';
-import 'tax_form_repository.dart';
 import 'tax_form_state.dart';
 import 'tax_model.dart';
+import 'tax_repository.dart';
 
 class TaxFormNotifier extends StateNotifier<TaxFormState> {
-  final TaxFormRepository _repository;
-  final Ref _ref;
+  final TaxRepository _repository;
 
-  TaxFormNotifier(this._repository, this._ref) : super(TaxFormState());
+  TaxFormNotifier(this._repository) : super(TaxFormState());
 
   //============================================
   // MARK: - Init
@@ -40,49 +38,42 @@ class TaxFormNotifier extends StateNotifier<TaxFormState> {
     state = state.copyWith(tax: updatedTax);
   }
 
-  // Upsert tax
+  // Upsert tax. List updates reactively (ADR-0003) — no manual refresh.
   Future<bool> onUpsert(Tax tax) async {
     state = state.copyWith(isLoading: true, error: null);
-    // Update tax
-    if (tax.id != null && tax.id! > 0) {
-      final result = await _repository.updateTax(tax);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshTaxList();
-      return result.success;
-    } else {
-      // Insert tax
-      final result = await _repository.insertTax(tax);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshTaxList();
-      return result.success;
-    }
+    final result = (tax.id != null && tax.id! > 0)
+        ? await _repository.update(tax)
+        : await _repository.create(tax);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   // Delete tax by id
   Future<bool> deleteTaxById(int id) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      await _repository.deleteTax(id);
-      state = state.copyWith(isLoading: false);
-
-      // Refresh the tax list
-      _refreshTaxList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
-  }
-
-  // Refresh the tax list
-  void _refreshTaxList() {
-    _ref.read(taxListProvider.notifier).getTaxes();
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 }
 
 // Provider for TaxFormNotifier
 final taxFormProvider = StateNotifierProvider<TaxFormNotifier, TaxFormState>(
-  (ref) => TaxFormNotifier(TaxFormRepository(), ref),
+  (ref) => TaxFormNotifier(ref.watch(taxRepositoryProvider)),
 );
