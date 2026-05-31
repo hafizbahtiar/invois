@@ -1,15 +1,46 @@
-# Sprint S2 — Propagate the S1 Pattern to All Features + AsyncNotifier
+# Sprint S2 — Propagate the S1 Pattern to All Features
 
 > **Depends on:** S1 (merged). **Branch:** `s2-feature-propagation`.
-> **Scope:** apply ADR-0002/0003 to every remaining feature, migrate forms from
-> `StateNotifier` → `AsyncNotifier`, converge imperative writes onto `Result`,
-> and extract `InvoiceComposer`. Still in-place (flat files); folder restructure
-> to `data/domain/presentation` is optional polish, NOT required here.
+> **Scope:** apply ADR-0002/0003 to every remaining feature, converge imperative
+> writes onto `Result`, and finish the invoice form (remove manual refresh,
+> `Result` writes). Still in-place (flat files); folder restructure to
+> `data/domain/presentation` is optional polish, NOT required here.
 > **No ObjectBox entity changes → no codegen.**
 
 Covers blueprint §6/§9 across: **business, client, tax, term, signature** (full
-list/form splits) + the **invoice form** (finish the S1 transitional debt).
+list/form splits) + the **invoice form**.
 `item` is an embedded model (no providers) — untouched. `settings` → S6.
+
+---
+
+## 0. SCOPE DECISION — AsyncNotifier deferred (CONFIRMED)
+
+The original S2 outline included migrating form notifiers
+`StateNotifier → AsyncNotifier`. This is **intentionally deferred** (confirmed
+decision, not unfinished work):
+
+- **Real S2 win:** repository unification (ADR-0002) + reactive list/query
+  providers (ADR-0003) + `Result`/`AppFailure` writes. All delivered here.
+- **Why defer AsyncNotifier:** it forces rewriting large (≈300–450 line) form
+  *pages*' state consumption for low immediate product value (mostly swapping
+  hand-rolled `isLoading`/`error` for `AsyncValue`). High churn, no bug/perf/
+  maintenance driver today.
+- **Rule going forward:**
+  - **Reactive `StreamProvider`** (family on a query type) is the required
+    standard for **list/query state**.
+  - **Unified repository per aggregate** (one repo, `Result` imperative + `Stream`
+    reactive) is the required standard for **all features**.
+  - **`StateNotifier` is retained for complex forms** (rewired to the unified
+    repo; manual refresh removed). Do **not** rewrite a form page to
+    `AsyncNotifier` absent a clear bug, performance issue, or maintenance
+    bottleneck. Revisit in a focused pass / S6 if ever justified.
+
+Per-feature delivered shape (matches the `tax` reference migration):
+new `X_repository.dart` (+ DI providers) · new `X_query_provider.dart` (if
+filtered) · `X_local_source.watchX()` · `X_list_provider` → `StreamProvider`
+family · `X_form_provider` rewired to repo (StateNotifier kept) · consumers →
+`AsyncValue` · deleted `X_list_repository`/`X_form_repository`/`X_list_state` ·
+barrel updated.
 
 ---
 
@@ -37,30 +68,45 @@ Mirror the invoice feature delivered in S1:
   provider; drop manual refresh and `.notifier.init()` calls.
 
 **Delete**
-- `X_list_repository.dart`, `X_form_repository.dart`, `X_list_state.dart`,
-  `X_form_state.dart` (the last replaced by `AsyncValue`).
+- `X_list_repository.dart`, `X_form_repository.dart`, `X_list_state.dart`.
+- `X_form_state.dart` is **retained** (StateNotifier form kept — see §0).
 
 ---
 
-## 2. Invoice form finish (S1 debt)
+## 2. Invoice form finish
 
-- Extract `domain/invoice_composer.dart`: moves the `onUpsert` orchestration
-  (resolve business/client, items/taxes/terms clear+add, totals) out of the
-  notifier. Pure, unit-testable. Exposed via `invoiceComposerProvider`.
-- Migrate `invoice_form_provider.dart` `StateNotifier` → `AsyncNotifier`.
-- Converge `createCompleteInvoice`/`updateCompleteInvoice`/`updateInvoiceStatus`
-  from `ObjectBoxResponse` → `Result` (remove the transitional methods from
-  `InvoiceRepository`; delete the `ObjectBoxResponse` dependency from the
-  invoice write path).
-- Update `invoice_form_page.dart` + `invoice_preview_page.dart` to the new
-  `AsyncValue`/`Result` surface.
+Per §0, this is **NOT** a full AsyncNotifier rewrite. Deliver:
+- Converge invoice writes to `Result`: `create/update/delete` return `Result`;
+  retire the transitional `ObjectBoxResponse` methods from `InvoiceRepository`
+  and the `ObjectBoxResponse` dependency from the invoice write path.
+- Remove any remaining manual refresh patterns (S1 already removed
+  `_refreshInvoiceList`; verify none linger).
+- `invoice_form_provider` stays a `StateNotifier`, rewired to the `Result` repo
+  surface; `invoice_form_page`/`invoice_preview_page` adapt their write-result
+  handling (no AsyncValue rewrite of the form).
+- Extracting `InvoiceComposer` is **optional/deferred** unless it falls out
+  naturally; not required for S2.
 
-> `ObjectBoxResponse` may still be used by not-yet-migrated features mid-sprint;
-> it is fully retired only after all features are migrated (end of S2 or S6).
+> `ObjectBoxResponse` is retired from migrated paths as each feature lands; any
+> residual usage is cleaned up by end of S2 / S6.
 
 ---
 
-## 3. Canonical AsyncNotifier form (pattern for every `X`)
+## 3. (DEFERRED) Canonical AsyncNotifier form — for future reference only
+
+> Not used in S2 (see §0). Kept here as the target shape if/when a form is
+> migrated in a later focused pass.
+
+```dart
+final xFormProvider = AsyncNotifierProvider.autoDispose
+    .family<XFormNotifier, X, int?>(XFormNotifier.new);
+
+class XFormNotifier extends AutoDisposeFamilyAsyncNotifier<X, int?> {
+  @override
+  Future<X> build(int? id) async {
+    final repo = ref.watch(xRepositoryProvider);
+    return id == null ? X.draft() : (await repo.byId(id)).orThrow();
+  }
 
 ```dart
 final xFormProvider = AsyncNotifierProvider.autoDispose
