@@ -74,7 +74,7 @@ class InvoiceRepository {
     try {
       final now = DateTime.now();
       final r = await _local.insertInvoice(
-        invoice.copyWith(createdAt: now, updatedAt: now),
+        _withDualWrittenMoney(invoice).copyWith(createdAt: now, updatedAt: now),
       );
       final data = r.data;
       return (r.success && data != null)
@@ -88,7 +88,7 @@ class InvoiceRepository {
   Future<Result<Invoice>> update(Invoice invoice) async {
     try {
       final r = await _local.updateInvoice(
-        invoice.copyWith(updatedAt: DateTime.now()),
+        _withDualWrittenMoney(invoice).copyWith(updatedAt: DateTime.now()),
       );
       final data = r.data;
       return (r.success && data != null)
@@ -112,7 +112,7 @@ class InvoiceRepository {
 
   // ---- Items ----
   Future<void> addItemToInvoice(int invoiceId, Item item) =>
-      _local.addItemToInvoice(invoiceId, item);
+      _local.addItemToInvoice(invoiceId, _withDualWrittenItem(item));
   Future<void> clearItemsFromInvoice(int invoiceId) =>
       _local.clearItemsFromInvoice(invoiceId);
 
@@ -127,4 +127,36 @@ class InvoiceRepository {
       _local.addTermToInvoice(invoiceId, term);
   Future<void> clearTermsFromInvoice(int invoiceId) =>
       _local.clearTermsFromInvoice(invoiceId);
+
+  Invoice _withDualWrittenMoney(Invoice invoice) {
+    return invoice.copyWith(
+      subtotal: invoice.effectiveSubtotalCents / 100,
+      discountAmount: invoice.effectiveDiscountAmountCents / 100,
+      taxAmount: invoice.effectiveTaxAmountCents / 100,
+      total: invoice.effectiveTotalCents / 100,
+      paidAmount: invoice.effectivePaidAmountCents / 100,
+      balanceDue: invoice.effectiveBalanceDueCents / 100,
+      subtotalCents: invoice.effectiveSubtotalCents,
+      discountAmountCents: invoice.effectiveDiscountAmountCents,
+      taxAmountCents: invoice.effectiveTaxAmountCents,
+      totalCents: invoice.effectiveTotalCents,
+      paidAmountCents: invoice.effectivePaidAmountCents,
+      balanceDueCents: invoice.effectiveBalanceDueCents,
+    );
+  }
+
+  Item _withDualWrittenItem(Item item) {
+    return item.copyWith(
+      unitPrice: item.effectiveUnitPriceCents / 100,
+      costPrice: item.effectiveCostPriceCents == null
+          ? null
+          : item.effectiveCostPriceCents! / 100,
+      wholesalePrice: item.effectiveWholesalePriceCents == null
+          ? null
+          : item.effectiveWholesalePriceCents! / 100,
+      unitPriceCents: item.effectiveUnitPriceCents,
+      costPriceCents: item.effectiveCostPriceCents,
+      wholesalePriceCents: item.effectiveWholesalePriceCents,
+    );
+  }
 }

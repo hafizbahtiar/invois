@@ -4,6 +4,7 @@ import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/core/result/app_failure.dart';
+import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/shared/widgets/my_bottom_sheet.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
@@ -507,9 +508,9 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
     final parts = <String>[];
 
     // Add total amount
-    if (invoice.total > 0) {
+    if (invoice.effectiveTotalCents > 0) {
       parts.add(
-        '${invoice.currency ?? '\$'}${invoice.total.toStringAsFixed(2)}',
+        '${CurrencyUtils.getSymbol(invoice.currency ?? 'MYR')}${(invoice.effectiveTotalCents / 100).toStringAsFixed(2)}',
       );
     }
 

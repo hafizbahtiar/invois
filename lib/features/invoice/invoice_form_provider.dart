@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
+import 'package:invois/core/money/money.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 import 'package:invois/features/business/business_form_provider.dart';
@@ -167,13 +168,18 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   }
 
   // Calculate the subtotal of all items
-  double calculateSubtotal() {
-    if (state.items == null || state.items!.isEmpty) return 0.0;
+  int calculateSubtotalCents() {
+    if (state.items == null || state.items!.isEmpty) return 0;
 
     return state.items!.fold(
-      0.0,
-      (sum, item) => sum + (item.unitPrice * (item.stockQuantity ?? 1)),
+      0,
+      (sum, item) =>
+          sum + (item.effectiveUnitPriceCents * (item.stockQuantity ?? 1)),
     );
+  }
+
+  double calculateSubtotal() {
+    return Money(calculateSubtotalCents()).toDouble();
   }
 
   // Save the current invoice. List updates reactively (ADR-0003) — no refresh.
@@ -197,8 +203,18 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     final updatedInvoice = invoice.copyWith(
       businessId: business.id,
       clientId: client.id,
-      subtotal: calculateSubtotal(),
-      total: calculateSubtotal(),
+      subtotal: Money(invoice.effectiveSubtotalCents).toDouble(),
+      discountAmount: Money(invoice.effectiveDiscountAmountCents).toDouble(),
+      taxAmount: Money(invoice.effectiveTaxAmountCents).toDouble(),
+      total: Money(invoice.effectiveTotalCents).toDouble(),
+      paidAmount: Money(invoice.effectivePaidAmountCents).toDouble(),
+      balanceDue: Money(invoice.effectiveBalanceDueCents).toDouble(),
+      subtotalCents: invoice.effectiveSubtotalCents,
+      discountAmountCents: invoice.effectiveDiscountAmountCents,
+      taxAmountCents: invoice.effectiveTaxAmountCents,
+      totalCents: invoice.effectiveTotalCents,
+      paidAmountCents: invoice.effectivePaidAmountCents,
+      balanceDueCents: invoice.effectiveBalanceDueCents,
     );
 
     // Save the invoice first
@@ -259,7 +275,10 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
 
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
     final result = await _repository.updateStatus(id, status);
-    state = state.copyWith(isLoading: false, error: result.failureOrNull?.message);
+    state = state.copyWith(
+      isLoading: false,
+      error: result.failureOrNull?.message,
+    );
   }
 }
 

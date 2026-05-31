@@ -1116,10 +1116,10 @@ class InvoiceGenerator {
             final currencySymbol =
                 CurrencyUtils.currencies[invoice.currency]?.symbol ?? '';
             final unitPriceStr =
-                '$currencySymbol${item.unitPrice.toStringAsFixed(2)}';
-            final totalPrice = item.unitPrice * quantity;
+                '$currencySymbol${(item.effectiveUnitPriceCents / 100).toStringAsFixed(2)}';
+            final totalPriceCents = item.effectiveUnitPriceCents * quantity;
             final totalPriceStr =
-                '$currencySymbol${totalPrice.toStringAsFixed(2)}';
+                '$currencySymbol${(totalPriceCents / 100).toStringAsFixed(2)}';
 
             return pw.TableRow(
               decoration: pw.BoxDecoration(
@@ -1258,10 +1258,10 @@ class InvoiceGenerator {
             final currencySymbol =
                 CurrencyUtils.currencies[invoice.currency]?.symbol ?? '';
             final unitPriceStr =
-                '$currencySymbol${item.unitPrice.toStringAsFixed(2)}';
-            final totalPrice = item.unitPrice * quantity;
+                '$currencySymbol${(item.effectiveUnitPriceCents / 100).toStringAsFixed(2)}';
+            final totalPriceCents = item.effectiveUnitPriceCents * quantity;
             final totalPriceStr =
-                '$currencySymbol${totalPrice.toStringAsFixed(2)}';
+                '$currencySymbol${(totalPriceCents / 100).toStringAsFixed(2)}';
 
             return pw.TableRow(
               decoration: pw.BoxDecoration(
@@ -1344,17 +1344,17 @@ class InvoiceGenerator {
             children: [
               _buildTotalRow(
                 'Subtotal',
-                invoice.subtotal,
-                invoice.formattedCurrency,
+                invoice.effectiveSubtotalCents,
+                invoice.currency ?? 'MYR',
                 bodyStyle,
                 bodyBoldStyle,
               ),
 
-              if (invoice.discountAmount > 0)
+              if (invoice.effectiveDiscountAmountCents > 0)
                 _buildTotalRow(
                   'Discount ${invoice.discountRate > 0 ? '(${invoice.discountRate.toStringAsFixed(2)}%)' : ''}',
-                  invoice.discountAmount,
-                  invoice.formattedCurrency,
+                  invoice.effectiveDiscountAmountCents,
+                  invoice.currency ?? 'MYR',
                   bodyStyle,
                   bodyBoldStyle,
                   isDiscount: true,
@@ -1362,11 +1362,13 @@ class InvoiceGenerator {
 
               // Add tax rows
               ...invoice.taxes.map((tax) {
-                final taxableAmount = invoice.subtotal - invoice.discountAmount;
+                final taxableAmountCents =
+                    invoice.effectiveSubtotalCents -
+                    invoice.effectiveDiscountAmountCents;
                 return _buildTotalRow(
                   '${tax.name} (${tax.rate.toStringAsFixed(2)}%)',
-                  taxableAmount * tax.rate / 100,
-                  invoice.formattedCurrency,
+                  (taxableAmountCents * tax.rate / 100).round(),
+                  invoice.currency ?? 'MYR',
                   bodyStyle,
                   bodyBoldStyle,
                 );
@@ -1376,30 +1378,30 @@ class InvoiceGenerator {
 
               _buildTotalRow(
                 'Total',
-                invoice.total,
-                invoice.formattedCurrency,
+                invoice.effectiveTotalCents,
+                invoice.currency ?? 'MYR',
                 bodyBoldStyle.copyWith(fontSize: 14),
                 bodyBoldStyle.copyWith(fontSize: 14),
               ),
 
-              if (invoice.paidAmount > 0)
+              if (invoice.effectivePaidAmountCents > 0)
                 _buildTotalRow(
                   'Paid',
-                  invoice.paidAmount,
-                  invoice.formattedCurrency,
+                  invoice.effectivePaidAmountCents,
+                  invoice.currency ?? 'MYR',
                   bodyStyle,
                   bodyBoldStyle,
                   isDiscount: true,
                 ),
 
-              if (invoice.paidAmount > 0)
+              if (invoice.effectivePaidAmountCents > 0)
                 pw.Divider(color: PdfColors.grey400, thickness: 1),
 
-              if (invoice.paidAmount > 0)
+              if (invoice.effectivePaidAmountCents > 0)
                 _buildTotalRow(
                   'Balance Due',
-                  invoice.balanceDue,
-                  invoice.formattedCurrency,
+                  invoice.effectiveBalanceDueCents,
+                  invoice.currency ?? 'MYR',
                   bodyBoldStyle.copyWith(fontSize: 14, color: PdfColors.red700),
                   bodyBoldStyle.copyWith(fontSize: 14, color: PdfColors.red700),
                 ),
@@ -1676,13 +1678,14 @@ class InvoiceGenerator {
   /// Helper method to build a total row
   static pw.Widget _buildTotalRow(
     String label,
-    double amount,
-    String currency,
+    int amountCents,
+    String currencyCode,
     pw.TextStyle labelStyle,
     pw.TextStyle amountStyle, {
     bool isDiscount = false,
   }) {
-    final currencySymbol = CurrencyUtils.currencies[currency]?.symbol ?? '';
+    final currencySymbol = CurrencyUtils.currencies[currencyCode]?.symbol ?? '';
+    final amount = amountCents / 100;
     final amountStr = isDiscount
         ? '-$currencySymbol${amount.toStringAsFixed(2)}'
         : '$currencySymbol${amount.toStringAsFixed(2)}';

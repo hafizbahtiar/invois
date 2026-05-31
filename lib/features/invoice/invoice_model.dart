@@ -445,7 +445,7 @@ class Invoice extends Equatable {
 
   /// Check if invoice is fully paid
   bool get isFullyPaid {
-    return balanceDue <= 0;
+    return effectiveBalanceDueCents <= 0;
   }
 
   /// Get days overdue
@@ -482,17 +482,17 @@ class Invoice extends Equatable {
 
   /// Get formatted total
   String get formattedTotal {
-    return '$formattedCurrency${total.toStringAsFixed(2)}';
+    return Money(effectiveTotalCents).format(symbol: formattedCurrency);
   }
 
   /// Get formatted balance due
   String get formattedBalanceDue {
-    return '$formattedCurrency${balanceDue.toStringAsFixed(2)}';
+    return Money(effectiveBalanceDueCents).format(symbol: formattedCurrency);
   }
 
   /// Get formatted paid amount
   String get formattedPaidAmount {
-    return '$formattedCurrency${paidAmount.toStringAsFixed(2)}';
+    return Money(effectivePaidAmountCents).format(symbol: formattedCurrency);
   }
 
   /// Get invoice type display name
@@ -573,8 +573,8 @@ class Invoice extends Equatable {
 
   /// Get payment percentage
   double get paymentPercentage {
-    if (total == 0) return 0.0;
-    return (paidAmount / total) * 100;
+    if (effectiveTotalCents == 0) return 0.0;
+    return (effectivePaidAmountCents / effectiveTotalCents) * 100;
   }
 
   /// Get overdue status text

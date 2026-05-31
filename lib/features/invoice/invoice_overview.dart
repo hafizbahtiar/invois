@@ -22,16 +22,16 @@ class SimpleInvoiceOverview extends ConsumerWidget {
         .where((inv) => inv.currency == defaultCurrency)
         .toList();
 
-    double totalPaid = 0;
-    double totalOutstanding = 0;
-    double totalAmount = 0;
+    var totalPaidCents = 0;
+    var totalOutstandingCents = 0;
+    var totalAmountCents = 0;
     int paidCount = 0;
     int outstandingCount = 0;
 
     for (final invoice in filteredInvoices) {
-      totalPaid += invoice.paidAmount;
-      totalOutstanding += invoice.balanceDue;
-      totalAmount += invoice.total;
+      totalPaidCents += invoice.effectivePaidAmountCents;
+      totalOutstandingCents += invoice.effectiveBalanceDueCents;
+      totalAmountCents += invoice.effectiveTotalCents;
       if (invoice.isFullyPaid) {
         paidCount++;
       } else {
@@ -39,7 +39,10 @@ class SimpleInvoiceOverview extends ConsumerWidget {
       }
     }
 
-    final paymentRate = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
+    final paymentRate = totalAmountCents > 0
+        ? (totalPaidCents / totalAmountCents) * 100
+        : 0;
+    final symbol = CurrencyUtils.getSymbol(settingState.currencyCode);
 
     return Container(
       decoration: BoxDecoration(
@@ -61,8 +64,7 @@ class SimpleInvoiceOverview extends ConsumerWidget {
             child: _OverviewItem(
               label: 'Paid',
               value: paidCount.toString(),
-              subValue:
-                  '${CurrencyUtils.getSymbol(settingState.currencyCode)} ${totalPaid.toStringAsFixed(2)}',
+              subValue: '$symbol ${(totalPaidCents / 100).toStringAsFixed(2)}',
               color: Colors.green,
             ),
           ),
@@ -71,7 +73,7 @@ class SimpleInvoiceOverview extends ConsumerWidget {
               label: 'Outstanding',
               value: outstandingCount.toString(),
               subValue:
-                  '${CurrencyUtils.getSymbol(settingState.currencyCode)} ${totalOutstanding.toStringAsFixed(2)}',
+                  '$symbol ${(totalOutstandingCents / 100).toStringAsFixed(2)}',
               color: Colors.orange,
             ),
           ),

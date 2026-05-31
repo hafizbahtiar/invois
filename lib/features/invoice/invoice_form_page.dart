@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
+import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/business/business_module.dart';
 import 'package:invois/features/client/client_module.dart';
@@ -281,19 +282,45 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     });
   }
 
+  Money _moneyFromCents(int cents) {
+    return Money(cents, currencyCode: _selectedCurrency);
+  }
+
+  Money _parseMoney(String value) {
+    return Money.tryParseDecimalString(
+          value,
+          currencyCode: _selectedCurrency,
+        ) ??
+        Money.zero(currencyCode: _selectedCurrency);
+  }
+
+  String _formatMoneyCents(int cents) {
+    return _moneyFromCents(
+      cents,
+    ).format(symbol: CurrencyUtils.getSymbol(_selectedCurrency));
+  }
+
   void _onDiscountRateChanged(String value) {
     if (_isReadOnly) return;
     final rate = double.tryParse(value) ?? 0.0;
-    final subtotal = ref.read(invoiceFormProvider.notifier).calculateSubtotal();
-    final discountAmount = (subtotal * rate) / 100;
-    _discountAmountController.text = discountAmount.toStringAsFixed(2);
+    final subtotalCents = ref
+        .read(invoiceFormProvider.notifier)
+        .calculateSubtotalCents();
+    final discountAmount = _moneyFromCents(subtotalCents).percent(rate);
+    _discountAmountController.text = discountAmount.toDouble().toStringAsFixed(
+      2,
+    );
   }
 
   void _onDiscountAmountChanged(String value) {
     if (_isReadOnly) return;
-    final amount = double.tryParse(value) ?? 0.0;
-    final subtotal = ref.read(invoiceFormProvider.notifier).calculateSubtotal();
-    final discountRate = subtotal > 0 ? (amount / subtotal) * 100 : 0.0;
+    final amount = _parseMoney(value);
+    final subtotalCents = ref
+        .read(invoiceFormProvider.notifier)
+        .calculateSubtotalCents();
+    final discountRate = subtotalCents > 0
+        ? (amount.minorUnits / subtotalCents) * 100
+        : 0.0;
     _discountRateController.text = discountRate.toStringAsFixed(2);
   }
 
@@ -303,20 +330,23 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     setState(() {});
   }
 
-  double _calculateTaxAmount(InvoiceFormState state) {
-    if (state.taxes == null || state.taxes!.isEmpty) return 0.0;
+  int _calculateTaxAmountCents(InvoiceFormState state) {
+    if (state.taxes == null || state.taxes!.isEmpty) return 0;
 
-    final subtotal = ref.read(invoiceFormProvider.notifier).calculateSubtotal();
-    final discountAmount =
-        double.tryParse(_discountAmountController.text) ?? 0.0;
-    final taxableAmount = subtotal - discountAmount;
+    final subtotalCents = ref
+        .read(invoiceFormProvider.notifier)
+        .calculateSubtotalCents();
+    final discountAmount = _parseMoney(_discountAmountController.text);
+    final taxableAmount = _moneyFromCents(
+      subtotalCents - discountAmount.minorUnits,
+    );
 
-    double totalTaxAmount = 0.0;
+    var totalTaxAmountCents = 0;
     for (final tax in state.taxes!) {
-      totalTaxAmount += (taxableAmount * tax.rate) / 100;
+      totalTaxAmountCents += taxableAmount.percent(tax.rate).minorUnits;
     }
 
-    return totalTaxAmount;
+    return totalTaxAmountCents;
   }
 
   void _onDeleteInvoice(invoice) async {
@@ -341,14 +371,14 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final state = ref.read(invoiceFormProvider);
     final notifier = ref.read(invoiceFormProvider.notifier);
 
-    final subtotal = notifier.calculateSubtotal();
+    final subtotalCents = notifier.calculateSubtotalCents();
     final discountRate = double.tryParse(_discountRateController.text) ?? 0.0;
-    final discountAmount =
-        double.tryParse(_discountAmountController.text) ?? 0.0;
-    final taxAmount = _calculateTaxAmount(state);
-    final paidAmount = double.tryParse(_paidAmountController.text) ?? 0.0;
-    final total = subtotal - discountAmount + taxAmount;
-    final balanceDue = total - paidAmount;
+    final discountAmount = _parseMoney(_discountAmountController.text);
+    final taxAmountCents = _calculateTaxAmountCents(state);
+    final paidAmount = _parseMoney(_paidAmountController.text);
+    final totalCents =
+        subtotalCents - discountAmount.minorUnits + taxAmountCents;
+    final balanceDueCents = totalCents - paidAmount.minorUnits;
 
     final invoice = Invoice(
       id: (widget.invoiceId != null && widget.invoiceId! > 0)
@@ -368,14 +398,20 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       paidDate: _paidDate,
       businessId: state.business?.id,
       clientId: state.client?.id,
-      subtotal: subtotal,
+      subtotal: _moneyFromCents(subtotalCents).toDouble(),
       discountRate: discountRate,
-      discountAmount: discountAmount,
-      taxAmount: taxAmount,
-      total: total,
-      paidAmount: paidAmount,
-      balanceDue: balanceDue,
+      discountAmount: discountAmount.toDouble(),
+      taxAmount: _moneyFromCents(taxAmountCents).toDouble(),
+      total: _moneyFromCents(totalCents).toDouble(),
+      paidAmount: paidAmount.toDouble(),
+      balanceDue: _moneyFromCents(balanceDueCents).toDouble(),
       currency: _selectedCurrency,
+      subtotalCents: subtotalCents,
+      discountAmountCents: discountAmount.minorUnits,
+      taxAmountCents: taxAmountCents,
+      totalCents: totalCents,
+      paidAmountCents: paidAmount.minorUnits,
+      balanceDueCents: balanceDueCents,
       isRecurring: _isRecurring,
       recurringFrequency: _isRecurring
           ? _selectedRecurringFrequency.name
@@ -460,7 +496,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     if (existingItem != null) {
       _itemNameController.text = existingItem.name;
       _itemDescriptionController.text = existingItem.description ?? '';
-      _itemPriceController.text = existingItem.unitPrice.toString();
+      _itemPriceController.text = Money(
+        existingItem.effectiveUnitPriceCents,
+        currencyCode: _selectedCurrency,
+      ).toDouble().toStringAsFixed(2);
       _itemQuantityController.text = existingItem.stockQuantity.toString();
     } else {
       _itemNameController.clear();
@@ -546,7 +585,11 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                                   if (value == null || value.isEmpty) {
                                     return 'Required';
                                   }
-                                  if (double.tryParse(value) == null) {
+                                  if (Money.tryParseDecimalString(
+                                        value,
+                                        currencyCode: _selectedCurrency,
+                                      ) ==
+                                      null) {
                                     return 'Invalid number';
                                   }
                                   return null;
@@ -599,8 +642,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                     ElevatedButton(
                       onPressed: () {
                         if (_itemFormKey.currentState!.validate()) {
-                          final price =
-                              double.tryParse(_itemPriceController.text) ?? 0.0;
+                          final price = _parseMoney(_itemPriceController.text);
                           final quantity =
                               int.tryParse(_itemQuantityController.text) ?? 1;
 
@@ -608,7 +650,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                             id: existingItem?.id,
                             name: _itemNameController.text,
                             description: _itemDescriptionController.text,
-                            unitPrice: price,
+                            unitPrice: price.toDouble(),
+                            unitPriceCents: price.minorUnits,
+                            currency: _selectedCurrency,
                             stockQuantity: quantity,
                           );
 
@@ -1183,14 +1227,16 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   }
 
   Widget _buildPricingSummary(InvoiceFormState state) {
-    final subtotal = ref.read(invoiceFormProvider.notifier).calculateSubtotal();
+    final subtotalCents = ref
+        .read(invoiceFormProvider.notifier)
+        .calculateSubtotalCents();
     final discountRate = double.tryParse(_discountRateController.text) ?? 0.0;
-    final discountAmount =
-        double.tryParse(_discountAmountController.text) ?? 0.0;
-    final taxAmount = _calculateTaxAmount(state);
-    final paidAmount = double.tryParse(_paidAmountController.text) ?? 0.0;
-    final total = subtotal - discountAmount + taxAmount;
-    final balanceDue = total - paidAmount;
+    final discountAmount = _parseMoney(_discountAmountController.text);
+    final taxAmountCents = _calculateTaxAmountCents(state);
+    final paidAmount = _parseMoney(_paidAmountController.text);
+    final totalCents =
+        subtotalCents - discountAmount.minorUnits + taxAmountCents;
+    final balanceDueCents = totalCents - paidAmount.minorUnits;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1218,12 +1264,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        '${item.name} (${item.stockQuantity ?? 1} × ${CurrencyUtils.getSymbol(_selectedCurrency)}${item.unitPrice.toStringAsFixed(2)})',
+                        '${item.name} (${item.stockQuantity ?? 1} × ${_formatMoneyCents(item.effectiveUnitPriceCents)})',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                     Text(
-                      '${CurrencyUtils.getSymbol(_selectedCurrency)}${(item.unitPrice * (item.stockQuantity ?? 1)).toStringAsFixed(2)}',
+                      _formatMoneyCents(
+                        item.effectiveUnitPriceCents *
+                            (item.stockQuantity ?? 1),
+                      ),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -1236,30 +1285,31 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Subtotal:'),
-              Text(
-                '${CurrencyUtils.getSymbol(_selectedCurrency)}${subtotal.toStringAsFixed(2)}',
-              ),
+              Text(_formatMoneyCents(subtotalCents)),
             ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Discount (${discountRate.toStringAsFixed(1)}%):'),
-              Text(
-                '-${CurrencyUtils.getSymbol(_selectedCurrency)}${discountAmount.toStringAsFixed(2)}',
-              ),
+              Text('-${_formatMoneyCents(discountAmount.minorUnits)}'),
             ],
           ),
           // Show tax breakdown
           if (state.taxes != null && state.taxes!.isNotEmpty) ...[
             ...state.taxes!.map((tax) {
-              final subtotal = ref
+              final subtotalCents = ref
                   .read(invoiceFormProvider.notifier)
-                  .calculateSubtotal();
-              final discountAmount =
-                  double.tryParse(_discountAmountController.text) ?? 0.0;
-              final taxableAmount = subtotal - discountAmount;
-              final individualTaxAmount = (taxableAmount * tax.rate) / 100;
+                  .calculateSubtotalCents();
+              final discountAmount = _parseMoney(
+                _discountAmountController.text,
+              );
+              final taxableAmount = _moneyFromCents(
+                subtotalCents - discountAmount.minorUnits,
+              );
+              final individualTaxAmountCents = taxableAmount
+                  .percent(tax.rate)
+                  .minorUnits;
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1267,9 +1317,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${tax.name} (${tax.rate.toStringAsFixed(1)}%):'),
-                    Text(
-                      '${CurrencyUtils.getSymbol(_selectedCurrency)}${individualTaxAmount.toStringAsFixed(2)}',
-                    ),
+                    Text(_formatMoneyCents(individualTaxAmountCents)),
                   ],
                 ),
               );
@@ -1282,7 +1330,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  '${CurrencyUtils.getSymbol(_selectedCurrency)}${taxAmount.toStringAsFixed(2)}',
+                  _formatMoneyCents(taxAmountCents),
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
               ],
@@ -1294,7 +1342,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             children: [
               Text('Total:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
-                '${CurrencyUtils.getSymbol(_selectedCurrency)}${total.toStringAsFixed(2)}',
+                _formatMoneyCents(totalCents),
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
@@ -1303,9 +1351,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Paid:'),
-              Text(
-                '${CurrencyUtils.getSymbol(_selectedCurrency)}${paidAmount.toStringAsFixed(2)}',
-              ),
+              Text(_formatMoneyCents(paidAmount.minorUnits)),
             ],
           ),
           Row(
@@ -1315,14 +1361,14 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                 'Balance Due:',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: balanceDue > 0 ? Colors.red : Colors.green,
+                  color: balanceDueCents > 0 ? Colors.red : Colors.green,
                 ),
               ),
               Text(
-                '${CurrencyUtils.getSymbol(_selectedCurrency)}${balanceDue.toStringAsFixed(2)}',
+                _formatMoneyCents(balanceDueCents),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: balanceDue > 0 ? Colors.red : Colors.green,
+                  color: balanceDueCents > 0 ? Colors.red : Colors.green,
                 ),
               ),
             ],
@@ -1363,9 +1409,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                 title: itemData.name,
                 isReadOnly: _isReadOnly,
                 subtitle:
-                    '${CurrencyUtils.getSymbol(_selectedCurrency)}${itemData.unitPrice} × ${itemData.stockQuantity ?? 1}',
+                    '${_formatMoneyCents(itemData.effectiveUnitPriceCents)} x ${itemData.stockQuantity ?? 1}',
                 trailing: Text(
-                  '${CurrencyUtils.getSymbol(_selectedCurrency)}${(itemData.unitPrice * (itemData.stockQuantity ?? 1)).toStringAsFixed(2)}',
+                  _formatMoneyCents(
+                    itemData.effectiveUnitPriceCents *
+                        (itemData.stockQuantity ?? 1),
+                  ),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 onTap: () => _showAddItemDialog(existingItem: itemData),
@@ -1380,7 +1429,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
-                'Subtotal: ${CurrencyUtils.getSymbol(_selectedCurrency)}${ref.read(invoiceFormProvider.notifier).calculateSubtotal().toStringAsFixed(2)}',
+                'Subtotal: ${_formatMoneyCents(ref.read(invoiceFormProvider.notifier).calculateSubtotalCents())}',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

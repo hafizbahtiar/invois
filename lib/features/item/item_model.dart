@@ -344,13 +344,13 @@ class Item extends Equatable {
   /// Calculate price with tax
   double get priceWithTax {
     if (!isTaxable || taxRate == null || taxRate == 0) {
-      return unitPrice;
+      return Money(effectiveUnitPriceCents).toDouble();
     }
 
     if (isTaxInclusive) {
-      return unitPrice;
+      return Money(effectiveUnitPriceCents).toDouble();
     } else {
-      return unitPrice + (unitPrice * taxRate! / 100);
+      return Money(effectiveUnitPriceCents).percent(100 + taxRate!).toDouble();
     }
   }
 
@@ -361,9 +361,11 @@ class Item extends Equatable {
     }
 
     if (isTaxInclusive) {
-      return unitPrice - (unitPrice / (1 + taxRate! / 100));
+      final gross = Money(effectiveUnitPriceCents);
+      final netCents = (gross.minorUnits / (1 + taxRate! / 100)).round();
+      return Money(gross.minorUnits - netCents).toDouble();
     } else {
-      return unitPrice * taxRate! / 100;
+      return Money(effectiveUnitPriceCents).percent(taxRate!).toDouble();
     }
   }
 
@@ -385,20 +387,21 @@ class Item extends Equatable {
 
   /// Get profit margin percentage
   double? get profitMargin {
-    if (costPrice == null || costPrice == 0) return null;
-    return ((unitPrice - costPrice!) / costPrice!) * 100;
+    final costCents = effectiveCostPriceCents;
+    if (costCents == null || costCents == 0) return null;
+    return ((effectiveUnitPriceCents - costCents) / costCents) * 100;
   }
 
   /// Get formatted price with currency
   String get formattedPrice {
     final currencySymbol = currency ?? '\$';
-    return '$currencySymbol${unitPrice.toStringAsFixed(2)}';
+    return Money(effectiveUnitPriceCents).format(symbol: currencySymbol);
   }
 
   /// Get formatted price with tax
   String get formattedPriceWithTax {
     final currencySymbol = currency ?? '\$';
-    return '$currencySymbol${priceWithTax.toStringAsFixed(2)}';
+    return Money.fromDouble(priceWithTax).format(symbol: currencySymbol);
   }
 
   /// Get stock status text
@@ -412,7 +415,7 @@ class Item extends Equatable {
 
   /// Check if item has all required fields for invoice
   bool get isCompleteForInvoice {
-    return name.isNotEmpty && unitPrice > 0;
+    return name.isNotEmpty && effectiveUnitPriceCents > 0;
   }
 
   /// Get a short description for display

@@ -218,6 +218,12 @@ class InvoiceLocalSource {
     double? total,
     double? paidAmount,
     double? balanceDue,
+    int? subtotalCents,
+    int? discountAmountCents,
+    int? taxAmountCents,
+    int? totalCents,
+    int? paidAmountCents,
+    int? balanceDueCents,
     String? currency,
     bool? isRecurring,
     String? recurringFrequency,
@@ -250,6 +256,12 @@ class InvoiceLocalSource {
       total: total,
       paidAmount: paidAmount,
       balanceDue: balanceDue,
+      subtotalCents: subtotalCents,
+      discountAmountCents: discountAmountCents,
+      taxAmountCents: taxAmountCents,
+      totalCents: totalCents,
+      paidAmountCents: paidAmountCents,
+      balanceDueCents: balanceDueCents,
       currency: currency,
       isRecurring: isRecurring,
       recurringFrequency: recurringFrequency,
@@ -295,9 +307,13 @@ class InvoiceLocalSource {
     final invoice = _invoiceBox.get(id);
     if (invoice == null) return false;
 
-    final newPaidAmount = paidAmount ?? invoice.total;
-    final newBalanceDue = invoice.total - newPaidAmount;
-    final newPaymentStatus = newBalanceDue <= 0
+    final newPaidAmountCents = paidAmount == null
+        ? invoice.effectiveTotalCents
+        : (paidAmount * 100).round();
+    final newBalanceDueCents = invoice.effectiveTotalCents - newPaidAmountCents;
+    final newPaidAmount = newPaidAmountCents / 100;
+    final newBalanceDue = newBalanceDueCents / 100;
+    final newPaymentStatus = newBalanceDueCents <= 0
         ? PaymentStatus.paid
         : PaymentStatus.partiallyPaid;
 
@@ -307,6 +323,8 @@ class InvoiceLocalSource {
       paymentStatus: newPaymentStatus.name,
       paidAmount: newPaidAmount,
       balanceDue: newBalanceDue,
+      paidAmountCents: newPaidAmountCents,
+      balanceDueCents: newBalanceDueCents,
       paidDate: DateTime.now(),
     );
   }
@@ -319,6 +337,10 @@ class InvoiceLocalSource {
     double? discountAmount,
     double? taxAmount,
     double? total,
+    int? subtotalCents,
+    int? discountAmountCents,
+    int? taxAmountCents,
+    int? totalCents,
   }) async {
     return updateInvoiceFields(
       id,
@@ -327,6 +349,10 @@ class InvoiceLocalSource {
       discountAmount: discountAmount,
       taxAmount: taxAmount,
       total: total,
+      subtotalCents: subtotalCents,
+      discountAmountCents: discountAmountCents,
+      taxAmountCents: taxAmountCents,
+      totalCents: totalCents,
     );
   }
 
