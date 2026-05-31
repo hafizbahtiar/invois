@@ -15,7 +15,6 @@ import 'package:invois/features/shared/widgets/my_selector_field.dart';
 import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
-import 'package:invois/features/signature/signature_module.dart';
 import 'package:invois/features/tax/tax_module.dart';
 import 'package:invois/features/term/term_module.dart';
 
@@ -102,7 +101,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       await ref.read(businessListProvider.notifier).getActiveBusinesses();
       await ref.read(clientListProvider.notifier).getActiveClients();
       // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
-      await ref.read(signatureListProvider.notifier).getActiveSignatures();
+      // Active signatures load reactively via signatureListProvider(const SignatureQuery(isActive: true)).
       // Active terms load reactively via termListProvider(const TermQuery(isActive: true)).
 
       final state = ref.read(invoiceFormProvider);

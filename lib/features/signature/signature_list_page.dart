@@ -6,10 +6,12 @@ import 'package:invois/core/constants/list_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 import 'signature_model.dart';
 
 import 'signature_list_provider.dart';
+import 'signature_query_provider.dart';
 
 enum SignatureListFilter { all, active, inactive, defaultStatus }
 
@@ -35,14 +37,6 @@ class _SignatureListPageState extends ConsumerState<SignatureListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(signatureListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -52,54 +46,42 @@ class _SignatureListPageState extends ConsumerState<SignatureListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadSignatures() async {
+  // Maps the selected chip to the signature query; the reactive list rebuilds.
+  void _applyFilter() {
+    final notifier = ref.read(signatureQueryProvider.notifier);
     switch (_selectedFilter) {
       case SignatureListFilter.active:
-        await ref
-            .read(signatureListProvider.notifier)
-            .filter(query: _searchController.text, isActive: true);
+        notifier.setFilter(isActive: true);
         break;
       case SignatureListFilter.inactive:
-        await ref
-            .read(signatureListProvider.notifier)
-            .filter(query: _searchController.text, isActive: false);
+        notifier.setFilter(isActive: false);
         break;
       case SignatureListFilter.defaultStatus:
-        await ref
-            .read(signatureListProvider.notifier)
-            .filter(query: _searchController.text, isDefault: true);
+        notifier.setFilter(isDefault: true);
         break;
       default:
-        await ref
-            .read(signatureListProvider.notifier)
-            .filter(query: _searchController.text);
+        notifier.setFilter();
         break;
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(signatureListProvider.notifier).getSignatures();
+    ref.invalidate(signatureListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(signatureListProvider.notifier).getSignatures();
-    } else {
-      await ref
-          .read(signatureListProvider.notifier)
-          .searchSignaturesByName(value);
-    }
+    ref.read(signatureQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(SignatureListFilter filter) {
     setState(() => _selectedFilter = filter);
-    _loadSignatures();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = SignatureListFilter.all);
-    _loadSignatures();
+    ref.read(signatureQueryProvider.notifier).reset();
   }
 
   //============================================
@@ -154,16 +136,21 @@ class _SignatureListPageState extends ConsumerState<SignatureListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(signatureListProvider);
+    final query = ref.watch(signatureQueryProvider);
+    final async = ref.watch(signatureListProvider(query));
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Signature>(
-            items: state.signatures,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load signatures')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:
