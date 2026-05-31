@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'term_list_provider.dart';
-import 'term_form_repository.dart';
 import 'term_form_state.dart';
 import 'term_model.dart';
+import 'term_repository.dart';
 
 class TermFormNotifier extends StateNotifier<TermFormState> {
-  final TermFormRepository _repository;
-  final Ref _ref;
+  final TermRepository _repository;
 
-  TermFormNotifier(this._repository, this._ref) : super(TermFormState());
+  TermFormNotifier(this._repository) : super(TermFormState());
 
   //============================================
   // MARK: - Init
@@ -42,49 +40,42 @@ class TermFormNotifier extends StateNotifier<TermFormState> {
     state = state.copyWith(term: updatedTerm);
   }
 
-  // Upsert term
+  // Upsert term. List updates reactively (ADR-0003) — no manual refresh.
   Future<bool> onUpsert(Term term) async {
     state = state.copyWith(isLoading: true, error: null);
-    // Update term
-    if (term.id != null && term.id! > 0) {
-      final result = await _repository.updateTerm(term);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshTermList();
-      return result.success;
-    } else {
-      // Insert term
-      final result = await _repository.insertTerm(term);
-      state = state.copyWith(isLoading: false, error: result.message);
-      _refreshTermList();
-      return result.success;
-    }
+    final result = (term.id != null && term.id! > 0)
+        ? await _repository.update(term)
+        : await _repository.create(term);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 
   // Delete term by id
   Future<bool> deleteTermById(int id) async {
     state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      await _repository.deleteTerm(id);
-      state = state.copyWith(isLoading: false);
-
-      // Refresh the term list
-      _refreshTermList();
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
-    }
-  }
-
-  // Refresh the term list
-  void _refreshTermList() {
-    _ref.read(termListProvider.notifier).getTerms();
+    final result = await _repository.delete(id);
+    return result.fold(
+      (_) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      },
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+    );
   }
 }
 
 // Provider for TermFormNotifier
 final termFormProvider = StateNotifierProvider<TermFormNotifier, TermFormState>(
-  (ref) => TermFormNotifier(TermFormRepository(), ref),
+  (ref) => TermFormNotifier(ref.watch(termRepositoryProvider)),
 );

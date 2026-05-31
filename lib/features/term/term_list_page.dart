@@ -7,14 +7,16 @@ import 'package:invois/core/constants/list_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 import 'term_model.dart';
 
 import 'term_list_provider.dart';
+import 'term_query_provider.dart';
 
 class TermListPage extends ConsumerStatefulWidget {
   final ListType listType;
-  
+
   const TermListPage({super.key, this.listType = ListType.list});
 
   @override
@@ -34,14 +36,6 @@ class _TermListPageState extends ConsumerState<TermListPage> {
   //============================================
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(termListProvider.notifier).init();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -51,52 +45,42 @@ class _TermListPageState extends ConsumerState<TermListPage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _loadTerms() async {
+  // Maps the selected chip to the term query; the reactive list rebuilds.
+  void _applyFilter() {
+    final notifier = ref.read(termQueryProvider.notifier);
     switch (_selectedFilter) {
       case ListFilterType.active:
-        await ref
-            .read(termListProvider.notifier)
-            .filter(query: _searchController.text, isActive: true);
+        notifier.setFilter(isActive: true);
         break;
       case ListFilterType.inactive:
-        await ref
-            .read(termListProvider.notifier)
-            .filter(query: _searchController.text, isActive: false);
+        notifier.setFilter(isActive: false);
         break;
       case ListFilterType.defaultStatus:
-        await ref
-            .read(termListProvider.notifier)
-            .filter(query: _searchController.text, isDefault: true);
+        notifier.setFilter(isDefault: true);
         break;
       default:
-        await ref
-            .read(termListProvider.notifier)
-            .filter(query: _searchController.text);
+        notifier.setFilter();
         break;
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(termListProvider.notifier).getTerms();
+    ref.invalidate(termListProvider);
   }
 
   Future<void> _onSearchChanged(String value) async {
-    if (value.isEmpty) {
-      await ref.read(termListProvider.notifier).getTerms();
-    } else {
-      await ref.read(termListProvider.notifier).filter(query: value);
-    }
+    ref.read(termQueryProvider.notifier).setSearch(value);
   }
 
   void _onFilterSelected(ListFilterType filter) {
     setState(() => _selectedFilter = filter);
-    _loadTerms();
+    _applyFilter();
   }
 
   void _onResetFilters() {
     _searchController.clear();
     setState(() => _selectedFilter = ListFilterType.all);
-    _loadTerms();
+    ref.read(termQueryProvider.notifier).reset();
   }
 
   //============================================
@@ -151,16 +135,21 @@ class _TermListPageState extends ConsumerState<TermListPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final state = ref.watch(termListProvider);
+    final query = ref.watch(termQueryProvider);
+    final async = ref.watch(termListProvider(query));
 
     return Column(
       children: [
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Term>(
-            items: state.terms,
-            isLoading: state.isLoading,
-            errorMessage: state.error,
+            items: async.valueOrNull ?? const [],
+            isLoading: async.isLoading,
+            errorMessage: async.hasError
+                ? (async.error is AppFailure
+                      ? (async.error as AppFailure).message
+                      : 'Failed to load terms')
+                : null,
             onRefresh: () async => await _onRefresh(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             emptyWidget:

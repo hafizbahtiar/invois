@@ -103,7 +103,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       await ref.read(clientListProvider.notifier).getActiveClients();
       // Active taxes load reactively via taxListProvider(const TaxQuery(isActive: true)).
       await ref.read(signatureListProvider.notifier).getActiveSignatures();
-      await ref.read(termListProvider.notifier).getActiveTerms();
+      // Active terms load reactively via termListProvider(const TermQuery(isActive: true)).
 
       final state = ref.read(invoiceFormProvider);
       final settingState = ref.read(settingsProvider);
@@ -430,9 +430,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
   void _onSelectTerms(List<dynamic> terms) {
     if (_isReadOnly) return;
-    final selectedTerms = ref
-        .read(termListProvider)
-        .terms
+    final activeTerms =
+        ref
+            .read(termListProvider(const TermQuery(isActive: true)))
+            .valueOrNull ??
+        const <Term>[];
+    final selectedTerms = activeTerms
         .where((term) => terms.contains(term.id))
         .toList();
     ref.read(invoiceFormProvider.notifier).setTerms(selectedTerms);
@@ -729,7 +732,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final state = ref.watch(invoiceFormProvider);
     final businessState = ref.watch(businessListProvider);
     final clientState = ref.watch(clientListProvider);
-    final termState = ref.watch(termListProvider);
+    final termState = ref.watch(
+      termListProvider(const TermQuery(isActive: true)),
+    );
     final taxState = ref.watch(taxListProvider(const TaxQuery(isActive: true)));
 
     return Expanded(
@@ -1091,7 +1096,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Terms',
                   selectedValues: state.terms?.map((term) => term.id).toList(),
                   onMultiSelected: (value) => _onSelectTerms(value),
-                  multiSelectItems: termState.terms
+                  multiSelectItems: (termState.valueOrNull ?? const <Term>[])
                       .map(
                         (term) => MultiSelectItem<int?>(
                           label: term.name,
