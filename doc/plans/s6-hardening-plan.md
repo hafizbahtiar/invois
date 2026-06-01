@@ -3,6 +3,52 @@
 > **Depends on:** S2–S5. **Branch:** `s6-hardening`.
 > Final MVP sprint. Covers blueprint §14 (testing), §15 (performance), §3.2
 > (settings drift), and clears residual analyzer noise + technical-debt checklist (§18).
+>
+> **Implementation status (2026-06-01) — COMPLETE, branch `s6-hardening`.**
+>
+> **Delivered (verified):**
+> - ✅ **Analyzer-zero**: `flutter analyze lib` → 0 issues. `skeletonizer`
+>   declared (it was used but only transitively resolved); the two deprecated
+>   `value` form-field infos were already fixed in code.
+> - ✅ **Money-spine tests**: extracted a pure, Flutter/ObjectBox-free
+>   `InvoiceComposer` (subtotal/discount/multi-tax/total/balance in cents) from
+>   the form widget + provider; 14 unit tests covering rounding and the
+>   post-discount tax base. Form page + provider delegate to it (single source
+>   of truth, behavior-preserving).
+> - ✅ **Repository tests** against a real in-memory ObjectBox store (CRUD,
+>   cents→double dual-write, reactive `watch` re-emit on put/remove, in-query
+>   filter/search). Tagged `@Tags(['objectbox'])`, **skipped by default** via
+>   `dart_test.yaml` (the Dart test VM lacks the native lib); run with
+>   `flutter test --tags objectbox --run-skipped`. Setup documented in
+>   [`../testing.md`](../testing.md).
+> - ✅ **PDF smoke coverage**: `generateInvoice` produces a valid multi-page PDF
+>   for a 100-item signed invoice + a single-item unsigned invoice, and throws
+>   on an empty invoice. (Pixel golden deferred — host-fragile; rationale in the
+>   test header.)
+> - ✅ **Settings → standard flat template**: removed the `data/datasources` +
+>   `data/repositories` nesting; `settings_repository.dart` at feature root,
+>   `data/settings_local_source.dart`. Public `settingsProvider` path unchanged
+>   → launch wiring untouched. Behavior-preserving.
+> - ✅ **Search debounce** (300ms) before `invoiceQueryProvider`; filter/data
+>   split was already in place. + 5 SettingsNotifier state-transition tests.
+> - ✅ **§18 architecture guard**: a test fails the build if `presentation/`
+>   code imports a feature `data/` layer or ObjectBox directly (clean today).
+>
+> **Deferred (conscious scope decisions, not bugs):**
+> - ⬜ **First-page pagination cap (~20) / infinite scroll.** `watchInvoices`
+>   returns all matching rows (ordered desc). A bare `.limit` would silently
+>   hide invoices without scroll-to-load, a behavior change; full paging is a
+>   follow-up. Acceptable at MVP data volumes.
+> - ⬜ **`const` list tiles / explicit keys micro-optimisation** and
+>   `select`-narrowing of heavy watches — low ROI vs. UI churn risk; revisit if
+>   a profiler shows whole-list rebuilds.
+> - ⬜ **Dependency major upgrades** (objectbox 5.x, riverpod 3.x, shadcn 0.0.52,
+>   etc.) — breaking; `flutter pub outdated` reviewed, no blind majors per plan.
+> - ⬜ **`getAll()` ban** beyond the import guard — many legitimate data-layer
+>   uses remain; not enforced.
+>
+> **Manual smoke not run in this session** (headless): create→edit→pdf→share→
+>   delete across features should be exercised on-device before release.
 
 ---
 
