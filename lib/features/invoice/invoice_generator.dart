@@ -15,6 +15,7 @@ import 'package:signature/signature.dart' as signature_lib;
 import 'package:invois/features/business/business_model.dart';
 import 'package:invois/features/client/client_model.dart';
 import 'package:invois/features/invoice/invoice_model.dart';
+import 'package:invois/features/invoice/pdf/pdf_fonts.dart';
 import 'package:invois/features/signature/signature_model.dart';
 
 /// A class responsible for generating PDF invoices
@@ -27,10 +28,11 @@ class InvoiceGenerator {
     Signature? signature,
     PdfPageFormat pageFormat = PdfPageFormat.a4,
   }) async {
-    // Load fonts
-    final font = await PdfGoogleFonts.nunitoRegular();
-    final fontBold = await PdfGoogleFonts.nunitoBold();
-    final fontItalic = await PdfGoogleFonts.nunitoItalic();
+    // Load bundled fonts (offline-first, R4) — no network fetch.
+    final fonts = await loadInvoiceFonts();
+    final font = fonts.regular;
+    final fontBold = fonts.bold;
+    final fontItalic = fonts.italic;
 
     // Create PDF document
     final pdf = pw.Document();
