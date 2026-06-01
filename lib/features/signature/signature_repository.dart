@@ -4,7 +4,7 @@ import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 
-import 'signature_local_source.dart';
+import 'data/signature_local_source.dart';
 import 'signature_model.dart';
 import 'signature_query_provider.dart';
 

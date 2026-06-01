@@ -201,7 +201,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: DropdownButtonFormField<InvoiceStatus>(
-                value: selectedStatus,
+                initialValue: selectedStatus,
                 decoration: InputDecoration(
                   labelText: 'Select Status',
                   border: InputBorder.none,
