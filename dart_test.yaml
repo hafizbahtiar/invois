@@ -1,0 +1,12 @@
+# Test runner configuration.
+#
+# The `objectbox` tag marks integration tests that open a real (in-memory)
+# ObjectBox store and therefore require the native `libobjectbox` library on the
+# host (see doc/testing.md). They are SKIPPED by default so a plain
+# `flutter test` stays green on machines/CI without the native lib.
+#
+# To run them where the lib IS installed:
+#   flutter test --tags objectbox --run-skipped
+tags:
+  objectbox:
+    skip: "Requires native libobjectbox (see doc/testing.md); run with --tags objectbox --run-skipped"
