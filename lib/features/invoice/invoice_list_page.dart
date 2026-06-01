@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
@@ -32,12 +34,18 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
   InvoiceListFilterType _selectedFilter = InvoiceListFilterType.all;
   final _searchController = TextEditingController();
 
+  /// Debounce so a query (and ObjectBox watch rebuild) fires once the user
+  /// pauses typing, not on every keystroke.
+  static const _searchDebounceDuration = Duration(milliseconds: 300);
+  Timer? _searchDebounce;
+
   //============================================
   // MARK: - Init
   //============================================
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -62,8 +70,12 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
     ref.invalidate(invoiceListProvider);
   }
 
-  Future<void> _onSearchChanged(String value) async {
-    ref.read(invoiceQueryProvider.notifier).setSearch(value);
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(_searchDebounceDuration, () {
+      if (!mounted) return;
+      ref.read(invoiceQueryProvider.notifier).setSearch(value);
+    });
   }
 
   void _onFilterSelected(InvoiceListFilterType filter) {
@@ -72,6 +84,7 @@ class _InvoiceListPageState extends ConsumerState<InvoiceListPage> {
   }
 
   void _onResetFilters() {
+    _searchDebounce?.cancel();
     _searchController.clear();
     setState(() => _selectedFilter = InvoiceListFilterType.all);
     ref.read(invoiceQueryProvider.notifier).reset();
