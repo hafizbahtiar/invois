@@ -14,10 +14,10 @@ import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 
-import 'invoice_form_provider.dart';
-import 'invoice_list_provider.dart';
-import 'invoice_model.dart';
-import 'invoice_query_provider.dart';
+import '../../providers/invoice_notifier.dart';
+import '../../providers/invoice_providers.dart';
+import '../../data/invoice_model.dart';
+import '../../data/invoice_query.dart';
 
 class InvoiceListPage extends ConsumerStatefulWidget {
   const InvoiceListPage({super.key});

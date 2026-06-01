@@ -1,6 +1,6 @@
 import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/money/money.dart';
-import 'package:invois/features/invoice/invoice_model.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/item/item_model.dart';
 
 class S3MoneyBackfillReport {

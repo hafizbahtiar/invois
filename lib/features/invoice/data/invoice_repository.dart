@@ -9,7 +9,7 @@ import 'package:invois/features/term/term.dart';
 
 import 'invoice_local_source.dart';
 import 'invoice_model.dart';
-import 'invoice_query_provider.dart';
+import 'invoice_query.dart';
 
 /// DI: one local source bound to the app-wide [storeProvider].
 final invoiceLocalSourceProvider = Provider<InvoiceLocalSource>(

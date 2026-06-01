@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/safe_parse.dart';
-import 'package:invois/features/invoice/invoice_model.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:objectbox/objectbox.dart';
 
 /// Enum to define the type of item (product, service, etc.)

@@ -11,10 +11,10 @@ import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
-import 'invoice_composer.dart';
-import 'invoice_form_state.dart';
-import 'invoice_model.dart';
-import 'invoice_repository.dart';
+import '../invoice_composer.dart';
+import 'invoice_state.dart';
+import '../data/invoice_model.dart';
+import '../data/invoice_repository.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   final InvoiceRepository _repository;

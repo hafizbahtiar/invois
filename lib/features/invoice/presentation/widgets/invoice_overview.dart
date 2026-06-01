@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
-import 'invoice_list_provider.dart';
-import 'invoice_model.dart';
+import '../../providers/invoice_providers.dart';
+import '../../data/invoice_model.dart';
 
 // ===============================
 //    MARK: Simple

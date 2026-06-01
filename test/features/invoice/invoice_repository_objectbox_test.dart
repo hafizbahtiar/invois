@@ -4,10 +4,10 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/result/result.dart';
-import 'package:invois/features/invoice/invoice_local_source.dart';
-import 'package:invois/features/invoice/invoice_model.dart';
-import 'package:invois/features/invoice/invoice_query_provider.dart';
-import 'package:invois/features/invoice/invoice_repository.dart';
+import 'package:invois/features/invoice/data/invoice_local_source.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
+import 'package:invois/features/invoice/data/invoice_query.dart';
+import 'package:invois/features/invoice/data/invoice_repository.dart';
 
 /// Repository / local-source integration tests against a real (in-memory)
 /// ObjectBox store. Tagged `objectbox` because they require the native

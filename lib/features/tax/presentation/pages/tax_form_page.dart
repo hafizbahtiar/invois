@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/tax_type.dart';
 import 'package:invois/core/utils/safe_parse.dart';
-import 'package:invois/features/business/business_module.dart';
+import 'package:invois/features/business/business.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_selector_field.dart';

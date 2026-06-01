@@ -17,7 +17,7 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import '../../features/business/data/business_model.dart';
 import '../../features/client/data/client_model.dart';
-import '../../features/invoice/invoice_model.dart';
+import '../../features/invoice/data/invoice_model.dart';
 import '../../features/item/item_model.dart';
 import '../../features/shared/models/address_model.dart';
 import '../../features/signature/data/signature_model.dart';

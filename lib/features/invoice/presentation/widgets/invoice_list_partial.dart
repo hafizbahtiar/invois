@@ -7,8 +7,8 @@ import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
-import 'invoice_list_provider.dart';
-import 'invoice_model.dart';
+import '../../providers/invoice_providers.dart';
+import '../../data/invoice_model.dart';
 
 List<Widget> buildInvoiceListSlivers(
   BuildContext context,

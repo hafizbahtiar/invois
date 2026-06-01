@@ -5,7 +5,7 @@ import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
-import 'invoice_model.dart';
+import '../data/invoice_model.dart';
 
 class InvoiceFormState {
   final Invoice? invoice;

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/invoice/invoice_model.dart';
-import 'package:invois/features/invoice/invoice_query_provider.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
+import 'package:invois/features/invoice/data/invoice_query.dart';
 
 void main() {
   group('InvoiceQuery value semantics', () {

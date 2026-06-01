@@ -19,10 +19,10 @@ import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
-import 'invoice_composer.dart';
-import 'invoice_form_provider.dart';
-import 'invoice_form_state.dart';
-import 'invoice_model.dart';
+import '../../invoice_composer.dart';
+import '../../providers/invoice_notifier.dart';
+import '../../providers/invoice_state.dart';
+import '../../data/invoice_model.dart';
 
 class InvoiceFormPage extends ConsumerStatefulWidget {
   final FormType type;

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'invoice_model.dart';
-import 'invoice_query_provider.dart';
-import 'invoice_repository.dart';
+import '../data/invoice_model.dart';
+import '../data/invoice_query.dart';
+import '../data/invoice_repository.dart';
 
 /// Reactive invoice list (ADR-0003).
 ///

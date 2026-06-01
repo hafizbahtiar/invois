@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:invois/features/invoice/invoice_generator.dart';
+import 'package:invois/features/invoice/pdf/invoice_generator.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 
-import 'invoice_form_provider.dart';
+import '../../providers/invoice_notifier.dart';
 
 /// A page to preview and interact with a generated invoice
 class InvoicePreviewPage extends ConsumerStatefulWidget {
