@@ -4,7 +4,7 @@ import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 
-import 'term_local_source.dart';
+import 'data/term_local_source.dart';
 import 'term_model.dart';
 import 'term_query_provider.dart';
 

@@ -2,6 +2,23 @@
 
 > **Depends on:** S3 (entity changes + codegen workflow). **Branch:** `s4-signature-system`.
 > **Requires `build_runner`** (new field on `Signature`). Covers blueprint §11, ADR-0004.
+>
+> **Implementation status (2026-06-01):** Done. Implemented: additive
+> `Signature.imageBytes` (byteVector), `SignatureService.export`,
+> `SignatureEmptyFailure`/`SignatureRenderFailure`, form capture of `imageBytes`,
+> and PDF embed preferring `imageBytes` with legacy points-render fallback.
+> build_runner regenerated; analyze clean; 23 tests pass (empty-export +
+> base64 round-trip added). **Intentional deviations from the plan below:**
+> - **Kept `signatureData`** (points) instead of renaming to `pointsJson` — avoids
+>   a UID rename migration; `imageBytes` is purely additive.
+> - **Skipped the `image` package** trim/flatten (no new dependency). PNG uses the
+>   controller's white background at ~1000px; bbox trim is a deferred storage
+>   optimization.
+> - **Self-heal persistence (§5) deferred:** legacy rows render from points at PDF
+>   time via the fallback (non-destructive); bytes are not back-written.
+> - **Memory split (§6) deferred:** ObjectBox loads `imageBytes` with each list
+>   row. Signatures are few in practice (≈1/business) so impact is low; a
+>   separate-entity/projection split is future work if lists grow.
 
 Fixes the root cause behind the PDF signature bug at the *source*: signatures are
 captured/stored as JSON drawing points, then re-rendered at PDF time. S1 added a

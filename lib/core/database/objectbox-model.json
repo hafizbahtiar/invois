@@ -832,7 +832,7 @@
     },
     {
       "id": "19:1637471470037547940",
-      "lastPropertyId": "14:160235966933542896",
+      "lastPropertyId": "15:6631649889703518724",
       "name": "Signature",
       "properties": [
         {
@@ -909,6 +909,11 @@
           "id": "14:160235966933542896",
           "name": "updatedAt",
           "type": 10
+        },
+        {
+          "id": "15:6631649889703518724",
+          "name": "imageBytes",
+          "type": 23
         }
       ],
       "relations": []

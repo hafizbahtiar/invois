@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 import 'package:objectbox/objectbox.dart';
 import '../../../../core/utils/safe_parse.dart';
@@ -11,7 +14,15 @@ class Signature extends Equatable {
 
   final String name;
   final String? title;
+
+  /// Vector drawing points (JSON), kept for re-editing the signature.
   final String? signatureData;
+
+  /// Canonical render-ready PNG bytes embedded directly into PDFs (ADR-0004).
+  /// Null for legacy rows captured before S4 — those fall back to rendering
+  /// [signatureData] points at PDF time.
+  @Property(type: PropertyType.byteVector)
+  final Uint8List? imageBytes;
 
   @Unique()
   final String? email;
@@ -36,6 +47,7 @@ class Signature extends Equatable {
     required this.name,
     this.title,
     this.signatureData,
+    this.imageBytes,
     this.email,
     this.phone,
     this.company,
@@ -54,6 +66,7 @@ class Signature extends Equatable {
     name,
     title,
     signatureData,
+    imageBytes,
     email,
     phone,
     company,
@@ -76,6 +89,7 @@ class Signature extends Equatable {
     String? name,
     String? title,
     String? signatureData,
+    Uint8List? imageBytes,
     String? email,
     String? phone,
     String? company,
@@ -92,6 +106,7 @@ class Signature extends Equatable {
       name: name ?? this.name,
       title: title ?? this.title,
       signatureData: signatureData ?? this.signatureData,
+      imageBytes: imageBytes ?? this.imageBytes,
       email: email ?? this.email,
       phone: phone ?? this.phone,
       company: company ?? this.company,
@@ -111,6 +126,7 @@ class Signature extends Equatable {
       'name': name,
       'title': title,
       'signatureData': signatureData,
+      'imageBytes': imageBytes == null ? null : base64Encode(imageBytes!),
       'email': email,
       'phone': phone,
       'company': company,
@@ -130,6 +146,9 @@ class Signature extends Equatable {
       name: SafeParse.string(json['name']),
       title: SafeParse.string(json['title']),
       signatureData: SafeParse.string(json['signatureData']),
+      imageBytes: json['imageBytes'] == null
+          ? null
+          : base64Decode(json['imageBytes'] as String),
       email: SafeParse.string(json['email']),
       phone: SafeParse.string(json['phone']),
       company: SafeParse.string(json['company']),

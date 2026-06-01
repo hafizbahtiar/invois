@@ -1,9 +1,9 @@
-export 'term_form_page.dart';
-export 'term_form_provider.dart';
-export 'term_form_state.dart';
-export 'term_list_page.dart';
-export 'term_list_provider.dart';
-export 'term_local_source.dart';
+export 'presentation/pages/term_form_page.dart';
+export 'presentation/providers/term_form_provider.dart';
+export 'presentation/providers/term_form_state.dart';
+export 'presentation/pages/term_list_page.dart';
+export 'presentation/providers/term_list_provider.dart';
+export 'data/term_local_source.dart';
 export 'term_model.dart';
 export 'term_query_provider.dart';
 export 'term_repository.dart';
