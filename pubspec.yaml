@@ -59,6 +59,7 @@ dependencies:
   share_plus: ^11.0.0
   printing: ^5.14.2
   shadcn_flutter: ^0.0.37
+  skeletonizer: ^2.0.1
 
 dev_dependencies:
   flutter_test:

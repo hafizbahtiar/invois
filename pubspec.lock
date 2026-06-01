@@ -1078,7 +1078,7 @@ packages:
     source: hosted
     version: "5.5.0"
   skeletonizer:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: skeletonizer
       sha256: a9ddf63900947f4c0648372b6e9987bc2b028db9db843376db6767224d166c31
