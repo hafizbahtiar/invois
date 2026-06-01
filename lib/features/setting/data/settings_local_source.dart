@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../presentation/providers/settings_state.dart';
+import '../providers/settings_state.dart';
 
 class SettingsLocalSource {
   static const String _settingsKey = 'app_settings';

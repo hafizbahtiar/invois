@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
-import 'package:invois/features/setting/presentation/providers/settings_state.dart';
+import 'package:invois/features/setting/providers/settings_state.dart';
 import 'package:invois/features/shared/widgets/my_selector_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import '../../../shared/widgets/simple_header_section.dart';
-import '../providers/settings_provider.dart';
+import '../../providers/settings_notifier.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/shared/widgets/my_select_bottom_sheet.dart';
 

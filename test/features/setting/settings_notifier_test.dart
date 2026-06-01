@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
-import 'package:invois/features/setting/settings_repository.dart';
-import 'package:invois/features/setting/presentation/providers/settings_state.dart';
+import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:invois/features/setting/data/settings_repository.dart';
+import 'package:invois/features/setting/providers/settings_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SHOULD-tier coverage (blueprint §14): SettingsNotifier state transitions

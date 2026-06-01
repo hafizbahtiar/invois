@@ -7,7 +7,7 @@ import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
 import 'package:invois/features/item/item_model.dart';
-import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
+import 'package:invois/features/setting/providers/settings_notifier.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_date_picker_field.dart';
