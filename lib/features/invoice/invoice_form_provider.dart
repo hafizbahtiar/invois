@@ -11,6 +11,7 @@ import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
+import 'invoice_composer.dart';
 import 'invoice_form_state.dart';
 import 'invoice_model.dart';
 import 'invoice_repository.dart';
@@ -167,14 +168,18 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     state = state.copyWith(items: updatedItems);
   }
 
-  // Calculate the subtotal of all items
+  // Calculate the subtotal of all items (delegates to the pure composer).
   int calculateSubtotalCents() {
-    if (state.items == null || state.items!.isEmpty) return 0;
+    final items = state.items;
+    if (items == null || items.isEmpty) return 0;
 
-    return state.items!.fold(
-      0,
-      (sum, item) =>
-          sum + (item.effectiveUnitPriceCents * (item.stockQuantity ?? 1)),
+    return InvoiceComposer.subtotalCents(
+      items.map(
+        (item) => ComposerLine(
+          unitPriceCents: item.effectiveUnitPriceCents,
+          quantity: item.stockQuantity ?? 1,
+        ),
+      ),
     );
   }
 

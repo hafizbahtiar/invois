@@ -19,6 +19,7 @@ import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/features/tax/tax_module.dart';
 import 'package:invois/features/term/term_module.dart';
 
+import 'invoice_composer.dart';
 import 'invoice_form_provider.dart';
 import 'invoice_form_state.dart';
 import 'invoice_model.dart';
@@ -337,16 +338,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
         .read(invoiceFormProvider.notifier)
         .calculateSubtotalCents();
     final discountAmount = _parseMoney(_discountAmountController.text);
-    final taxableAmount = _moneyFromCents(
-      subtotalCents - discountAmount.minorUnits,
+
+    return InvoiceComposer.taxOnTaxable(
+      taxableCents: subtotalCents - discountAmount.minorUnits,
+      rates: state.taxes!.map((tax) => tax.rate),
+      currencyCode: _selectedCurrency,
     );
-
-    var totalTaxAmountCents = 0;
-    for (final tax in state.taxes!) {
-      totalTaxAmountCents += taxableAmount.percent(tax.rate).minorUnits;
-    }
-
-    return totalTaxAmountCents;
   }
 
   void _onDeleteInvoice(invoice) async {
@@ -371,14 +368,29 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final state = ref.read(invoiceFormProvider);
     final notifier = ref.read(invoiceFormProvider.notifier);
 
-    final subtotalCents = notifier.calculateSubtotalCents();
     final discountRate = double.tryParse(_discountRateController.text) ?? 0.0;
     final discountAmount = _parseMoney(_discountAmountController.text);
-    final taxAmountCents = _calculateTaxAmountCents(state);
     final paidAmount = _parseMoney(_paidAmountController.text);
-    final totalCents =
-        subtotalCents - discountAmount.minorUnits + taxAmountCents;
-    final balanceDueCents = totalCents - paidAmount.minorUnits;
+
+    // Single source of truth for the money spine (see InvoiceComposer). The
+    // typed discount amount takes precedence over the rate, matching the form.
+    final totals = InvoiceComposer.compose(
+      lines: (state.items ?? const []).map(
+        (item) => ComposerLine(
+          unitPriceCents: item.effectiveUnitPriceCents,
+          quantity: item.stockQuantity ?? 1,
+        ),
+      ),
+      discountAmountCents: discountAmount.minorUnits,
+      taxRates: (state.taxes ?? const []).map((tax) => tax.rate),
+      paidAmountCents: paidAmount.minorUnits,
+      currencyCode: _selectedCurrency,
+    );
+
+    final subtotalCents = totals.subtotalCents;
+    final taxAmountCents = totals.taxAmountCents;
+    final totalCents = totals.totalCents;
+    final balanceDueCents = totals.balanceDueCents;
 
     final invoice = Invoice(
       id: (widget.invoiceId != null && widget.invoiceId! > 0)
