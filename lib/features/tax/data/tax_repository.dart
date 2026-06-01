@@ -4,9 +4,9 @@ import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 
-import 'data/tax_local_source.dart';
+import 'tax_local_source.dart';
 import 'tax_model.dart';
-import 'tax_query_provider.dart';
+import 'tax_query.dart';
 
 final taxLocalSourceProvider = Provider<TaxLocalSource>(
   (ref) => TaxLocalSource.withDependencies(store: ref.watch(storeProvider)),

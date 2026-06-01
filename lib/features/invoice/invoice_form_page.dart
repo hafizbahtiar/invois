@@ -16,7 +16,7 @@ import 'package:invois/features/shared/widgets/my_selector_field.dart';
 import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
-import 'package:invois/features/tax/tax_module.dart';
+import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term_module.dart';
 
 import 'invoice_composer.dart';

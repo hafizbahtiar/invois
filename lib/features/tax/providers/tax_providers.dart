@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../tax_model.dart';
-import '../../tax_query_provider.dart';
-import '../../tax_repository.dart';
+import '../data/tax_model.dart';
+import '../data/tax_query.dart';
+import '../data/tax_repository.dart';
 
 /// Reactive tax list (ADR-0003), parameterized by [TaxQuery].
 ///

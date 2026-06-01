@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'tax_form_state.dart';
-import '../../tax_model.dart';
-import '../../tax_repository.dart';
+import 'tax_state.dart';
+import '../data/tax_model.dart';
+import '../data/tax_repository.dart';
 
 class TaxFormNotifier extends StateNotifier<TaxFormState> {
   final TaxRepository _repository;

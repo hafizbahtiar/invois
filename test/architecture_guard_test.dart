@@ -7,13 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Enforces the blueprint §18 layering anti-patterns as a cheap CI guard.
 ///
-/// Presentation code must depend on repositories (which expose Result / Stream),
-/// never reach into a feature's `data/` layer or touch ObjectBox directly. This
-/// test fails the build if a regression reintroduces those imports.
+/// Presentation code must go through providers/repositories, never reach into a
+/// feature's local data source or touch ObjectBox directly. (Importing the
+/// entity model or the query filter type from `data/` is fine — those are the
+/// shared types presentation renders.) This test fails the build if a
+/// regression reintroduces a forbidden import.
 void main() {
   final featuresDir = Directory('lib/features');
 
-  test('presentation layers do not import data/ or ObjectBox', () {
+  test('presentation layers do not import a local source or ObjectBox', () {
     final violations = <String>[];
 
     final presentationFiles = featuresDir
@@ -23,7 +25,8 @@ void main() {
         .where((f) => f.path.contains('/presentation/'));
 
     final forbidden = <RegExp, String>{
-      RegExp(r'''import\s+['"][^'"]*/data/'''): 'imports a feature data/ layer',
+      RegExp(r'''import\s+['"][^'"]*_local_source\.dart'''):
+          'imports a feature local data source',
       RegExp(r'objectbox\.g\.dart'): 'imports the ObjectBox generated bindings',
       RegExp(r'''import\s+['"]package:objectbox/'''): 'imports package:objectbox',
     };

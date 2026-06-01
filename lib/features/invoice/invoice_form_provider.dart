@@ -8,7 +8,7 @@ import 'package:invois/features/business/business_repository.dart';
 import 'package:invois/features/client/presentation/providers/client_form_provider.dart';
 import 'package:invois/features/client/client_repository.dart';
 import 'package:invois/features/item/item_model.dart';
-import 'package:invois/features/tax/tax_model.dart';
+import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
 import 'invoice_composer.dart';

@@ -2,7 +2,7 @@ import 'package:invois/features/business/business_module.dart';
 import 'package:invois/features/client/client_model.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/signature_model.dart';
-import 'package:invois/features/tax/tax_model.dart';
+import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/term_model.dart';
 
 import 'invoice_model.dart';

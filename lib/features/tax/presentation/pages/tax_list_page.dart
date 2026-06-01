@@ -9,10 +9,10 @@ import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
-import '../../tax_model.dart';
+import '../../data/tax_model.dart';
 
-import '../providers/tax_list_provider.dart';
-import '../../tax_query_provider.dart';
+import '../../providers/tax_providers.dart';
+import '../../data/tax_query.dart';
 
 class TaxListPage extends ConsumerStatefulWidget {
   final ListType listType;

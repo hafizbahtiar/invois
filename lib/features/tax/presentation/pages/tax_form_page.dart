@@ -11,8 +11,8 @@ import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
-import '../providers/tax_form_provider.dart';
-import '../../tax_model.dart';
+import '../../providers/tax_notifier.dart';
+import '../../data/tax_model.dart';
 
 class TaxFormPage extends ConsumerStatefulWidget {
   final FormType type;

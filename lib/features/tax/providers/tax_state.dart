@@ -1,4 +1,4 @@
-import '../../tax_model.dart';
+import '../data/tax_model.dart';
 
 class TaxFormState {
   final Tax? tax;

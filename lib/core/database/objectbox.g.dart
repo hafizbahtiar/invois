@@ -21,7 +21,7 @@ import '../../features/invoice/invoice_model.dart';
 import '../../features/item/item_model.dart';
 import '../../features/shared/models/address_model.dart';
 import '../../features/signature/signature_model.dart';
-import '../../features/tax/tax_model.dart';
+import '../../features/tax/data/tax_model.dart';
 import '../../features/term/term_model.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
