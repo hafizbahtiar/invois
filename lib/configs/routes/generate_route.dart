@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_type.dart';
-import 'package:invois/features/business/business_module.dart';
-import 'package:invois/features/client/client_module.dart';
+import 'package:invois/features/business/business.dart';
+import 'package:invois/features/client/client.dart';
 import 'package:invois/features/invoice/invoice_form_page.dart';
 import 'package:invois/features/invoice/invoice_list_page.dart';
 import 'package:invois/features/invoice/invoice_preview_page.dart';
-import 'package:invois/features/signature/signature_module.dart';
+import 'package:invois/features/signature/signature.dart';
 
 import 'package:invois/features/shared/pages/no_route_page.dart';
 import 'package:invois/features/home/pages/home_page.dart';
 import 'package:invois/features/setting/presentation/pages/settings_page.dart';
 import 'package:invois/features/splash/splash_page.dart';
 import 'package:invois/features/tax/tax.dart';
-import 'package:invois/features/term/term_module.dart';
+import 'package:invois/features/term/term.dart';
 import '../../../core/utils/safe_parse.dart';
 import 'routes_name.dart';
 

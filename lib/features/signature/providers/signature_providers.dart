@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../signature_model.dart';
-import '../../signature_query_provider.dart';
-import '../../signature_repository.dart';
+import '../data/signature_model.dart';
+import '../data/signature_query.dart';
+import '../data/signature_repository.dart';
 
 /// Reactive signature list (ADR-0003), parameterized by [SignatureQuery].
 ///

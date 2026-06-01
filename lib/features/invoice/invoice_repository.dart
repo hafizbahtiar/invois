@@ -5,7 +5,7 @@ import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
-import 'package:invois/features/term/term_module.dart';
+import 'package:invois/features/term/term.dart';
 
 import 'invoice_local_source.dart';
 import 'invoice_model.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'term_form_state.dart';
-import '../../term_model.dart';
-import '../../term_repository.dart';
+import 'term_state.dart';
+import '../data/term_model.dart';
+import '../data/term_repository.dart';
 
 class TermFormNotifier extends StateNotifier<TermFormState> {
   final TermRepository _repository;

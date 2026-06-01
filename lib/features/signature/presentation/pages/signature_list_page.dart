@@ -8,10 +8,10 @@ import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
-import '../../signature_model.dart';
+import '../../data/signature_model.dart';
 
-import '../providers/signature_list_provider.dart';
-import '../../signature_query_provider.dart';
+import '../../providers/signature_providers.dart';
+import '../../data/signature_query.dart';
 
 enum SignatureListFilter { all, active, inactive, defaultStatus }
 

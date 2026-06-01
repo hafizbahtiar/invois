@@ -8,10 +8,10 @@ import 'package:invois/features/shared/widgets/my_filter_section.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
-import '../../business_model.dart';
+import '../../data/business_model.dart';
 
-import '../providers/business_list_provider.dart';
-import '../../business_query_provider.dart';
+import '../../providers/business_providers.dart';
+import '../../data/business_query.dart';
 
 class BusinessListPage extends ConsumerStatefulWidget {
   const BusinessListPage({super.key});

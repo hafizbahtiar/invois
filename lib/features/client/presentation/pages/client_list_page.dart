@@ -9,9 +9,9 @@ import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/features/shared/widgets/simple_list.dart';
 
-import '../providers/client_list_provider.dart';
-import '../../client_model.dart';
-import '../../client_query_provider.dart';
+import '../../providers/client_providers.dart';
+import '../../data/client_model.dart';
+import '../../data/client_query.dart';
 
 class ClientListPage extends ConsumerStatefulWidget {
   const ClientListPage({super.key});

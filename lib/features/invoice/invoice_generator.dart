@@ -12,12 +12,12 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:signature/signature.dart' as signature_lib;
 
-import 'package:invois/features/business/business_model.dart';
-import 'package:invois/features/client/client_model.dart';
+import 'package:invois/features/business/data/business_model.dart';
+import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/invoice/invoice_model.dart';
 import 'package:invois/features/invoice/pdf/pdf_fonts.dart';
 import 'package:invois/features/item/item_model.dart';
-import 'package:invois/features/signature/signature_model.dart';
+import 'package:invois/features/signature/data/signature_model.dart';
 
 /// Generates PDF invoices.
 ///

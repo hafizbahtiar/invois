@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../term_model.dart';
-import '../term_query_provider.dart';
+import 'term_model.dart';
+import 'term_query.dart';
 
 class TermLocalSource {
   final Store _store;

@@ -9,8 +9,8 @@ import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
-import '../providers/business_form_provider.dart';
-import '../../business_model.dart';
+import '../../providers/business_notifier.dart';
+import '../../data/business_model.dart';
 
 class BusinessFormPage extends ConsumerStatefulWidget {
   final FormType type;

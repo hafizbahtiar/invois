@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/features/business/business_model.dart';
+import 'package:invois/features/business/data/business_model.dart';
 
-import '../../business_query_provider.dart';
-import '../../business_repository.dart';
+import '../data/business_query.dart';
+import '../data/business_repository.dart';
 
 /// Reactive business list (ADR-0003), parameterized by [BusinessQuery].
 ///

@@ -4,9 +4,9 @@ import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
 
-import 'data/business_local_source.dart';
+import 'business_local_source.dart';
 import 'business_model.dart';
-import 'business_query_provider.dart';
+import 'business_query.dart';
 
 final businessLocalSourceProvider = Provider<BusinessLocalSource>(
   (ref) =>

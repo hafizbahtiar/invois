@@ -2,12 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:invois/features/business/business_model.dart';
-import 'package:invois/features/client/client_model.dart';
+import 'package:invois/features/business/data/business_model.dart';
+import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/invoice/invoice_generator.dart';
 import 'package:invois/features/invoice/invoice_model.dart';
 import 'package:invois/features/item/item_model.dart';
-import 'package:invois/features/signature/signature_model.dart';
+import 'package:invois/features/signature/data/signature_model.dart';
 
 /// Smoke coverage for the S5 PDF engine.
 ///

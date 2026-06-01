@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'package:invois/features/business/business_module.dart';
+import 'package:invois/features/business/business.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_selector_field.dart';
@@ -9,8 +9,8 @@ import 'package:invois/features/shared/widgets/my_snackbar.dart';
 import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
-import '../providers/term_form_provider.dart';
-import '../../term_model.dart';
+import '../../providers/term_notifier.dart';
+import '../../data/term_model.dart';
 
 class TermFormPage extends ConsumerStatefulWidget {
   final FormType type;

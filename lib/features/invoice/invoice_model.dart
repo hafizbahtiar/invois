@@ -3,7 +3,7 @@ import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
-import 'package:invois/features/term/term_model.dart';
+import 'package:invois/features/term/data/term_model.dart';
 import 'package:objectbox/objectbox.dart';
 
 /// Enum to define the invoice status

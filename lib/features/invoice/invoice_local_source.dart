@@ -3,7 +3,7 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
-import 'package:invois/features/term/term_model.dart';
+import 'package:invois/features/term/data/term_model.dart';
 
 import 'invoice_model.dart';
 import 'invoice_query_provider.dart';

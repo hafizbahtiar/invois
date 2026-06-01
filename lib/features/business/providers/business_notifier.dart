@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'business_form_state.dart';
-import '../../business_model.dart';
-import '../../business_repository.dart';
+import 'business_state.dart';
+import '../data/business_model.dart';
+import '../data/business_repository.dart';
 
 class BusinessFormNotifier extends StateNotifier<BusinessFormState> {
   final BusinessRepository _repository;

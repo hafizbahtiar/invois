@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/utils/string_utils.dart';
-import 'package:invois/features/business/business_module.dart';
+import 'package:invois/features/business/business.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_selector_field.dart';
@@ -14,9 +14,9 @@ import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:signature/signature.dart' as signature_lib;
 
-import '../../signature_model.dart' as signature_model;
-import '../../signature_service.dart';
-import '../providers/signature_form_provider.dart';
+import '../../data/signature_model.dart' as signature_model;
+import '../../providers/signature_service.dart';
+import '../../providers/signature_notifier.dart';
 
 class SignatureFormPage extends ConsumerStatefulWidget {
   final FormType type;

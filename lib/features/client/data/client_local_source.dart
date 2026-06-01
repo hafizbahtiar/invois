@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../client_model.dart';
-import '../client_query_provider.dart';
+import 'client_model.dart';
+import 'client_query.dart';
 
 class ClientLocalSource {
   final Store _store;

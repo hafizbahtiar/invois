@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
-import 'signature_form_state.dart';
-import '../../signature_model.dart';
-import '../../signature_repository.dart';
+import 'signature_state.dart';
+import '../data/signature_model.dart';
+import '../data/signature_repository.dart';
 
 class SignatureFormNotifier extends StateNotifier<SignatureFormState> {
   final SignatureRepository _repository;

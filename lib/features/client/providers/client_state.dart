@@ -1,4 +1,4 @@
-import '../../client_model.dart';
+import '../data/client_model.dart';
 
 class ClientFormState {
   final Client? client;

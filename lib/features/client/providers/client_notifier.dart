@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 
-import 'client_form_state.dart';
-import '../../client_model.dart';
-import '../../client_repository.dart';
+import 'client_state.dart';
+import '../data/client_model.dart';
+import '../data/client_repository.dart';
 
 class ClientFormNotifier extends StateNotifier<ClientFormState> {
   final ClientRepository _repository;

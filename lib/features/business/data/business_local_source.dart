@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../business_model.dart';
-import '../business_query_provider.dart';
+import 'business_model.dart';
+import 'business_query.dart';
 
 class BusinessLocalSource {
   final Store _store;

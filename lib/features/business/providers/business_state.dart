@@ -1,4 +1,4 @@
-import '../../business_model.dart';
+import '../data/business_model.dart';
 
 class BusinessFormState {
   final Business? business;

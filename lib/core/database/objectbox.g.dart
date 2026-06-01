@@ -15,14 +15,14 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import '../../features/business/business_model.dart';
-import '../../features/client/client_model.dart';
+import '../../features/business/data/business_model.dart';
+import '../../features/client/data/client_model.dart';
 import '../../features/invoice/invoice_model.dart';
 import '../../features/item/item_model.dart';
 import '../../features/shared/models/address_model.dart';
-import '../../features/signature/signature_model.dart';
+import '../../features/signature/data/signature_model.dart';
 import '../../features/tax/data/tax_model.dart';
-import '../../features/term/term_model.dart';
+import '../../features/term/data/term_model.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 

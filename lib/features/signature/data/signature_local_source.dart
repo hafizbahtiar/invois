@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../signature_model.dart';
-import '../signature_query_provider.dart';
+import 'signature_model.dart';
+import 'signature_query.dart';
 
 class SignatureLocalSource {
   final Store _store;

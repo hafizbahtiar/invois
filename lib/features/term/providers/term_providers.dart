@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../term_model.dart';
-import '../../term_query_provider.dart';
-import '../../term_repository.dart';
+import '../data/term_model.dart';
+import '../data/term_query.dart';
+import '../data/term_repository.dart';
 
 /// Reactive term list (ADR-0003), parameterized by [TermQuery].
 ///

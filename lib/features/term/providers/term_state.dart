@@ -1,4 +1,4 @@
-import '../../term_model.dart';
+import '../data/term_model.dart';
 
 class TermFormState {
   final Term? term;

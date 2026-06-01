@@ -1,4 +1,4 @@
-import '../../signature_model.dart';
+import '../data/signature_model.dart';
 
 class SignatureFormState {
   final Signature? signature;
