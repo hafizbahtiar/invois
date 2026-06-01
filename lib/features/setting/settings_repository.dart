@@ -1,5 +1,5 @@
-import '../datasources/settings_local_source.dart';
-import '../../presentation/providers/settings_state.dart';
+import 'data/settings_local_source.dart';
+import 'presentation/providers/settings_state.dart';
 
 class SettingsRepository {
   final SettingsLocalSource _localSource;
