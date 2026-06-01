@@ -4,6 +4,17 @@
 > Decomposes the 1,700-line `invoice_generator.dart` (manual pagination
 > heuristics, synchronous build, network fonts) into a maintainable, offline,
 > off-thread engine. Covers blueprint §10. **No entity changes / no codegen.**
+>
+> **Implementation status (2026-06-01) — partial, branch `s5-pdf-engine`:**
+> - ✅ **Bundled fonts** (`pdf/pdf_fonts.dart`, `assets/fonts/Nunito-*.ttf`):
+>   replaced `PdfGoogleFonts.*`; PDFs generate offline. Verified (network-blocked
+>   smoke + visual).
+> - ✅ **MultiPage**: single `pw.MultiPage`, repeating table header, footer page
+>   numbers; deleted manual single/multi heuristics + compact variants
+>   (1817→731 lines). Verified visually (single+signature, 60-item/5-page).
+> - ⬜ **DTO + `compute()` isolate (R3)**, ⬜ **pdf/ decomposition (store/sharer/
+>   template)**, ⬜ **caching** — pending. The generator still runs on the UI
+>   isolate and consumes `Invoice` directly (no DTO yet).
 
 ---
 
