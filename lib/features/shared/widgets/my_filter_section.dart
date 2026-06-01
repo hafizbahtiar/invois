@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/features/business/business_module.dart';
+import 'package:invois/features/business/business.dart';
 
 class MyFilterSection<T> extends ConsumerWidget {
   final String searchQuery;

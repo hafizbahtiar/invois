@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
-import 'package:invois/features/client/client_model.dart';
+import 'package:invois/features/client/data/client_model.dart';
 import 'package:objectbox/objectbox.dart';
 import 'package:invois/core/utils/safe_parse.dart';
-import 'package:invois/features/business/business_model.dart';
+import 'package:invois/features/business/data/business_model.dart';
 
 @Entity()
 // ignore: must_be_immutable
