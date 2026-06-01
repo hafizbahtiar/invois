@@ -5,16 +5,40 @@
 > heuristics, synchronous build, network fonts) into a maintainable, offline,
 > off-thread engine. Covers blueprint §10. **No entity changes / no codegen.**
 >
-> **Implementation status (2026-06-01) — partial, branch `s5-pdf-engine`:**
-> - ✅ **Bundled fonts** (`pdf/pdf_fonts.dart`, `assets/fonts/Nunito-*.ttf`):
->   replaced `PdfGoogleFonts.*`; PDFs generate offline. Verified (network-blocked
->   smoke + visual).
-> - ✅ **MultiPage**: single `pw.MultiPage`, repeating table header, footer page
->   numbers; deleted manual single/multi heuristics + compact variants
->   (1817→731 lines). Verified visually (single+signature, 60-item/5-page).
-> - ⬜ **DTO + `compute()` isolate (R3)**, ⬜ **pdf/ decomposition (store/sharer/
->   template)**, ⬜ **caching** — pending. The generator still runs on the UI
->   isolate and consumes `Invoice` directly (no DTO yet).
+> **Implementation status (2026-06-01) — FINALIZED at reduced scope, branch `s5-pdf-engine`.**
+>
+> **Delivered (verified):**
+> - ✅ **Bundled fonts / offline PDF** (`pdf/pdf_fonts.dart`, `assets/fonts/Nunito-*.ttf`):
+>   replaced `PdfGoogleFonts.*`; PDFs generate with no network. Fixed a real
+>   correctness bug (offline generation previously failed). Verified via
+>   network-blocked smoke + visual PDF render.
+> - ✅ **MultiPage pagination**: single `pw.MultiPage` replacing the manual
+>   single-/multi-page heuristics + compact builder variants (1817→731 lines).
+>   Fixed a real invoice scalability problem.
+> - ✅ **Repeating table header + footer page numbers** across pages.
+> - ✅ **Signature compatibility preserved**: `imageBytes` with legacy
+>   points-render fallback; verified embedded in single- and multi-page PDFs.
+> - Public generator API (`generate/preview/print/share/save`) unchanged →
+>   `invoice_preview_page` untouched.
+>
+> **DEFERRED to a focused follow-up sprint (not implemented):**
+> - ⬜ **`PdfInvoiceData` DTO + `compute()` isolate (R3)** — moves PDF build off
+>   the UI thread. The generator still runs synchronously on the UI isolate and
+>   consumes `Invoice` directly.
+> - ⬜ **`pdf/` decomposition** (template / store / sharer split beyond
+>   `pdf_fonts.dart`).
+> - ⬜ **Byte caching** by `(invoiceId, updatedAt)`.
+>
+> **Reason for deferral:** lower immediate value (UX/performance polish, not a
+> correctness bug), high churn (a full DTO mirror + mapper + rewiring every
+> section builder, since ObjectBox `ToMany` can't cross the isolate boundary),
+> and it requires its own full smoke cycle. Generating one invoice at a time is
+> acceptable today.
+>
+> **Recommended future trigger to pick this up:** an observed UI freeze during
+> generation, user complaints about large-invoice generation latency, or when
+> PDF templates multiply (multiple selectable layouts) — at which point the DTO
+> + template-strategy + isolate split pays for itself.
 
 ---
 
