@@ -848,7 +848,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
       id: const obx_int.IdUid(19, 1637471470037547940),
       name: 'Signature',
-      lastPropertyId: const obx_int.IdUid(14, 160235966933542896),
+      lastPropertyId: const obx_int.IdUid(15, 6631649889703518724),
       flags: 0,
       properties: <obx_int.ModelProperty>[
         obx_int.ModelProperty(
@@ -922,6 +922,11 @@ final _entities = <obx_int.ModelEntity>[
             id: const obx_int.IdUid(14, 160235966933542896),
             name: 'updatedAt',
             type: 10,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(15, 6631649889703518724),
+            name: 'imageBytes',
+            type: 23,
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
@@ -2166,7 +2171,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
               object.website == null ? null : fbb.writeString(object.website!);
           final notesOffset =
               object.notes == null ? null : fbb.writeString(object.notes!);
-          fbb.startTable(15);
+          final imageBytesOffset = object.imageBytes == null
+              ? null
+              : fbb.writeListInt8(object.imageBytes!);
+          fbb.startTable(16);
           fbb.addInt64(0, object.id ?? 0);
           fbb.addOffset(1, nameOffset);
           fbb.addOffset(2, titleOffset);
@@ -2181,6 +2189,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fbb.addInt64(11, object.businessId);
           fbb.addInt64(12, object.createdAt?.millisecondsSinceEpoch);
           fbb.addInt64(13, object.updatedAt?.millisecondsSinceEpoch);
+          fbb.addOffset(14, imageBytesOffset);
           fbb.finish(fbb.endTable());
           return object.id ?? 0;
         },
@@ -2200,6 +2209,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           final signatureDataParam =
               const fb.StringReader(asciiOptimization: true)
                   .vTableGetNullable(buffer, rootOffset, 10);
+          final imageBytesParam = const fb.Uint8ListReader(lazy: false)
+              .vTableGetNullable(buffer, rootOffset, 32) as Uint8List?;
           final emailParam = const fb.StringReader(asciiOptimization: true)
               .vTableGetNullable(buffer, rootOffset, 12);
           final phoneParam = const fb.StringReader(asciiOptimization: true)
@@ -2227,6 +2238,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
               name: nameParam,
               title: titleParam,
               signatureData: signatureDataParam,
+              imageBytes: imageBytesParam,
               email: emailParam,
               phone: phoneParam,
               company: companyParam,
@@ -2910,4 +2922,8 @@ class Signature_ {
   /// see [Signature.updatedAt]
   static final updatedAt =
       obx.QueryDateProperty<Signature>(_entities[7].properties[13]);
+
+  /// see [Signature.imageBytes]
+  static final imageBytes =
+      obx.QueryByteVectorProperty<Signature>(_entities[7].properties[14]);
 }

@@ -34,6 +34,17 @@ class NotFoundFailure extends AppFailure {
   const NotFoundFailure(super.message);
 }
 
+/// The signature canvas had no strokes to export.
+class SignatureEmptyFailure extends AppFailure {
+  const SignatureEmptyFailure()
+    : super('Please draw a signature before saving.');
+}
+
+/// The signature could not be rendered to an image.
+class SignatureRenderFailure extends AppFailure {
+  const SignatureRenderFailure() : super('Failed to render the signature.');
+}
+
 /// Anything we did not anticipate. Keeps the original [cause] for logging.
 class UnexpectedFailure extends AppFailure {
   final Object cause;

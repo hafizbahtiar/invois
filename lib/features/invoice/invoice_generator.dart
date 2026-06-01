@@ -35,10 +35,11 @@ class InvoiceGenerator {
     // Create PDF document
     final pdf = pw.Document();
 
-    // Signatures are stored as JSON drawing points, not image bytes. Render them
-    // to a PNG up-front so the (synchronous) page builders can embed real image
-    // data. Returns null when there is no signature or the data can't be rendered.
-    final Uint8List? signatureImage = await _renderSignatureImage(signature);
+    // Prefer the canonical stored PNG (ADR-0004); fall back to rendering the
+    // legacy JSON drawing points for rows captured before S4. Computed up-front
+    // so the (synchronous) page builders can embed real image data.
+    final Uint8List? signatureImage =
+        signature?.imageBytes ?? await _renderSignatureImage(signature);
 
     // Define colors
     final primaryColor = PdfColors.blueGrey800;

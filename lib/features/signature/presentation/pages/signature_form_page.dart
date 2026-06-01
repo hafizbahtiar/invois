@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import 'package:invois/features/shared/widgets/my_tile.dart';
 import 'package:signature/signature.dart' as signature_lib;
 
 import '../../signature_model.dart' as signature_model;
+import '../../signature_service.dart';
 import '../providers/signature_form_provider.dart';
 
 class SignatureFormPage extends ConsumerStatefulWidget {
@@ -180,7 +182,7 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
 
     final state = ref.read(signatureFormProvider);
     final notifier = ref.read(signatureFormProvider.notifier);
-    // Serialize signature points to JSON
+    // Serialize signature points to JSON (kept for re-editing).
     final pointsJson = jsonEncode(
       _signatureController.points
           .map(
@@ -194,6 +196,16 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
           .toList(),
     );
 
+    // Render the canonical PNG (ADR-0004) when there are strokes; null otherwise
+    // so an unsigned record still saves. Carry forward existing bytes on edit
+    // when the canvas is empty.
+    Uint8List? imageBytes = state.signature?.imageBytes;
+    if (_signatureController.isNotEmpty) {
+      imageBytes = await ref
+          .read(signatureServiceProvider)
+          .export(_signatureController);
+    }
+
     final signature = signature_model.Signature(
       id: (widget.signatureId != null && widget.signatureId! > 0)
           ? widget.signatureId!
@@ -205,6 +217,7 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
       company: StringUtils.nullIfBlank(_companyController.text),
       website: StringUtils.nullIfBlank(_websiteController.text),
       signatureData: pointsJson,
+      imageBytes: imageBytes,
       businessId: state.signature?.businessId,
       isDefault: _isDefault,
       isActive: _isActive,
