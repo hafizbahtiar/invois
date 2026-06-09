@@ -401,6 +401,21 @@ Pure read adapter only — **no consumer switched, no writes changed, no schema/
 
 ---
 
+## Stage 4C-2 — Completed (2026-06-09) — invoice detail line-items via InvoiceLineReader
+
+First read consumer switched. **Detail display only** — totals/composer, PDF, form, and the write path are untouched.
+
+- **Changed:** `invoice_detail_page.dart` `_LineItemsSection` renders `InvoiceLineReader.fromInvoice(invoice)` → `InvoiceLineView` (`name`, `displayQuantity` × unit price, `lineTotalCents`) instead of mapping raw `Item` rows.
+- **Fallback preserved:** legacy invoices (no lines) → `items` with identical whole-quantity display + totals; backfilled invoices → `lines`; both present → lines only; empty → unchanged empty state. No visual redesign.
+- `data.items` still backs the `_ActionSection` "Mark as Sent" guard (unchanged).
+- **Files:** `invoice_detail_page.dart` (import + `_LineItemsSection`); new objectbox-tagged `invoice_line_reader_objectbox_test.dart`; docs.
+- **Tests:** the 4C-1 pure adapter tests cover the mapping/fallback; the new tagged test exercises `fromInvoice` against a real store (legacy fallback / backfilled-prefers-lines / empty). No native lib needed for the default suite.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 132 passed, 8 skipped (+1 tagged).
+- **Not done (as scoped):** PDF (`invoice_generator`), totals (`invoice_composer`/notifier), form, and all writes untouched; no schema/generated changes; no orphan cleanup.
+- **Next:** Stage 4C-3 — switch the next read consumer (totals/composer or PDF) behind the same fallback.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

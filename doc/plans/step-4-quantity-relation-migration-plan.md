@@ -200,3 +200,11 @@ Matches the plan, with these concrete choices:
 - Pure-testable: `resolve` takes plain lists, so unit tests need no native store.
 - **No consumers switched** — form/detail/PDF/composer/notifier untouched. Writes unchanged.
 - Next: 4C-2 — switch a first read consumer (totals/composer or detail) to `InvoiceLineReader`, behind the same fallback, with tests.
+
+## Step 4C-2 — Implementation Notes (detail display switched)
+
+- `invoice_detail_page.dart` `_LineItemsSection` now renders `InvoiceLineReader.fromInvoice(invoice)` → `InvoiceLineView` (name / `displayQuantity` × unit price / `lineTotalCents`) instead of mapping raw `Item` rows.
+- Behaviour preserved for legacy invoices (fallback to `items`; whole-quantity display + totals identical); backfilled invoices render from `lines`; both-present uses lines; empty unchanged.
+- Scope held: totals/composer, PDF, form, and the write path are untouched; `data.items` still backs the `_ActionSection` "Mark as Sent" guard.
+- Added objectbox-tagged `invoice_line_reader_objectbox_test.dart` exercising `fromInvoice` against a real store (legacy fallback, backfilled-prefers-lines, empty).
+- Next: 4C-3 — switch the next consumer (composer/totals or PDF) behind the same fallback.

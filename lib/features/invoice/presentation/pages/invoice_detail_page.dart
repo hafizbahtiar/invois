@@ -5,6 +5,7 @@ import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/core/utils/date_utils.dart' as app_date;
 import 'package:invois/features/invoice/data/invoice_model.dart';
+import 'package:invois/features/invoice/invoice_line_view.dart';
 import 'package:invois/features/invoice/pdf/invoice_generator.dart';
 import 'package:invois/features/invoice/providers/invoice_notifier.dart';
 import 'package:invois/features/invoice/providers/invoice_providers.dart';
@@ -451,33 +452,34 @@ class _LineItemsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = data.items;
     final invoice = data.invoice;
+    // Step 4C-2: read line items through the unified adapter — prefers the new
+    // Invoice.lines snapshots, falls back to legacy Invoice.items. Totals/PDF/
+    // form/write paths are unchanged.
+    final lineViews = InvoiceLineReader.fromInvoice(invoice);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionTitle(icon: Icons.list_alt, title: 'Line Items'),
         const SizedBox(height: 8),
-        if (items.isEmpty)
+        if (lineViews.isEmpty)
           const MyEmptyState(
             icon: Icons.list_alt,
             title: 'No line items',
             description: 'This invoice does not have any line items yet.',
           )
         else
-          ...items.map((item) {
-            final quantity = item.stockQuantity ?? 1;
-            final amountCents = item.effectiveUnitPriceCents * quantity;
+          ...lineViews.map((view) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: MyTile(
                 icon: Icons.shopping_cart,
-                title: item.name,
+                title: view.name,
                 subtitle:
-                    '$quantity x ${_formatMoney(invoice, item.effectiveUnitPriceCents)}',
+                    '${view.displayQuantity} x ${_formatMoney(invoice, view.unitPriceCents)}',
                 trailing: Text(
-                  _formatMoney(invoice, amountCents),
+                  _formatMoney(invoice, view.lineTotalCents),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 showChevron: false,
