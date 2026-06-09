@@ -12,6 +12,7 @@ import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
 import '../../providers/tax_notifier.dart';
+import '../../providers/tax_providers.dart';
 import '../../data/tax_model.dart';
 
 class TaxFormPage extends ConsumerStatefulWidget {
@@ -119,7 +120,12 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
     final result = await ref
         .read(taxFormProvider.notifier)
         .deleteTaxById(tax.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(taxListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -152,7 +158,10 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
 
     final notifier = ref.read(taxFormProvider.notifier);
     final result = await notifier.onUpsert(tax);
-    if (result == true && mounted) Navigator.pop(context);
+    if (result == true && mounted) {
+      ref.invalidate(taxListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,

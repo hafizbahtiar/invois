@@ -17,6 +17,7 @@ import 'package:signature/signature.dart' as signature_lib;
 import '../../data/signature_model.dart' as signature_model;
 import '../../providers/signature_service.dart';
 import '../../providers/signature_notifier.dart';
+import '../../providers/signature_providers.dart';
 
 class SignatureFormPage extends ConsumerStatefulWidget {
   final FormType type;
@@ -161,7 +162,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     final result = await ref
         .read(signatureFormProvider.notifier)
         .deleteSignature(signature.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(signatureListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -224,7 +230,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     );
 
     final result = await notifier.onUpsert(signature);
-    if (result == true && mounted) Navigator.pop(context);
+    // Covers create/update plus set-default / activate-deactivate (all go
+    // through onUpsert), refreshing the list badges/status.
+    if (result == true && mounted) {
+      ref.invalidate(signatureListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,

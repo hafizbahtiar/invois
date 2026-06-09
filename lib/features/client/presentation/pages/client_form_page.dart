@@ -12,6 +12,7 @@ import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
 import '../../providers/client_notifier.dart';
+import '../../providers/client_providers.dart';
 import '../../data/client_model.dart';
 
 class ClientFormPage extends ConsumerStatefulWidget {
@@ -137,7 +138,12 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     final result = await ref
         .read(clientFormProvider.notifier)
         .deleteClientById(client.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(clientListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -180,7 +186,10 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     );
 
     final result = await notifier.onUpsert(client);
-    if (result == true && mounted) Navigator.pop(context);
+    if (result == true && mounted) {
+      ref.invalidate(clientListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,

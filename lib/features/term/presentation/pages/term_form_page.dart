@@ -10,6 +10,7 @@ import 'package:invois/features/shared/widgets/my_text_field.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 
 import '../../providers/term_notifier.dart';
+import '../../providers/term_providers.dart';
 import '../../data/term_model.dart';
 
 class TermFormPage extends ConsumerStatefulWidget {
@@ -108,7 +109,12 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
     final result = await ref
         .read(termFormProvider.notifier)
         .deleteTermById(term.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(termListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -140,7 +146,10 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
     );
 
     final result = await notifier.onUpsert(term);
-    if (result == true && mounted) Navigator.pop(context);
+    if (result == true && mounted) {
+      ref.invalidate(termListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
