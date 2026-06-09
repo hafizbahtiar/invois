@@ -355,6 +355,38 @@ Additive only. The legacy `Invoice.items` / `Item.stockQuantity` path **still dr
 
 ---
 
+## QA Checkpoint — Settings list freshness (2026-06-09)
+
+- **Latest commit:** `052bd6f` — fix(settings): refresh lists after mutations.
+- **Settings list refresh fix: completed.** Targeted `ref.invalidate(<feature>ListProvider)` added after successful create/update/delete (and signature set-default/activate/deactivate via `onUpsert`) in the five settings form pages, guarded by `mounted`. Defense-in-depth over the existing ObjectBox `watch` streams; no schema/generated/list-page changes.
+- **Branch health:** `flutter analyze` → No issues found; `flutter test` → 121 passed, 7 skipped (the 7 skips are objectbox-tagged suites). Working tree clean.
+- **Manual QA: still required** (see checklist below) — the runtime staleness was UI/runtime-path, so it must be confirmed on a device/emulator.
+- **ObjectBox tagged tests: still pending** on a machine with native `libobjectbox.dylib`.
+- **Step 4C (invoice quantity read/write switch): NOT started.** Invoice quantity/schema untouched.
+
+### Manual QA checklist — Settings list freshness
+- [ ] Add Term → list shows latest immediately
+- [ ] Edit Term → list updates immediately
+- [ ] Delete Term → item removed immediately
+- [ ] Add Signature → list shows latest immediately
+- [ ] Edit Signature → list updates immediately
+- [ ] Delete Signature → item removed immediately
+- [ ] Set default Signature → badge/status updates immediately
+- [ ] Add/Edit/Delete Tax → list updates immediately
+- [ ] Add/Edit/Delete Client → list updates immediately
+- [ ] Add/Edit/Delete Business → list updates immediately
+- [ ] Pull-to-refresh still works
+- [ ] No duplicate items
+- [ ] No stale item after delete
+
+### ObjectBox runtime verification (run on a machine with `libobjectbox.dylib`)
+- [ ] Run `flutter test --tags objectbox --run-skipped`
+- [ ] Confirm InvoiceLine backfill tests pass
+- [ ] Confirm signature/business/client uniqueness tests pass
+- [ ] Confirm settings reactivity tests pass (`term`/`signature` watch emits after create/update/delete)
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
