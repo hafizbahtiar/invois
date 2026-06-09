@@ -695,6 +695,35 @@ Do not start Stage 4E until:
 
 ---
 
+## Stage 4E Planning Checkpoint (2026-06-10)
+
+Planning only. Stage 4E implementation was not started.
+
+- Plan file: `doc/plans/stage-4e-legacy-retirement-plan.md`.
+- Scope planned: retiring legacy `Invoice.items`, `Item`, `Item.invoiceId`, and `stockQuantity` compatibility after `InvoiceLine` is proven authoritative.
+- Preconditions before implementation:
+  - ObjectBox tagged tests pass on a native-lib machine.
+  - Decimal quantity manual QA passes.
+  - Stage 4D cleanup dry-run is reviewed on production-like data.
+  - Optional real orphan delete is completed only after confirmation and backup.
+  - Backup/export or store-copy restore strategy is verified before schema retirement.
+- Remaining legacy dependency categories identified:
+  - `Invoice.items` schema/relation, relation helpers, form load/save, reader fallback, backfill, cleanup, generated ObjectBox metadata, and legacy tests.
+  - `Item` model imports across form state, notifier/repository/local source, adapters/builders, cleanup/backfill, and tests.
+  - `Item.invoiceId` exists in `item_model.dart` and generated ObjectBox metadata, but no meaningful runtime ownership use was found.
+  - `stockQuantity` remains the legacy quantity compatibility field for fallback/backfill/tests and should not drive future totals.
+- Recommended retirement path:
+  - 4E-1 remove production reads from legacy fallback only after backfill is guaranteed.
+  - 4E-2 stop writing legacy `Invoice.items`.
+  - 4E-3 remove `Item.invoiceId` if the entity remains temporarily.
+  - 4E-4 remove `Item` only when no references remain.
+  - 4E-5 regenerate ObjectBox files and review UIDs/model diff.
+  - 4E-6 run migration/open verification on a pre-4E store fixture.
+- Fallback decision: prefer keeping legacy fallback/schema for one more release unless native ObjectBox migration/open tests prove immediate removal is safe.
+- Not done: no app code changes, no schema changes, no generated-file changes, no data deletion, no Stage 4E implementation.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
