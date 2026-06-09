@@ -14,6 +14,7 @@ import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
+import '../invoice_form_line.dart';
 import '../invoice_line_builder.dart';
 import '../invoice_line_view.dart';
 import 'invoice_state.dart';
@@ -99,10 +100,17 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       final items = invoice.items.toList();
       final taxes = invoice.taxes.toList();
       final terms = invoice.terms.toList();
+      // Step 4C-4D-2A: carry precise quantities — prefer Invoice.lines, else
+      // derive from legacy items. Not consumed by UI/write yet.
+      final lines = InvoiceFormLine.resolve(
+        items: items,
+        lines: invoice.lines.toList(),
+      );
 
       state = state.copyWith(
         invoice: invoice,
         items: items,
+        lines: lines,
         taxes: taxes,
         terms: terms,
         signature: signature,
@@ -169,13 +177,18 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   }
 
   void resetItems() {
-    state = state.copyWith(items: []);
+    // Keep the in-memory line carrier (Step 4C-4D-2A) in lockstep with items.
+    state = state.copyWith(items: [], lines: []);
   }
 
   // Add a new item to the temporary items list
   void addItem(Item item) {
     final List<Item> updatedItems = [...state.items!, item];
-    state = state.copyWith(items: updatedItems);
+    final List<InvoiceFormLine> updatedLines = [
+      ...?state.lines,
+      InvoiceFormLine.fromItem(item),
+    ];
+    state = state.copyWith(items: updatedItems, lines: updatedLines);
   }
 
   // Update an existing item in the temporary items list
@@ -190,7 +203,15 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       return item;
     }).toList();
 
-    state = state.copyWith(items: updatedItems);
+    final List<InvoiceFormLine> updatedLines = (state.lines ?? const [])
+        .map(
+          (line) => line.item.id == updatedItem.id
+              ? InvoiceFormLine.fromItem(updatedItem)
+              : line,
+        )
+        .toList();
+
+    state = state.copyWith(items: updatedItems, lines: updatedLines);
   }
 
   // Remove an item from the temporary items list
@@ -201,7 +222,11 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
         .where((item) => item.id != itemToRemove.id)
         .toList();
 
-    state = state.copyWith(items: updatedItems);
+    final List<InvoiceFormLine> updatedLines = (state.lines ?? const [])
+        .where((line) => line.item.id != itemToRemove.id)
+        .toList();
+
+    state = state.copyWith(items: updatedItems, lines: updatedLines);
   }
 
   // Subtotal via the unified line adapter (Step 4C-4C): same lines-preferred /

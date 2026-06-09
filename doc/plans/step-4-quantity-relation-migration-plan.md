@@ -290,3 +290,12 @@ Matches the plan, with these concrete choices:
 - **Format:** delegates to `InvoiceLineMath.formatQuantity` (no duplication): `1000→"1"`, `1500→"1.5"`, `1→"0.001"`.
 - **No UI/state/write/totals/PDF/schema changes** — helper only.
 - Next: 4C-4D-2 — wire the parser/formatter into the form's item quantity field + form state (still behind the existing dual-write; quantity becomes decimal end to end).
+
+## Step 4C-4D-2A — Implementation Notes (form state carries quantityMilli)
+
+- Added `InvoiceFormLine` (`lib/features/invoice/invoice_form_line.dart`) — pairs a form `Item` with `quantityMilli`; `legacyQuantity` getter (truncates to whole for the current integer UI); `fromItem`/`fromLine` factories; static `resolve(items, lines)` (prefers `Invoice.lines` paired by `sortOrder` when count matches, else legacy items).
+- `InvoiceFormState` gained an additive `List<InvoiceFormLine>? lines` (default `const []`), kept in sync by the notifier: `resetItems`/`addItem`/`updateItem`/`removeItem` mirror `items`; `getInvoiceById` populates via `InvoiceFormLine.resolve(invoice.items, invoice.lines)`.
+- **No consumption yet:** UI reads `state.items`, `_onSubmit` writes from `state.items`, subtotal still resolves from `state.items`. `state.lines` is purely the precise-quantity carrier. No visible behaviour change; same integer input/validation/save/totals.
+- **Compatibility rule:** for the integer UI/write path, `legacyQuantity = quantityMilli ~/ 1000` (documented truncation). New/edited items derive `quantityMilli` from `stockQuantity × 1000`; only loaded-from-lines invoices carry a potentially-fractional value (none exist pre-UI), preserved without loss.
+- Tests: pure `invoice_form_line_test.dart` (fromItem mapping, legacyQuantity, resolve lines-win/fallback/empty, non-whole held without loss).
+- Next: 4C-4D-2B — wire the decimal field + parser/formatter into the form UI and make the write path persist `quantityMilli` on the line.

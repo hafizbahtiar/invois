@@ -516,6 +516,21 @@ Pure helper only — **no UI/state/write/totals/PDF/schema changes.**
 
 ---
 
+## Stage 4C-4D-2A — Completed (2026-06-09) — form state carries quantityMilli
+
+In-memory state plumbing only — **no UI/write/subtotal/PDF/schema changes; no visible behaviour change.**
+
+- **Added:** `InvoiceFormLine` (`invoice_form_line.dart`) — pairs a form `Item` with `quantityMilli`; `legacyQuantity` getter (`~/1000`, truncation documented); `fromItem`/`fromLine`; static `resolve(items, lines)` (prefers `Invoice.lines` by `sortOrder` when count matches, else legacy items).
+- **State:** `InvoiceFormState` gained additive `List<InvoiceFormLine>? lines` (default `[]`), synced by the notifier (`resetItems`/`addItem`/`updateItem`/`removeItem`) and populated on load (`getInvoiceById` via `InvoiceFormLine.resolve`).
+- **Not consumed yet:** UI reads `items`, `_onSubmit` writes from `items`, subtotal resolves from `items`. `lines` is the precise-quantity carrier only.
+- **Compat rule:** integer path uses `legacyQuantity = quantityMilli ~/ 1000`; new/edited items derive `quantityMilli` from `stockQuantity × 1000`; loaded-from-lines quantities preserved without loss (none fractional pre-UI).
+- **Files:** new `invoice_form_line.dart`; `invoice_state.dart`, `invoice_notifier.dart`; new `invoice_form_line_test.dart` (10 pure tests); docs.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 193 passed, 9 skipped (+10).
+- **Not done (as scoped):** form UI/decimal input, write path, subtotal source, PDF, schema/generated, orphan cleanup — all untouched.
+- **Next:** Stage 4C-4D-2B — wire the decimal field + parser/formatter into the form UI and persist `quantityMilli` on the line.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
