@@ -430,6 +430,20 @@ PDF item table read path switched. **Item table only** — PDF totals, the compo
 
 ---
 
+## Stage 4C-4A — Completed (2026-06-09) — totals/composer parity audit + tests
+
+Audit + tests only — **no write/totals/form/PDF-totals/schema changes.** (Full detail in `doc/plans/step-4-quantity-relation-migration-plan.md` → "Step 4C-4A".)
+
+- **Calculation flow traced:** subtotal/discount/tax/total via `InvoiceComposer` (quantity = `item.stockQuantity ?? 1`); cents written on save by `invoice_form_page._onSubmit`, legacy doubles dual-written by `repository._withDualWrittenMoney`; PDF/detail/dashboard read the stored `effective*Cents` snapshot; PDF per-tax rows recompute from **live** `invoice.taxes`.
+- **Parity result:** Σ `InvoiceLineView.lineTotalCents` **exactly equals** the composer subtotal for legacy whole-quantity invoices (proven algebraically + by `invoice_line_parity_test.dart`). The single divergence is invalid `qty ≤ 0` (composer→0, adapter→1 unit) — already blocked by `InvoiceValidation`; add a defensive guard before the totals switch.
+- **Taxes:** invoice-level (`invoice.taxes`), not per-line; per-line `taxRateBasisPoints` captured but unused. The PDF-rows-vs-stored mismatch on post-invoice tax edits (P2-003) is pre-existing and unrelated to lines.
+- **Recommendation (writes-first):** 4C-4B dual-write `lines` on save (totals unchanged) → 4C-4C totals derive from `InvoiceLineReader` (guard qty ≤ 0) → 4C-4D form decimal input → 4D orphan cleanup → 4E retire legacy. Do **not** change stored totals until writes reliably create `lines`.
+- **Files:** `test/features/invoice/invoice_line_parity_test.dart` (new, 13 pure tests); docs.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 143 passed, 8 skipped (+10).
+- **Next:** Stage 4C-4B — dual-write `Invoice.lines` on save (first write-path change; run the pending objectbox-tagged suites on a native-lib machine first).
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

@@ -216,3 +216,47 @@ Matches the plan, with these concrete choices:
 - Fallback preserved (legacy items / new lines / both→lines / empty→throws as before). Decimal quantity now displays in the PDF (e.g. 2.5).
 - Tests: added a default-suite PDF test generating from in-memory `InvoiceLine` rows with decimal qty (and a legacy item present to prove lines win); existing item-based PDF tests still pass via fallback.
 - Next: 4C-4 — switch totals/composer to derive from `InvoiceLineReader` (the source-of-truth change), or the form decimal-quantity input.
+
+## Step 4C-4A — Totals/Composer Parity Audit (audit + tests only)
+
+### Current calculation flow
+- **Subtotal:** `InvoiceComposer.subtotalCents` = Σ(`unitPriceCents × quantity`), `quantity = item.stockQuantity ?? 1`. Driven by `invoice_form_page._onSubmit` (over `state.items`) and `invoice_notifier.calculateSubtotalCents`.
+- **Discount:** composer — explicit `discountAmountCents` wins, else `subtotal × rate%`.
+- **Tax:** `composer.taxOnTaxable` — each invoice-level `Tax` rate (from `invoice.taxes`) applied to `(subtotal − discount)`, per-rate half-up rounded, summed. Stored `taxAmountCents` is the save-time snapshot.
+- **Total / balance:** `total = subtotal − discount + tax`; `balance = total − paid`. Paid/balance reconciled by `InvoicePayment` on status change (Steps 2/2B).
+- **Persistence:** `_onSubmit` sets the cents fields on `Invoice`; `repository._withDualWrittenMoney` dual-writes the legacy doubles from cents.
+- **Reads:** PDF totals + detail + dashboard/overview read the stored `invoice.effective*Cents` snapshot. PDF per-tax rows recompute from **live** `invoice.taxes` rates.
+
+### Parity matrix — composer subtotal vs Σ `InvoiceLineView.lineTotalCents`
+| Case | Composer | Σ line totals | Parity |
+|------|----------|---------------|--------|
+| qty 1 | = | = | ✅ exact |
+| qty 2 | = | = | ✅ exact |
+| multiple lines | = | = | ✅ exact |
+| null qty → 1 | = | = | ✅ exact |
+| large values | = | = | ✅ exact (int64, no double) |
+| zero unit price | 0 | 0 | ✅ |
+| **qty ≤ 0 (invalid)** | `0` (`?? 1` keeps 0) | `1 × price` (adapter maps ≤0→1) | ⚠️ **differs** |
+| decimal qty | n/a (int only) | per-line half-up | new capability |
+
+### Answers
+- **Σ `lineTotalCents` == current subtotal for legacy whole-qty invoices?** **Yes, exact.** Algebraically `(unitPriceCents × qty×1000 + 500) ~/ 1000 = unitPriceCents × qty` (the product is an exact multiple of 1000). Confirmed by `invoice_line_parity_test.dart`.
+- **Only divergence:** a stored `stockQuantity ≤ 0`. `InvoiceValidation` already rejects qty ≤ 0 at save, so this shouldn't exist in real data — but a defensive backfill/migration check is warranted before totals switch.
+- **Taxes derived from:** `invoice.taxes` (live shared `Tax` rows) for the PDF per-tax breakdown; stored `taxAmountCents` snapshot for totals. The per-line `taxRateBasisPoints` captured in 4B is **not** consumed.
+- **Known mismatch:** PDF per-tax rows vs stored total **if a `Tax` rate is edited after invoicing** (audit P2-003). Pre-existing and **independent of lines** (tax is invoice-level, not per-line); not addressed by 4C.
+- **Can totals switch now?** Technically safe for current (whole-qty) data given exact parity — but **writes should switch first** so `lines` are authoritative before any decimal input exists, and to avoid a window where the stored snapshot (from `items`) could diverge from line-derived display.
+
+### Recommendation — order (Option A variant: writes first)
+1. **4C-4B — dual-write on save:** in `onUpsert`, in addition to legacy `items`, create/replace `Invoice.lines` from the same data (`quantityMilli = stockQuantity × 1000` for now). Keep computing/storing totals from the composer (unchanged). Replace lines on edit (clear+add) to avoid stale rows. Parity preserved (lines mirror items).
+2. **4C-4C — totals from lines:** switch composer/subtotal to derive from `InvoiceLineReader`, keeping the stored snapshot; guard the qty ≤ 0 edge. Verify with parity tests.
+3. **4C-4D — form decimal-quantity input:** now safe (writes lines, totals derive from lines).
+4. Then **4D** orphan cleanup, **4E** retire legacy `items`/`Item.invoiceId`.
+
+### Risks
+- qty ≤ 0 divergence (mitigated by validation; add a guard/normalisation in 4C-4B/C).
+- Edit must **replace** lines (not append) to avoid duplicates/stale snapshots.
+- Tax remains invoice-level live (P2-003 separate).
+- ObjectBox-tagged suites still unrun (native lib) — run before 4C-4B touches writes.
+
+### Files likely to change next (4C-4B)
+`invoice_notifier.dart` (persist lines in `onUpsert`), `invoice_local_source.dart` (add line clear/add helpers), `invoice_repository.dart` (line write passthrough), tests (objectbox-tagged write/replace + parity). No schema/generated/PDF/form-UI changes in 4C-4B.
