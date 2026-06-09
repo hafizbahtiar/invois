@@ -562,6 +562,35 @@ The invoice item quantity is now decimal end-to-end (input → state → totals 
 
 ---
 
+## QA Checkpoint — Decimal quantity (2026-06-09)
+
+- **Latest commit:** `15ce962` — decimal item quantity is now end-to-end (input → state → totals → persistence → reopen/edit → detail/PDF).
+- **Branch health:** `flutter analyze` → No issues found; `flutter test` → 206 passed, 9 skipped (the 9 skips are the objectbox-tagged suites).
+- **Manual QA: required** (UI/device — the input + round-trip can't be fully covered by the host suite).
+- **ObjectBox-tagged tests: PENDING** on a machine with native `libobjectbox.dylib` (decimal persistence, backfill, dual-write/replace, reader).
+- **4D (orphan `Item` cleanup): NOT started. 4E (retire legacy `Invoice.items`/`Item.invoiceId`): NOT started.**
+- Unrelated `home_page.dart`/`simple_list.dart` WIP remains uncommitted (untouched).
+
+### Manual QA checklist — Decimal quantity
+- [ ] Create invoice with qty 1.5 and price RM10 → line total RM15
+- [ ] Create invoice with qty 0.25 and price RM100 → line total RM25
+- [ ] Save invoice → reopen edit → decimal quantity persists
+- [ ] Detail page shows decimal quantity
+- [ ] PDF preview/share shows decimal quantity and correct totals
+- [ ] Edit invoice qty 1.5 → 2.25 → save → reopen → correct
+- [ ] Invalid qty 0 rejected
+- [ ] Invalid qty -1 rejected
+- [ ] Invalid qty 1.2345 rejected
+- [ ] Invalid qty 1,5 rejected
+- [ ] Whole quantity 1/2 still works as before
+
+### ObjectBox runtime verification (native-lib machine)
+- [ ] Run `flutter test --tags objectbox --run-skipped`
+- [ ] Confirm decimal persistence tests pass
+- [ ] Confirm backfill / dual-write / reader tests pass
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
