@@ -211,6 +211,53 @@ Verification-only. No schema, generated-file, dependency, or app-code changes �
 
 ---
 
+## Stage 3B — Completed (2026-06-09) — remove Signature global contact uniqueness (P1-004)
+
+Scope: **Signature only.** Business and Client uniqueness, invoice quantity/schema, @Backlink/orphan work — all untouched.
+
+**Decision applied:** Signature `email`/`phone` are contact fields, not identity fields → DB-level global `@Unique` removed; no per-business DB constraint added. Multiple signatures may share contact info (within or across businesses), and contactless signatures are permitted. Existing form validation (email/phone still `isRequired`) is unchanged — no contactless-signature UI introduced.
+
+**Schema change made (via generator, not hand-edited)**
+- `signature_model.dart`: removed `@Unique()` from `email` and `phone` (now plain, non-unique, non-indexed `String?`).
+- Regenerated with `dart run build_runner build` (objectbox generator). Result (verified): `Signature.email`/`phone` `flags 2080 → 0` (unique + hash64 index dropped). `Business` (email+phone) and `Client.email` remain `flags 2080` — **unchanged**.
+- Generated diff is small/surgical: `objectbox-model.json` (−unique flags, index UIDs retired) and `objectbox.g.dart` (property flag/reader changes).
+
+**Why it's safe / non-destructive**
+- Dropping a unique index is **not** a data migration: existing rows are untouched; ObjectBox just stops enforcing/maintaining that index (the index UIDs are retired in the model so the ids aren't reused).
+- No field added/removed/retyped; no entity renamed. The store opens against the existing data unchanged.
+- Generated files were produced by the generator, not edited by hand.
+
+**Defensive normalisation (repository layer)**
+- `SignatureRepository.create`/`update` now run contact fields through `StringUtils.nullIfBlank` (trim; blank → null) via a private `_normalizeContact` (builds a normalised instance, since `copyWith` can't set null). This protects non-UI callers, not just the form.
+
+**Files changed**
+- `lib/features/signature/data/signature_model.dart` — removed `@Unique` on email/phone.
+- `lib/core/database/objectbox-model.json`, `lib/core/database/objectbox.g.dart` — regenerated.
+- `lib/features/signature/data/signature_repository.dart` — `_normalizeContact` + `StringUtils` import, applied in create/update.
+- `test/features/signature/signature_unique_objectbox_test.dart` — flipped to assert duplicates allowed + normalisation (objectbox-tagged).
+- `test/core/string_utils_test.dart` — **new** pure unit tests for `nullIfBlank`.
+
+**Tests added/updated**
+- 6 pure unit tests (`StringUtils.nullIfBlank`: null/blank/whitespace → null; trims email/phone; clean value unchanged) — default suite.
+- ObjectBox-tagged (rewritten): two null-contact allowed; same email same business allowed; same email across businesses allowed; same phone across businesses allowed; blank → null persisted; whitespace trimmed. Removed the old duplicate-rejection assertions.
+
+**Test result**
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **105 passed, 2 skipped** (was 99; +6).
+- ⚠️ ObjectBox-tagged tests **could not run here** (`libobjectbox.dylib` unavailable). They compile (verified by analyze). **Run on a machine with the native lib: `flutter test --tags objectbox --run-skipped`** — this also exercises the regenerated model against a real store.
+
+**Is P1-004 closed (for Signature)?** Yes — global contact uniqueness removed, normalisation added, behaviour characterised by tests (tagged run pending native lib).
+
+### Future work — Step 3C (Business / Client contact uniqueness)
+`Business.email`, `Business.phone`, and `Client.email` still carry the same **global `@Unique`** (flags 2080) and the same latent defect (can't reuse contact info / duplicates blocked app-wide). If the same "contact ≠ identity" decision applies, repeat this exact recipe per entity (remove `@Unique`, regenerate, normalise in repo, flip tests). **Out of scope for 3B; needs its own approval** (those forms/uniqueness expectations may differ from Signature).
+
+**Remaining risks after 3B**
+- ObjectBox-tagged tests unverified in this environment (need native lib) — including confirming the regenerated model opens cleanly against existing data.
+- Business/Client global uniqueness remains (Step 3C).
+- All P1-003/P2/P3 items remain.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

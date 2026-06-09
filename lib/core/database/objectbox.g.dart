@@ -1047,15 +1047,13 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(5, 1711720495029591732),
         name: 'email',
         type: 9,
-        flags: 2080,
-        indexId: const obx_int.IdUid(21, 1009636550082759560),
+        flags: 0,
       ),
       obx_int.ModelProperty(
         id: const obx_int.IdUid(6, 3969562006830402048),
         name: 'phone',
         type: 9,
-        flags: 2080,
-        indexId: const obx_int.IdUid(22, 8656462993882657750),
+        flags: 0,
       ),
       obx_int.ModelProperty(
         id: const obx_int.IdUid(7, 6777268452257702941),
@@ -1185,6 +1183,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
       3079117104798726924,
       5029742589811632287,
       3472833135228683572,
+      1009636550082759560,
+      8656462993882657750,
     ],
     retiredPropertyUids: const [
       4333528399939120073,

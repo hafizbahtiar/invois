@@ -3,6 +3,7 @@ import 'package:invois/core/error/failure_mapper.dart';
 import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
+import 'package:invois/core/utils/string_utils.dart';
 
 import 'signature_local_source.dart';
 import 'signature_model.dart';
@@ -39,7 +40,7 @@ class SignatureRepository {
 
   Future<Result<Signature>> create(Signature signature) async {
     try {
-      final r = await _local.insertSignature(signature);
+      final r = await _local.insertSignature(_normalizeContact(signature));
       final data = r.data;
       return (r.success && data != null)
           ? Ok(data)
@@ -51,7 +52,7 @@ class SignatureRepository {
 
   Future<Result<Signature>> update(Signature signature) async {
     try {
-      final r = await _local.updateSignature(signature);
+      final r = await _local.updateSignature(_normalizeContact(signature));
       final data = r.data;
       return (r.success && data != null)
           ? Ok(data)
@@ -59,6 +60,33 @@ class SignatureRepository {
     } catch (e) {
       return Err(mapException(e));
     }
+  }
+
+  /// Trim contact fields and store blanks as null, so callers that bypass the
+  /// form can't persist empty/whitespace email/phone. Returns the input
+  /// unchanged when nothing needs normalising. (`copyWith` can't set null, so a
+  /// normalised instance is constructed when needed.)
+  Signature _normalizeContact(Signature signature) {
+    final email = StringUtils.nullIfBlank(signature.email);
+    final phone = StringUtils.nullIfBlank(signature.phone);
+    if (email == signature.email && phone == signature.phone) return signature;
+    return Signature(
+      id: signature.id,
+      name: signature.name,
+      title: signature.title,
+      signatureData: signature.signatureData,
+      imageBytes: signature.imageBytes,
+      email: email,
+      phone: phone,
+      company: signature.company,
+      website: signature.website,
+      notes: signature.notes,
+      isActive: signature.isActive,
+      isDefault: signature.isDefault,
+      businessId: signature.businessId,
+      createdAt: signature.createdAt,
+      updatedAt: signature.updatedAt,
+    );
   }
 
   Future<Result<void>> delete(int id) async {

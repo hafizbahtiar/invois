@@ -8,15 +8,14 @@ import 'package:invois/features/signature/data/signature_local_source.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
 
-/// Step 3A (P1-004): characterises the `@Unique` nullable email/phone behaviour
-/// on [Signature]. Requires the native `libobjectbox` library — tagged
-/// `objectbox` and skipped by default; run with:
-///   flutter test --tags objectbox --run-skipped
+/// Step 3B (P1-004): Signature email/phone are contact fields, no longer
+/// DB-unique. Multiple signatures may share contact info (across or within
+/// businesses), and contactless signatures are allowed. The repository also
+/// normalises blank contact values to null.
 ///
-/// These tests encode the *expected* business rule (multiple contactless
-/// signatures allowed) and document the *current* GLOBAL uniqueness (which
-/// Step 3B should revisit). If ObjectBox rejected duplicate nulls, the first
-/// group would fail here — that is exactly the verification we want.
+/// Requires the native `libobjectbox` library — tagged `objectbox` and skipped
+/// by default; run with:
+///   flutter test --tags objectbox --run-skipped
 void main() {
   late Store store;
   late SignatureRepository repo;
@@ -33,51 +32,65 @@ void main() {
 
   tearDown(() => store.close());
 
-  group('Signature @Unique nullable email/phone (P1-004)', () {
-    test('two signatures with null email AND null phone are both allowed',
-        () async {
-      final a = await repo.create(Signature(name: 'Owner A'));
-      final b = await repo.create(Signature(name: 'Owner B'));
-      expect(a, isA<Ok<Signature>>());
+  group('Signature contact fields are not unique (Step 3B)', () {
+    test('two signatures with null email AND null phone are allowed', () async {
+      expect(await repo.create(Signature(name: 'Owner A')), isA<Ok<Signature>>());
+      expect(await repo.create(Signature(name: 'Owner B')), isA<Ok<Signature>>());
+    });
+
+    test('same email within the same business is allowed', () async {
       expect(
-        b,
+        await repo.create(Signature(name: 'A', email: 'x@x.com', businessId: 1)),
         isA<Ok<Signature>>(),
-        reason: 'contactless signatures must not collide on null unique fields',
+      );
+      expect(
+        await repo.create(Signature(name: 'B', email: 'x@x.com', businessId: 1)),
+        isA<Ok<Signature>>(),
       );
     });
 
-    test('multiple null-contact signatures under the same business are allowed',
-        () async {
-      final a = await repo.create(Signature(name: 'A', businessId: 1));
-      final b = await repo.create(Signature(name: 'B', businessId: 1));
-      expect(a, isA<Ok<Signature>>());
-      expect(b, isA<Ok<Signature>>());
+    test('same email across different businesses is allowed', () async {
+      expect(
+        await repo.create(Signature(name: 'A', email: 'dup@x.com', businessId: 1)),
+        isA<Ok<Signature>>(),
+      );
+      expect(
+        await repo.create(Signature(name: 'B', email: 'dup@x.com', businessId: 2)),
+        isA<Ok<Signature>>(),
+      );
     });
 
-    test('duplicate non-empty email is rejected (CURRENT global uniqueness)',
-        () async {
-      final a = await repo.create(Signature(name: 'A', email: 'same@x.com'));
-      expect(a, isA<Ok<Signature>>());
+    test('same phone across different businesses is allowed', () async {
+      expect(
+        await repo.create(Signature(name: 'A', phone: '0123', businessId: 1)),
+        isA<Ok<Signature>>(),
+      );
+      expect(
+        await repo.create(Signature(name: 'B', phone: '0123', businessId: 2)),
+        isA<Ok<Signature>>(),
+      );
+    });
+  });
 
-      final b = await repo.create(Signature(name: 'B', email: 'same@x.com'));
-      // Documents today's behaviour: email is GLOBALLY unique. Step 3B should
-      // decide whether this should be per-business or dropped entirely.
-      expect(b, isA<Err<Signature>>());
+  group('Signature repository normalises contact fields (Step 3B)', () {
+    test('blank email/phone are stored as null', () async {
+      final created = await repo.create(
+        Signature(name: 'A', email: '   ', phone: ''),
+      );
+      final saved = (created as Ok<Signature>).value;
+      final fetched = await repo.getSignatureById(saved.id!);
+      expect(fetched?.email, isNull);
+      expect(fetched?.phone, isNull);
     });
 
-    test('same email under DIFFERENT businesses is also rejected today '
-        '(uniqueness is global, not per-business)', () async {
-      final a = await repo.create(
-        Signature(name: 'A', email: 'dup@x.com', businessId: 1),
+    test('surrounding whitespace is trimmed', () async {
+      final created = await repo.create(
+        Signature(name: 'A', email: '  a@b.com  ', phone: '  0123  '),
       );
-      expect(a, isA<Ok<Signature>>());
-
-      final b = await repo.create(
-        Signature(name: 'B', email: 'dup@x.com', businessId: 2),
-      );
-      // The likely real defect: contact info can't be reused across a user's
-      // own businesses. Captured here for Step 3B.
-      expect(b, isA<Err<Signature>>());
+      final saved = (created as Ok<Signature>).value;
+      final fetched = await repo.getSignatureById(saved.id!);
+      expect(fetched?.email, 'a@b.com');
+      expect(fetched?.phone, '0123');
     });
   });
 }

@@ -24,10 +24,11 @@ class Signature extends Equatable {
   @Property(type: PropertyType.byteVector)
   final Uint8List? imageBytes;
 
-  @Unique()
+  // Contact fields, not identity fields: intentionally NOT unique. Multiple
+  // signatures (across or within businesses) may share an email/phone.
+  // (Step 3B — removed the former global `@Unique` constraint.)
   final String? email;
 
-  @Unique()
   final String? phone;
   final String? company;
   final String? website;
