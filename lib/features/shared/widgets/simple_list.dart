@@ -102,6 +102,29 @@ class SimpleList<T> extends StatelessWidget {
       );
     }
 
+    Widget buildRefreshableStateWidget({required Widget child}) {
+      final stateWidget = buildStateWidget(child: child);
+      if (onRefresh == null) return stateWidget;
+
+      return RefreshIndicator.adaptive(
+        onRefresh: onRefresh!,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final viewportHeight = constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : MediaQuery.sizeOf(context).height;
+
+            return ListView(
+              controller: controller,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              children: [SizedBox(height: viewportHeight, child: stateWidget)],
+            );
+          },
+        ),
+      );
+    }
+
     if (isLoading && useSkeleton && skeletonBuilder != null) {
       return ListView.builder(
         controller: controller,
@@ -159,7 +182,7 @@ class SimpleList<T> extends StatelessWidget {
     }
 
     if (items.isEmpty) {
-      return buildStateWidget(
+      return buildRefreshableStateWidget(
         child:
             emptyWidget ??
             MyEmptyState(
@@ -173,6 +196,9 @@ class SimpleList<T> extends StatelessWidget {
     Widget listView = separatorBuilder != null
         ? ListView.separated(
             controller: controller,
+            physics: onRefresh != null
+                ? const AlwaysScrollableScrollPhysics()
+                : null,
             padding: padding ?? const EdgeInsets.all(16),
             itemCount:
                 items.length +
@@ -199,6 +225,9 @@ class SimpleList<T> extends StatelessWidget {
           )
         : ListView.builder(
             controller: controller,
+            physics: onRefresh != null
+                ? const AlwaysScrollableScrollPhysics()
+                : null,
             padding: padding ?? const EdgeInsets.all(16),
             itemCount:
                 items.length +

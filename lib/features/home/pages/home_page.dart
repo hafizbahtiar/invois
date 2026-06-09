@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
@@ -30,8 +32,20 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   InvoiceListFilterType _selectedFilter = InvoiceListFilterType.all;
+
+  static const List<InvoiceListFilterType> _filterOptions = [
+    InvoiceListFilterType.all,
+    InvoiceListFilterType.draft,
+    InvoiceListFilterType.sent,
+    InvoiceListFilterType.viewed,
+    InvoiceListFilterType.paid,
+    InvoiceListFilterType.overdue,
+    InvoiceListFilterType.cancelled,
+    InvoiceListFilterType.refunded,
+  ];
 
   //============================================
   // MARK: - Init
@@ -39,6 +53,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -60,8 +75,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   // MARK: - Actions
   //============================================
 
-  Future<void> _onSearchChanged(String value) async {
-    ref.read(invoiceQueryProvider.notifier).setSearch(value);
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      ref.read(invoiceQueryProvider.notifier).setSearch(value);
+    });
   }
 
   void _onFilterSelected(InvoiceListFilterType filter) {
@@ -70,9 +89,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _onResetFilters() {
+    _searchDebounce?.cancel();
     _searchController.clear();
     setState(() => _selectedFilter = InvoiceListFilterType.all);
     ref.read(invoiceQueryProvider.notifier).reset();
+  }
+
+  void _navigateToAddInvoice() {
+    Navigator.pushNamed(
+      context,
+      RoutesName.invoiceForm,
+      arguments: {'type': FormType.add.name},
+    );
   }
 
   void _onDeleteInvoice(Invoice invoice) async {
@@ -287,6 +315,24 @@ class _HomePageState extends ConsumerState<HomePage> {
   // MARK: - Widgets
   //============================================
 
+  Widget _buildInvoiceTile(Invoice invoice) {
+    return MyTile(
+      key: ValueKey(invoice.id ?? invoice.invoiceNumber),
+      isRounded: true,
+      showChevron: true,
+      icon: Icons.receipt_long,
+      title: invoice.invoiceNumber,
+      subtitle: _getSubtitle(invoice),
+      trailing: _buildTrailing(invoice),
+      onTap: () {
+        Navigator.of(context).pushNamed(
+          RoutesName.invoiceDetail,
+          arguments: {'invoiceId': invoice.id},
+        );
+      },
+    );
+  }
+
   Widget _buildTrailing(Invoice invoice) {
     return Row(
       spacing: 8,
@@ -382,6 +428,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         Padding(
           padding: const EdgeInsets.only(right: 10),
           child: IconButton(
+            tooltip: 'Settings',
             onPressed: () =>
                 Navigator.of(context).pushNamed(RoutesName.settings),
             icon: Icon(
@@ -404,6 +451,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Only treat it as an error screen when there's nothing to show; a transient
     // error while data is already on screen shouldn't blank the list.
     final hasError = invoicesAsync.hasError && invoices.isEmpty;
+    final isInitialLoading = invoicesAsync.isLoading && invoices.isEmpty;
+    final hasActiveFilters =
+        _selectedFilter != InvoiceListFilterType.all ||
+        _searchController.text.trim().isNotEmpty;
+
     return SafeArea(
       bottom: false,
       child: RefreshIndicator.adaptive(
@@ -432,9 +484,17 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             SliverToBoxAdapter(child: SizedBox(height: 32)),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: hasError
-                  ? SliverToBoxAdapter(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+              sliver: isInitialLoading
+                  ? const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      ),
+                    )
+                  : hasError
+                  ? SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(
                         child: MyNoMatchingState(
                           icon: Icons.error_outline,
@@ -445,15 +505,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     )
                   : invoices.isEmpty
-                  ? SliverToBoxAdapter(
+                  ? SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(
-                        child:
-                            _selectedFilter.name !=
-                                InvoiceListFilterType.all.name
+                        child: hasActiveFilters
                             ? MyNoMatchingState(
                                 buttonText: 'Reset Filters',
                                 icon: Icons.receipt_long,
-                                title: 'No Invoices',
+                                title: 'No invoices matching your filters',
                                 onPressed: () => _onResetFilters(),
                               )
                             : MyEmptyState(
@@ -466,21 +525,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   : SliverList.builder(
                       itemCount: invoices.length,
                       itemBuilder: (context, index) {
-                        final invoice = invoices[index];
-                        return MyTile(
-                          isRounded: true,
-                          showChevron: true,
-                          icon: Icons.receipt_long,
-                          title: invoice.invoiceNumber,
-                          subtitle: _getSubtitle(invoice),
-                          trailing: _buildTrailing(invoice),
-                          onTap: () {
-                            Navigator.of(context).pushNamed(
-                              RoutesName.invoiceDetail,
-                              arguments: {'invoiceId': invoice.id},
-                            );
-                          },
-                        );
+                        return _buildInvoiceTile(invoices[index]);
                       },
                     ),
             ),
@@ -496,11 +541,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _buildFloatingActionButton(BuildContext context) {
     return FloatingActionButton.extended(
-      onPressed: () => Navigator.pushNamed(
-        context,
-        RoutesName.invoiceForm,
-        arguments: {'type': FormType.add.name},
-      ),
+      onPressed: _navigateToAddInvoice,
       tooltip: 'Add Invoice',
       label: const Text('Add Invoice'),
       icon: const Icon(Icons.add),
@@ -523,17 +564,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   //============================================
   // MARK: - Helpers
   //============================================
-
-  List<InvoiceListFilterType> get _filterOptions => [
-    InvoiceListFilterType.all,
-    InvoiceListFilterType.draft,
-    InvoiceListFilterType.sent,
-    InvoiceListFilterType.viewed,
-    InvoiceListFilterType.paid,
-    InvoiceListFilterType.overdue,
-    InvoiceListFilterType.cancelled,
-    InvoiceListFilterType.refunded,
-  ];
 
   String _filterLabel(InvoiceListFilterType filter) {
     return filter.displayName;
@@ -632,6 +662,12 @@ class _RedContainerHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 110; // Adjust as needed
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
-      false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    if (oldDelegate is! _RedContainerHeaderDelegate) return true;
+
+    return oldDelegate.searchController != searchController ||
+        oldDelegate.searchQuery != searchQuery ||
+        oldDelegate.selectedFilter != selectedFilter ||
+        oldDelegate.filterOptions != filterOptions;
+  }
 }
