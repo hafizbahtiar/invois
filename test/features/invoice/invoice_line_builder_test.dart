@@ -4,8 +4,8 @@ import 'package:invois/features/invoice/invoice_form_line.dart';
 import 'package:invois/features/invoice/invoice_line_builder.dart';
 import 'package:invois/features/item/item_model.dart';
 
-/// Step 4C-4B: the pure builder that maps submitted legacy items to
-/// InvoiceLine snapshots for the dual-write.
+/// Pure builder that maps submitted form rows or legacy items to InvoiceLine
+/// snapshots.
 void main() {
   Item item(
     String name, {
@@ -41,18 +41,21 @@ void main() {
 
   test('quantity mapping: null/<=0 -> 1000, n -> n*1000', () {
     expect(
-      InvoiceLineBuilder.fromItems([item('A', stockQuantity: null)]).single
-          .quantityMilli,
+      InvoiceLineBuilder.fromItems([
+        item('A', stockQuantity: null),
+      ]).single.quantityMilli,
       1000,
     );
     expect(
-      InvoiceLineBuilder.fromItems([item('A', stockQuantity: 0)]).single
-          .quantityMilli,
+      InvoiceLineBuilder.fromItems([
+        item('A', stockQuantity: 0),
+      ]).single.quantityMilli,
       1000,
     );
     expect(
-      InvoiceLineBuilder.fromItems([item('A', stockQuantity: 4)]).single
-          .quantityMilli,
+      InvoiceLineBuilder.fromItems([
+        item('A', stockQuantity: 4),
+      ]).single.quantityMilli,
       4000,
     );
   });
@@ -68,11 +71,8 @@ void main() {
       item('B', stockQuantity: 3, unitPriceCents: 333),
       item('C', stockQuantity: 2, unitPriceCents: 500),
     ];
-    final builtSubtotal = InvoiceLineBuilder.fromItems(
-      items,
-    ).fold(0, (sum, l) {
-      return sum +
-          ((l.unitPriceCents * l.quantityMilli + 500) ~/ 1000);
+    final builtSubtotal = InvoiceLineBuilder.fromItems(items).fold(0, (sum, l) {
+      return sum + ((l.unitPriceCents * l.quantityMilli + 500) ~/ 1000);
     });
     final composerSubtotal = InvoiceComposer.subtotalCents(
       items.map(
@@ -107,6 +107,13 @@ void main() {
       expect(lines.map((l) => l.name), ['A', 'B']);
       expect(lines.map((l) => l.quantityMilli), [1000, 2500]);
       expect(lines.map((l) => l.sortOrder), [0, 1]);
+    });
+
+    test('negative temporary form ids do not become legacy sourceItemId', () {
+      final lines = InvoiceLineBuilder.fromFormLines([
+        InvoiceFormLine(item: item('LineOnly', id: -42), quantityMilli: 1500),
+      ]);
+      expect(lines.single.sourceItemId, isNull);
     });
   });
 }

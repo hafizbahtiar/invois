@@ -6,10 +6,9 @@ import 'invoice_line_math.dart';
 /// In-memory pairing of a form's legacy [Item] with its authoritative decimal
 /// quantity (`quantityMilli`).
 ///
-/// Step 4C-4D-2A: carried in form state ahead of the decimal UI. The visible
-/// form, the write path, and the subtotal still use the legacy integer quantity
-/// (`Item.stockQuantity`); this just preserves the precise quantity so a future
-/// step can consume it without data loss.
+/// Stage 4E-1: carried in form state while the UI still edits an Item-shaped
+/// row. Persistence writes only [InvoiceLine] rows; legacy [Item] rows are
+/// fallback input only for old invoices with no lines.
 class InvoiceFormLine {
   final Item item;
 
@@ -47,6 +46,30 @@ class InvoiceFormLine {
   factory InvoiceFormLine.fromLine(Item item, InvoiceLine line) =>
       InvoiceFormLine(item: item, quantityMilli: line.quantityMilli);
 
+  /// Rebuilds the temporary Item-shaped form carrier from an authoritative
+  /// [InvoiceLine] snapshot. This does not create or persist an Item row.
+  factory InvoiceFormLine.fromLineSnapshot(InvoiceLine line) => InvoiceFormLine(
+    item: Item(
+      // If this line came from a legacy Item, keep that provenance id. For
+      // line-only rows, use a negative temporary id so form edits can target a
+      // single row without writing a fake legacy sourceItemId later.
+      id:
+          line.sourceItemId ??
+          (line.id != null && line.id! > 0 ? -line.id! : -(line.sortOrder + 1)),
+      name: line.name,
+      description: line.description,
+      unit: line.unit,
+      currency: line.currency,
+      unitPrice: line.unitPriceCents / 100,
+      unitPriceCents: line.unitPriceCents,
+      taxRate: line.taxRateBasisPoints == null
+          ? null
+          : line.taxRateBasisPoints! / 100,
+      stockQuantity: legacyQuantityFor(line.quantityMilli),
+    ),
+    quantityMilli: line.quantityMilli,
+  );
+
   InvoiceFormLine copyWith({Item? item, int? quantityMilli}) => InvoiceFormLine(
     item: item ?? this.item,
     quantityMilli: quantityMilli ?? this.quantityMilli,
@@ -66,23 +89,18 @@ class InvoiceFormLine {
     return total;
   }
 
-  /// Resolve the form-line list for a loaded invoice — prefers `Invoice.lines`
-  /// (authoritative `quantityMilli`, paired with [items] by `sortOrder`) and
-  /// falls back to legacy [items]. Mirrors `InvoiceLineReader` but keeps the
-  /// concrete [Item] the form needs.
-  ///
-  /// Lines are only preferred when their count matches [items] (dual-write keeps
-  /// them in lockstep); otherwise we fall back to items for safety.
+  /// Resolve the form-line list for a loaded invoice. Authoritative
+  /// `Invoice.lines` always win when present; old legacy [items] are used only
+  /// when an invoice has not been backfilled yet.
   static List<InvoiceFormLine> resolve({
     required List<Item> items,
     required List<InvoiceLine> lines,
   }) {
-    if (lines.isNotEmpty && lines.length == items.length) {
+    if (lines.isNotEmpty) {
       final sorted = [...lines]
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       return [
-        for (var i = 0; i < items.length; i++)
-          InvoiceFormLine.fromLine(items[i], sorted[i]),
+        for (final line in sorted) InvoiceFormLine.fromLineSnapshot(line),
       ];
     }
     return [for (final item in items) InvoiceFormLine.fromItem(item)];

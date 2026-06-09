@@ -492,10 +492,10 @@ class InvoiceLocalSource {
   }
 
   // ================================
-  //    MARK: Invoice lines (S4 dual-write)
+  //    MARK: Invoice lines
   // ================================
 
-  /// Replace the invoice's [InvoiceLine] snapshots with [lines] (Step 4C-4B).
+  /// Replace the invoice's [InvoiceLine] snapshots with [lines].
   ///
   /// Deletes the existing owned line rows (no orphans) and writes the fresh set
   /// with their `invoice` relation set. Idempotent: re-running with the same

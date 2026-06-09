@@ -713,14 +713,30 @@ Planning only. Stage 4E implementation was not started.
   - `Item.invoiceId` exists in `item_model.dart` and generated ObjectBox metadata, but no meaningful runtime ownership use was found.
   - `stockQuantity` remains the legacy quantity compatibility field for fallback/backfill/tests and should not drive future totals.
 - Recommended retirement path:
-  - 4E-1 remove production reads from legacy fallback only after backfill is guaranteed.
-  - 4E-2 stop writing legacy `Invoice.items`.
+  - 4E-1 stop writing legacy `Invoice.items` while retaining schema/fallback.
+  - 4E-2 remove production reads from legacy fallback only after backfill is guaranteed.
   - 4E-3 remove `Item.invoiceId` if the entity remains temporarily.
   - 4E-4 remove `Item` only when no references remain.
   - 4E-5 regenerate ObjectBox files and review UIDs/model diff.
   - 4E-6 run migration/open verification on a pre-4E store fixture.
 - Fallback decision: prefer keeping legacy fallback/schema for one more release unless native ObjectBox migration/open tests prove immediate removal is safe.
 - Not done: no app code changes, no schema changes, no generated-file changes, no data deletion, no Stage 4E implementation.
+
+---
+
+## Stage 4E-1 — Completed (2026-06-10) — stop writing legacy invoice items
+
+Scope: stop production save/update from creating new legacy `Item` rows via `Invoice.items`, while keeping old data readable.
+
+- **Write path changed:** `InvoiceFormNotifier.onUpsert` no longer calls `clearItemsFromInvoice` or `addItemToInvoice`. It persists submitted line data only through `replaceInvoiceLines(...)` built from `InvoiceFormLine.quantityMilli`.
+- **New invoices:** create `Invoice.lines`; do **not** create or attach legacy `Item` rows.
+- **Edited invoices:** replace `Invoice.lines`; do **not** create new legacy `Item` rows. Existing legacy `Invoice.items` links/rows are left untouched for compatibility and cleanup.
+- **Edit/reopen compatibility:** `InvoiceFormLine.resolve` now treats `Invoice.lines` as authoritative whenever present and can synthesize temporary, non-persisted Item-shaped form carriers from line snapshots. Old invoices with no lines still fall back to legacy `items`.
+- **Fallback retained:** `InvoiceLineReader` still falls back to `Invoice.items` for old invoices without lines.
+- **Cleanup retained:** Stage 4D orphan cleanup remains available for old legacy rows.
+- **Tests updated:** pure form-line resolver/builder tests cover line-only form carriers and temporary negative ids; objectbox-tagged line persistence tests now assert line-only saves create no legacy `Item` rows and old legacy rows are untouched.
+- **Not done:** no ObjectBox schema changes; `Item` retained; `Invoice.items` retained; `Item.invoiceId` retained; generated files not regenerated; no data deleted; legacy read fallback not removed; Stage 4E-2 not started.
+- **Next:** run `flutter test --tags objectbox --run-skipped` on a native-lib machine, complete manual QA for new line-only saves/reopen/detail/PDF and old fallback invoices, then decide when to remove legacy read fallback.
 
 ---
 

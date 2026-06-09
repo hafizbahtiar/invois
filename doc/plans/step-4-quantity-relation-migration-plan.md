@@ -340,3 +340,14 @@ Matches the plan, with these concrete choices:
 - Pure formatter helpers `cleanupHeadline` / `cleanupReportRows` (testable without widgets).
 - Tests: `legacy_item_cleanup_format_test.dart` (headline + rows for zero / non-zero / deleted). Action-wiring (dry-run/confirm/delete) is debug-only + manual QA; full widget test needs the native store so it's deferred.
 - **Next:** 4E legacy retirement (unchanged).
+
+## Stage 4E-1 — Implementation Notes (stop legacy item writes)
+
+- **Write path:** `InvoiceFormNotifier.onUpsert` no longer calls `clearItemsFromInvoice` or `addItemToInvoice`. Normal invoice create/update persists submitted lines only through `replaceInvoiceLines(... InvoiceLineBuilder.fromFormLines(state.lines))`.
+- **No new legacy rows:** new invoice saves should create `InvoiceLine` rows and zero `Item` rows. Edit saves replace line snapshots without creating new legacy `Item` rows.
+- **Old data retained:** pre-existing `Invoice.items` links and `Item` rows are left untouched; this avoids data deletion and keeps the Stage 4D cleanup tool meaningful.
+- **Edit/reopen:** `InvoiceFormLine.resolve` now treats `Invoice.lines` as authoritative whenever present. For line-only invoices, it synthesizes temporary Item-shaped form carriers from `InvoiceLine` snapshots; negative temporary ids prevent form-row collisions without becoming `sourceItemId`.
+- **Fallback:** `InvoiceLineReader` still falls back to legacy `Invoice.items` when an old invoice has no lines.
+- **Schema:** no ObjectBox schema changes, no generated-file regeneration, no `Item`/`Invoice.items`/`Item.invoiceId` removal.
+- **Tests:** pure resolver/builder tests cover line-only form carriers and temporary ids; objectbox-tagged line persistence tests assert no new legacy `Item` rows and old legacy rows untouched.
+- **Next:** run objectbox-tagged tests on a native-lib machine and manual QA before any legacy read fallback or schema removal.

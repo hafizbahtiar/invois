@@ -172,7 +172,10 @@ class InvoiceRepository {
 
   /// Move the invoice to a non-paid [status], reconciling the payment fields
   /// back to unpaid so status and payment can never diverge.
-  Future<Result<void>> markAsUnpaid(int id, {required InvoiceStatus status}) async {
+  Future<Result<void>> markAsUnpaid(
+    int id, {
+    required InvoiceStatus status,
+  }) async {
     try {
       final ok = await _local.markAsUnpaid(id, status: status);
       return ok
@@ -189,9 +192,9 @@ class InvoiceRepository {
   Future<void> clearItemsFromInvoice(int invoiceId) =>
       _local.clearItemsFromInvoice(invoiceId);
 
-  // ---- Invoice lines (S4 dual-write) ----
-  /// Replace the invoice's [InvoiceLine] snapshots (Step 4C-4B). Legacy
-  /// `items` are unchanged.
+  // ---- Invoice lines ----
+  /// Replace the invoice's [InvoiceLine] snapshots. Legacy `items` are
+  /// unchanged.
   Future<void> replaceInvoiceLines(int invoiceId, List<InvoiceLine> lines) =>
       _local.replaceInvoiceLines(invoiceId, lines);
 

@@ -99,8 +99,9 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       final items = invoice.items.toList();
       final taxes = invoice.taxes.toList();
       final terms = invoice.terms.toList();
-      // Step 4C-4D-2A: carry precise quantities — prefer Invoice.lines, else
-      // derive from legacy items. Not consumed by UI/write yet.
+      // Stage 4E-1: carry editable form rows from authoritative Invoice.lines
+      // when present, falling back to legacy items only for old invoices that
+      // have not been backfilled yet.
       final lines = InvoiceFormLine.resolve(
         items: items,
         lines: invoice.lines.toList(),
@@ -308,18 +309,10 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
 
     final savedInvoice = (result as Ok<Invoice>).value;
 
-    // Save items — always clear first so removals persist.
-    await _repository.clearItemsFromInvoice(savedInvoice.id!);
-    if (state.items != null && state.items!.isNotEmpty) {
-      for (final item in state.items!) {
-        await _repository.addItemToInvoice(savedInvoice.id!, item);
-      }
-    }
-
-    // Step 4C-4D-2C: persist Invoice.lines from the authoritative form lines
-    // (preserving quantityMilli exactly), not rebuilt from rounded items.
-    // Built after the items loop so the lines' sourceItemId reflects assigned
-    // item ids. Replaces any prior lines.
+    // Stage 4E-1: do not write newly submitted form rows to legacy
+    // Invoice.items/Item. Persist only Invoice.lines from the authoritative
+    // form lines, preserving quantityMilli exactly. Existing legacy rows are
+    // left untouched for fallback/cleanup compatibility.
     await _repository.replaceInvoiceLines(
       savedInvoice.id!,
       InvoiceLineBuilder.fromFormLines(state.lines ?? const []),

@@ -3,7 +3,7 @@ import 'package:invois/features/item/item_model.dart';
 import 'data/invoice_line_model.dart';
 import 'invoice_form_line.dart';
 
-/// Builds [InvoiceLine] snapshots for the dual-write.
+/// Builds [InvoiceLine] snapshots for persistence.
 ///
 /// [fromFormLines] is the authoritative path (Step 4C-4D-2C): it preserves the
 /// form's exact `quantityMilli`. [fromItems] (the legacy/backfill-equivalent

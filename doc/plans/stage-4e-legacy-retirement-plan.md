@@ -146,38 +146,41 @@ These should be rewritten or retired in the same staged order as the production 
 
 ## Retirement Strategy
 
-### 4E-1: Remove Production Reads From Legacy Fallback If Safe
+### 4E-1: Stop Writing Legacy `Invoice.items`
+
+Goal: stop creating new legacy `Item` rows while keeping the legacy schema and
+read fallback for old invoices.
+
+- Do not remove schema in this step.
+- Do not clear or add `Invoice.items` from the normal invoice save/update path.
+- Do not create `Item` rows for submitted invoice form lines.
+- Continue persisting `Invoice.lines` from the form's authoritative `quantityMilli`.
+- Leave pre-existing legacy rows/relations untouched for fallback and cleanup.
+- Edit-form loading should prefer `invoice.lines` and synthesize temporary form
+  carriers from line snapshots when no legacy items exist.
+- Keep backfill, cleanup, and `InvoiceLineReader` fallback available for old data.
+
+Exit criteria:
+
+- New invoice saves create `Invoice.lines` and no `Item` rows.
+- Editing an invoice replaces `Invoice.lines` and creates no new `Item` rows.
+- Existing legacy rows remain untouched.
+- ObjectBox tagged tests pass.
+
+### 4E-2: Remove Production Reads From Legacy Fallback If Safe
 
 Goal: prove production runtime no longer needs `Invoice.items`.
 
 - Change `InvoiceLineReader` production callers to require `InvoiceLine` rows.
 - Keep a separate test-only or migration-only helper for legacy fallback if still needed.
-- Edit invoice loading should prefer `invoice.lines` without requiring an equal count with legacy items.
 - Detail, PDF, and subtotal should fail visibly or show empty only when `Invoice.lines` is empty after a guaranteed backfill.
-- Do not remove schema in this step.
-- Keep backfill available until migration/open verification proves all old invoices have lines.
+- Keep the schema for one compatibility release if choosing the conservative fallback strategy.
 
 Exit criteria:
 
 - No production detail/PDF/subtotal path reads `Invoice.items`.
 - Old invoice fixtures pass because backfill created `InvoiceLine` rows first.
 - ObjectBox tagged tests pass.
-
-### 4E-2: Remove Write To Legacy `Invoice.items`
-
-Goal: stop creating or mutating legacy `Item` rows.
-
-- Replace form state carrier from `Item + InvoiceFormLine` to an `InvoiceLine`-native draft line model.
-- Save/update should call only `replaceInvoiceLines`.
-- Remove calls to `clearItemsFromInvoice` and `addItemToInvoice`.
-- Remove `InvoiceRepository.addItemToInvoice` / `clearItemsFromInvoice` only after no callers remain.
-- Keep the schema for one compatibility release if choosing the conservative fallback strategy.
-
-Exit criteria:
-
-- Creating/editing invoices writes no new `Item` rows.
-- Decimal quantity persists through `InvoiceLine.quantityMilli`.
-- ObjectBox tagged create/edit tests assert `Invoice.lines` only.
 
 ### 4E-3: Remove `Item.invoiceId` If Unused
 
@@ -274,7 +277,7 @@ Cons:
 - Store open and downgrade failures become harder to recover from.
 - Cleanup cannot run after `Item` schema removal.
 
-Recommendation: use Option A unless a native ObjectBox migration/open test proves every production-like store is safely backfilled and manual QA passes. Stop legacy writes first, keep fallback/schema for one release, then remove schema in a later Stage 4E substep.
+Recommendation: use Option A unless a native ObjectBox migration/open test proves every production-like store is safely backfilled and manual QA passes. Stage 4E-1 stops legacy writes first; keep fallback/schema for one release, then remove read fallback and schema in later Stage 4E substeps.
 
 ## Data Migration Strategy
 
@@ -306,7 +309,7 @@ Recommendation: use Option A unless a native ObjectBox migration/open test prove
 - Invoice create/edit with decimal quantity works.
 - PDF generation uses only `InvoiceLine` rows and totals correctly.
 - Detail page uses only `InvoiceLine` rows and shows decimal quantity.
-- Invoice form save/update does not create legacy `Item` rows once 4E-2 lands.
+- Invoice form save/update does not create legacy `Item` rows.
 - Orphan cleanup is either removed as no longer applicable, or remains dev-only until schema removal.
 - ObjectBox migration/open test using a pre-4E fixture store.
 - Regression test that an invoice missing lines is caught before fallback removal, not silently displayed with zero items.
@@ -332,3 +335,19 @@ Recommendation: use Option A unless a native ObjectBox migration/open test prove
 - Stop if any invoice can exist with legacy items but no `InvoiceLine` rows.
 - Stop if generated ObjectBox diff changes unrelated entities.
 - Stop if stash/user UI changes conflict with docs or implementation branches.
+
+## Stage 4E-1 Completion Notes
+
+Completed: `onUpsert` no longer clears or adds legacy `Invoice.items`.
+
+- New invoice saves persist submitted form lines only through `Invoice.lines`.
+- New invoice saves no longer create `Item` rows for line items.
+- Edit saves replace `Invoice.lines` and do not create new legacy `Item` rows.
+- Existing legacy `Item` rows and `Invoice.items` relation links are left untouched for compatibility and the Stage 4D cleanup tool.
+- `InvoiceFormLine.resolve` now treats `Invoice.lines` as authoritative whenever present. If an invoice has line snapshots and no legacy items, the edit form synthesizes temporary, non-persisted Item-shaped carriers from the `InvoiceLine` snapshots.
+- `InvoiceLineReader` fallback remains intact: old invoices with no lines still render from legacy `Invoice.items`.
+- Schema retained: `Item`, `Invoice.items`, and `Item.invoiceId` still exist.
+- Generated ObjectBox files were not regenerated.
+- Data deletion was not performed.
+
+Next: do not remove legacy read fallback or schema until ObjectBox tagged tests pass on a native-lib machine and manual QA confirms new line-only saves, old fallback invoices, detail, PDF, and cleanup behavior.

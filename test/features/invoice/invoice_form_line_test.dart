@@ -7,20 +7,32 @@ import 'package:invois/features/item/item_model.dart';
 /// Step 4C-4D-2A/2C/2B: in-memory decimal-quantity carrier for the form. Pure
 /// tests (no store, no UI).
 void main() {
-  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) => Item(
-    name: name,
-    unitPrice: unitPriceCents / 100,
-    unitPriceCents: unitPriceCents,
-    stockQuantity: stockQuantity,
-  );
-
-  InvoiceLine line(String name, {required int quantityMilli, int sortOrder = 0}) =>
-      InvoiceLine(
+  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) =>
+      Item(
         name: name,
-        unitPriceCents: 1000,
-        quantityMilli: quantityMilli,
-        sortOrder: sortOrder,
+        unitPrice: unitPriceCents / 100,
+        unitPriceCents: unitPriceCents,
+        stockQuantity: stockQuantity,
       );
+
+  InvoiceLine line(
+    String name, {
+    required int quantityMilli,
+    int sortOrder = 0,
+    int? id,
+    int? sourceItemId,
+    int unitPriceCents = 1000,
+  }) => InvoiceLine(
+    id: id,
+    sourceItemId: sourceItemId,
+    name: name,
+    description: 'line-desc-$name',
+    unit: 'hour',
+    currency: 'MYR',
+    unitPriceCents: unitPriceCents,
+    quantityMilli: quantityMilli,
+    sortOrder: sortOrder,
+  );
 
   group('InvoiceFormLine.fromItem', () {
     test('default (null stockQuantity) -> 1000', () {
@@ -57,11 +69,14 @@ void main() {
         2,
       );
     });
-    test('non-whole 1500 is held without loss; legacyQuantity truncates to 1', () {
-      final l = InvoiceFormLine(item: item('A'), quantityMilli: 1500);
-      expect(l.quantityMilli, 1500); // preserved
-      expect(l.legacyQuantity, 1); // documented truncation for legacy UI
-    });
+    test(
+      'non-whole 1500 is held without loss; legacyQuantity truncates to 1',
+      () {
+        final l = InvoiceFormLine(item: item('A'), quantityMilli: 1500);
+        expect(l.quantityMilli, 1500); // preserved
+        expect(l.legacyQuantity, 1); // documented truncation for legacy UI
+      },
+    );
   });
 
   group('resolve', () {
@@ -74,7 +89,7 @@ void main() {
       expect(result.map((l) => l.quantityMilli), [2000, 1000]);
     });
 
-    test('lines present (count matches) win, paired by sortOrder', () {
+    test('lines present win and are sorted by sortOrder', () {
       final result = InvoiceFormLine.resolve(
         items: [item('A', stockQuantity: 1), item('B', stockQuantity: 1)],
         lines: [
@@ -87,15 +102,37 @@ void main() {
       expect(result.map((l) => l.quantityMilli), [1500, 2500]);
     });
 
-    test('count mismatch -> fall back to items (safety)', () {
+    test(
+      'lines-only invoice rebuilds temporary form carriers from snapshots',
+      () {
+        final result = InvoiceFormLine.resolve(
+          items: const [],
+          lines: [
+            line(
+              'Consulting',
+              id: 42,
+              quantityMilli: 1500,
+              unitPriceCents: 1000,
+            ),
+          ],
+        );
+        expect(result.single.item.name, 'Consulting');
+        expect(result.single.item.description, 'line-desc-Consulting');
+        expect(result.single.item.unit, 'hour');
+        expect(result.single.item.currency, 'MYR');
+        expect(result.single.item.effectiveUnitPriceCents, 1000);
+        expect(result.single.quantityMilli, 1500);
+        expect(result.single.item.id, -42); // temporary, not a legacy Item id
+      },
+    );
+
+    test('line sourceItemId is preserved for legacy-backed rows', () {
       final result = InvoiceFormLine.resolve(
-        items: [item('A', stockQuantity: 3)],
-        lines: [
-          line('A', quantityMilli: 1500),
-          line('extra', quantityMilli: 1000, sortOrder: 1),
-        ],
+        items: const [],
+        lines: [line('Backfilled', sourceItemId: 7, quantityMilli: 2000)],
       );
-      expect(result.single.quantityMilli, 3000); // from item, not line
+      expect(result.single.item.id, 7);
+      expect(result.single.quantityMilli, 2000);
     });
 
     test('empty -> empty', () {
@@ -113,7 +150,10 @@ void main() {
           quantityMilli: quantityMilli,
         );
 
-    test('empty -> 0', () => expect(InvoiceFormLine.subtotalCents(const []), 0));
+    test(
+      'empty -> 0',
+      () => expect(InvoiceFormLine.subtotalCents(const []), 0),
+    );
 
     test('whole quantity (2 x RM10) -> 2000', () {
       expect(InvoiceFormLine.subtotalCents([fl(2000)]), 2000);
