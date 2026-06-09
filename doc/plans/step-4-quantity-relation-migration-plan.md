@@ -191,3 +191,12 @@ Matches the plan, with these concrete choices:
 - Backfill `InvoiceLineBackfill` (`lib/features/invoice/data/invoice_line_backfill.dart`) + report; wired into `main()` after `S3MoneyBackfill`. Idempotent (skips invoices that already have `lines` or have no `items`).
 - Generated files regenerated via `dart run build_runner build` only.
 - Not done in 4B (as planned): no read/write switch, no decimal-qty UI, no orphan deletion, `Invoice.items`/`Item`/`Item.invoiceId` all retained.
+
+## Step 4C-1 — Implementation Notes (read adapter)
+
+- Added `InvoiceLineView` + `InvoiceLineReader` (`lib/features/invoice/invoice_line_view.dart`) — a pure, source-agnostic read view.
+- Fallback rule: `InvoiceLineReader.resolve(lines, items)` prefers `lines` (sorted by `sortOrder`); else maps legacy `items` in relation order (`sortOrder = index`). `fromInvoice(invoice)` is a thin wrapper over the `lines`/`items` ToMany for future consumers.
+- Legacy quantity + line totals reuse `InvoiceLineMath` (no duplicated rounding). The Item→view mapping mirrors the 4B backfill exactly.
+- Pure-testable: `resolve` takes plain lists, so unit tests need no native store.
+- **No consumers switched** — form/detail/PDF/composer/notifier untouched. Writes unchanged.
+- Next: 4C-2 — switch a first read consumer (totals/composer or detail) to `InvoiceLineReader`, behind the same fallback, with tests.

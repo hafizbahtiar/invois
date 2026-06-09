@@ -387,6 +387,20 @@ Additive only. The legacy `Invoice.items` / `Item.stockQuantity` path **still dr
 
 ---
 
+## Stage 4C-1 — Completed (2026-06-09) — InvoiceLine read adapter
+
+Pure read adapter only — **no consumer switched, no writes changed, no schema/generated changes.**
+
+- **Added:** `InvoiceLineView` (unified read shape) + `InvoiceLineReader` (`lib/features/invoice/invoice_line_view.dart`).
+- **Fallback rule:** `resolve(lines, items)` → prefer `lines` (sorted by `sortOrder`); else legacy `items` in relation order (`sortOrder = index`). `fromInvoice(invoice)` wraps the ToMany for future consumers. Legacy quantity + line totals reuse `InvoiceLineMath` (no duplicated rounding); the Item→view mapping mirrors the 4B backfill.
+- **Files:** new `invoice_line_view.dart`; new `test/features/invoice/invoice_line_view_test.dart` (11 pure tests); docs (`AUDIT_REPORT.md`, plan).
+- **Tests:** prefers lines / falls back to items / empty→empty / legacy qty mapping (null/0/2) / line totals / order preserved / mixed→lines-only. All pure (no native store).
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 132 passed, 7 skipped (+11).
+- **Not done (as scoped):** form/detail/PDF/composer/notifier untouched; no write switch; no orphan cleanup; `Invoice.items`/`Item`/`Item.invoiceId` retained.
+- **Next:** Stage 4C-2 — switch the first read consumer (totals/composer or detail) to `InvoiceLineReader` behind this fallback, with tests; PDF/form later.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
