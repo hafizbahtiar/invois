@@ -158,6 +158,27 @@ class InvoiceGenerator {
     return pdf.save();
   }
 
+  /// Sanitize an invoice number into a filesystem-safe base filename.
+  ///
+  /// Invoice numbers can contain `/`, `\`, `:` and other characters that are
+  /// illegal in file paths (e.g. `INV/2024/001`), which would make
+  /// [saveInvoice] throw and the OS share sheet misbehave. Illegal characters
+  /// are replaced with `-`; the result never collapses to an empty string.
+  static String sanitizeFileName(String name) {
+    final cleaned = name
+        .trim()
+        .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^[-.]+|[-.]+$'), '');
+    return cleaned.isEmpty ? 'invoice' : cleaned;
+  }
+
+  static String _invoiceFileBase(Invoice invoice) {
+    return sanitizeFileName(
+      '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}',
+    );
+  }
+
   /// Render a stored signature's legacy JSON points into PNG bytes.
   ///
   /// Returns `null` when there is no signature, the data is empty, or it can't
@@ -758,7 +779,7 @@ class InvoiceGenerator {
     await Printing.layoutPdf(
       onLayout: (_) => pdfData,
       format: pageFormat,
-      name: '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}',
+      name: _invoiceFileBase(invoice),
     );
   }
 
@@ -779,8 +800,7 @@ class InvoiceGenerator {
     );
     await Printing.sharePdf(
       bytes: pdfData,
-      filename:
-          '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}.pdf',
+      filename: '${_invoiceFileBase(invoice)}.pdf',
     );
   }
 
@@ -799,8 +819,7 @@ class InvoiceGenerator {
       signature: signature,
       pageFormat: pageFormat,
     );
-    final filename =
-        '${invoice.invoiceNumberPrefix ?? ''}${invoice.invoiceNumber}.pdf';
+    final filename = '${_invoiceFileBase(invoice)}.pdf';
     Directory? directory;
     try {
       directory = await getDownloadsDirectory();

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:invois/core/money/money.dart';
+import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
@@ -114,6 +115,17 @@ extension RecurringFrequencyExtension on RecurringFrequency {
       case RecurringFrequency.yearly:
         return 'Yearly';
     }
+  }
+
+  /// Safely parse a stored frequency name; null/empty/unknown (legacy/corrupt)
+  /// fall back to [RecurringFrequency.monthly] instead of throwing —
+  /// `Enum.values.byName('')` would crash.
+  static RecurringFrequency fromName(String? name) {
+    if (name == null || name.isEmpty) return RecurringFrequency.monthly;
+    for (final value in RecurringFrequency.values) {
+      if (value.name == name) return value;
+    }
+    return RecurringFrequency.monthly;
   }
 }
 
@@ -521,19 +533,22 @@ class Invoice extends Equatable {
   int get effectiveBalanceDueCents =>
       balanceDueCents ?? Money.fromDouble(balanceDue).minorUnits;
 
+  /// Currency symbol for display (e.g. `RM`), resolved from the stored code.
+  String get _currencySymbol => CurrencyUtils.getSymbol(moneyCurrencyCode);
+
   /// Get formatted total
   String get formattedTotal {
-    return Money(effectiveTotalCents).format(symbol: formattedCurrency);
+    return Money(effectiveTotalCents).format(symbol: _currencySymbol);
   }
 
   /// Get formatted balance due
   String get formattedBalanceDue {
-    return Money(effectiveBalanceDueCents).format(symbol: formattedCurrency);
+    return Money(effectiveBalanceDueCents).format(symbol: _currencySymbol);
   }
 
   /// Get formatted paid amount
   String get formattedPaidAmount {
-    return Money(effectivePaidAmountCents).format(symbol: formattedCurrency);
+    return Money(effectivePaidAmountCents).format(symbol: _currencySymbol);
   }
 
   /// Get invoice type display name

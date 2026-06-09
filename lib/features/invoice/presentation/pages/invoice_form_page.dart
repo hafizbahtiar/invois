@@ -144,11 +144,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             .toString();
         _paidAmountController.text = state.invoice!.paidAmount.toString();
         _isRecurring = state.invoice!.isRecurring;
-        _selectedRecurringFrequency = state.invoice!.recurringFrequency != null
-            ? RecurringFrequency.values.byName(
-                state.invoice!.recurringFrequency!,
-              )
-            : RecurringFrequency.monthly;
+        _selectedRecurringFrequency = RecurringFrequencyExtension.fromName(
+          state.invoice!.recurringFrequency,
+        );
         _recurringIntervalController.text =
             state.invoice!.recurringInterval?.toString() ?? '';
         _recurringEndDate = state.invoice!.recurringEndDate;
@@ -158,20 +156,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
         _viewedDate = state.invoice!.viewedDate;
         _paidDate = state.invoice!.paidDate;
 
-        // Set enums
-        if (state.invoice!.invoiceType != null) {
-          _selectedInvoiceType = InvoiceType.values.byName(
-            state.invoice!.invoiceType!,
-          );
-        }
-        if (state.invoice!.status != null) {
-          _selectedStatus = InvoiceStatus.values.byName(state.invoice!.status!);
-        }
-        if (state.invoice!.paymentStatus != null) {
-          _selectedPaymentStatus = PaymentStatus.values.byName(
-            state.invoice!.paymentStatus!,
-          );
-        }
+        // Set enums (safe parse — tolerates unknown/legacy stored values
+        // instead of throwing via Enum.values.byName).
+        _selectedInvoiceType = InvoiceTypeExtension.fromName(
+          state.invoice!.invoiceType,
+        );
+        _selectedStatus = InvoiceStatusExtension.fromName(state.invoice!.status);
+        _selectedPaymentStatus = PaymentStatusExtension.fromName(
+          state.invoice!.paymentStatus,
+        );
 
         _onSelectClient(state.invoice!.clientId);
       } else {
@@ -374,7 +367,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   }
 
   void _onDeleteInvoice(Invoice invoice) async {
-    final state = ref.watch(invoiceFormProvider);
+    final state = ref.read(invoiceFormProvider);
     final result = await ref
         .read(invoiceFormProvider.notifier)
         .deleteInvoiceById(invoice.id!);
@@ -805,7 +798,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   //============================================
 
   void _showDeleteConfirmation() {
-    final state = ref.watch(invoiceFormProvider);
+    final state = ref.read(invoiceFormProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog.adaptive(

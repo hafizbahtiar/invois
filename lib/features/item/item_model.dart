@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:invois/core/money/money.dart';
+import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:objectbox/objectbox.dart';
@@ -334,8 +335,7 @@ class Item extends Equatable {
 
   /// Get the display unit (custom unit if specified, otherwise enum name)
   String get displayUnit {
-    if (ItemUnit.values.byName(unit ?? '') == ItemUnit.custom &&
-        customUnit != null) {
+    if (_itemUnitFromName(unit) == ItemUnit.custom && customUnit != null) {
       return customUnit!;
     }
     return unit ?? '';
@@ -394,13 +394,13 @@ class Item extends Equatable {
 
   /// Get formatted price with currency
   String get formattedPrice {
-    final currencySymbol = currency ?? '\$';
+    final currencySymbol = CurrencyUtils.getSymbol(moneyCurrencyCode);
     return Money(effectiveUnitPriceCents).format(symbol: currencySymbol);
   }
 
   /// Get formatted price with tax
   String get formattedPriceWithTax {
-    final currencySymbol = currency ?? '\$';
+    final currencySymbol = CurrencyUtils.getSymbol(moneyCurrencyCode);
     return Money.fromDouble(priceWithTax).format(symbol: currencySymbol);
   }
 
@@ -430,7 +430,7 @@ class Item extends Equatable {
 
   /// Get item type display name
   String get itemTypeDisplay {
-    switch (ItemType.values.byName(itemType ?? '')) {
+    switch (_itemTypeFromName(itemType)) {
       case ItemType.product:
         return 'Product';
       case ItemType.service:
@@ -442,7 +442,10 @@ class Item extends Equatable {
 
   /// Get unit display name
   String get unitDisplay {
-    switch (ItemUnit.values.byName(unit ?? '')) {
+    final parsedUnit = _itemUnitFromName(unit);
+    // Unknown/legacy stored unit: show the raw stored value instead of crashing.
+    if (parsedUnit == null) return unit ?? '';
+    switch (parsedUnit) {
       case ItemUnit.piece:
         return 'Piece';
       case ItemUnit.hour:
@@ -471,4 +474,24 @@ class Item extends Equatable {
         return customUnit ?? 'Custom';
     }
   }
+}
+
+/// Safely parse a stored item-type name; null/empty/unknown (legacy/corrupt)
+/// fall back to [ItemType.other] instead of throwing via `values.byName`.
+ItemType _itemTypeFromName(String? name) {
+  if (name == null || name.isEmpty) return ItemType.other;
+  for (final value in ItemType.values) {
+    if (value.name == name) return value;
+  }
+  return ItemType.other;
+}
+
+/// Safely parse a stored unit name; returns null for unknown/legacy values so
+/// callers can fall back to the raw stored string rather than crashing.
+ItemUnit? _itemUnitFromName(String? name) {
+  if (name == null || name.isEmpty) return null;
+  for (final value in ItemUnit.values) {
+    if (value.name == name) return value;
+  }
+  return null;
 }
