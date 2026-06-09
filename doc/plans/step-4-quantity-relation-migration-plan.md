@@ -331,3 +331,12 @@ Matches the plan, with these concrete choices:
 - **No automatic startup run** — `main.dart` unchanged; the cleanup is explicit/tested only, so no silent data deletion.
 - Tests: pure report getters; tagged (no-orphan→0, dry-run reports but keeps, delete removes, referenced preserved, multi-invoice preserved, idempotent, sourceItemId-guard preserves).
 - **Next:** 4E — retire legacy `Invoice.items` / `Item` / `Item.invoiceId` once everything reads/writes lines and a one-time orphan cleanup has run in production.
+
+## Step 4D-2 — Implementation Notes (guarded cleanup entry point)
+
+- Added `LegacyItemCleanupPage` (`lib/features/setting/presentation/pages/legacy_item_cleanup_page.dart`): **Dry Run** (`OrphanItemCleanup.run(dryRun: true)`) and **Delete Orphans** (`dryRun: false`). Delete is enabled only after a dry-run that found orphans, and behind a confirmation dialog ("This will permanently delete orphan legacy invoice item rows. It will not delete invoices or invoice lines."). Errors are caught → snackbar, no crash.
+- **Entry point:** a Settings → **Maintenance** section, gated behind `kDebugMode` (not customer-facing). Pushed via `MaterialPageRoute` (no named route added).
+- Store accessed via `storeProvider`. **No automatic/startup run.**
+- Pure formatter helpers `cleanupHeadline` / `cleanupReportRows` (testable without widgets).
+- Tests: `legacy_item_cleanup_format_test.dart` (headline + rows for zero / non-zero / deleted). Action-wiring (dry-run/confirm/delete) is debug-only + manual QA; full widget test needs the native store so it's deferred.
+- **Next:** 4E legacy retirement (unchanged).

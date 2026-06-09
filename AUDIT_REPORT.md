@@ -607,6 +607,20 @@ Delete-capable cleanup for orphaned legacy `Item` rows. **Not run automatically*
 
 ---
 
+## Stage 4D-2 — Completed (2026-06-10) — guarded manual cleanup entry point
+
+A safe, explicit, **debug-only** UI to run the Stage 4D `OrphanItemCleanup`. **Never automatic.**
+
+- **Where:** Settings → **Maintenance** section, gated behind `kDebugMode` (not customer-facing); opens `LegacyItemCleanupPage` via `MaterialPageRoute`.
+- **Dry Run:** `OrphanItemCleanup.run(dryRun: true)` → shows the report (total/referenced/orphans/deleted/skipped/warnings) + a headline; mutates nothing.
+- **Delete Orphans:** enabled **only after a dry-run that found orphans**, and behind a confirmation dialog ("This will permanently delete orphan legacy invoice item rows. It will not delete invoices or invoice lines."); then `run(dryRun: false)` and shows the final report. Failures are caught → error snackbar, no crash.
+- **Files:** new `legacy_item_cleanup_page.dart` (+ pure `cleanupHeadline`/`cleanupReportRows`); `settings_page.dart` (Maintenance section + imports); new `test/features/setting/legacy_item_cleanup_format_test.dart`.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 212 passed, 10 skipped (+5).
+- **Not done (as scoped):** no automatic/startup cleanup; no schema/generated changes; `Invoice.items`/`Item`/`Item.invoiceId` retained; no PDF/totals/payment/decimal-UI changes; Stage 4E not started.
+- **Next:** Stage 4E — retire legacy `Invoice.items` + `Item`/`Item.invoiceId` (after a native-lib tagged run, decimal manual QA, and a production dry-run/cleanup via this screen).
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
