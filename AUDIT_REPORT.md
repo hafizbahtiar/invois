@@ -621,6 +621,80 @@ A safe, explicit, **debug-only** UI to run the Stage 4D `OrphanItemCleanup`. **N
 
 ---
 
+# Stage 4D-3 Verification Gate
+
+## Branch State
+
+* Branch: dev
+* Working tree: clean before this audit-report update
+* Stage 4E: not started
+
+## Default Verification
+
+* flutter analyze: passed — No issues found
+* flutter test: passed — 212 passed, 10 skipped
+
+## ObjectBox Tagged Tests
+
+* Command: `flutter test --tags objectbox --run-skipped`
+* Result:
+  * failed due to missing `libobjectbox.dylib`
+* Note:
+  * Error summary: host Dart VM tests could not load `libobjectbox.dylib`; `dlopen` searched Flutter engine, `/usr/local/lib`, `/usr/lib`, and local library paths and reported "no such file".
+  * This is an environment/native dependency issue.
+  * It does not prove ObjectBox store migration/backfill/cleanup logic at runtime.
+  * Tagged tests still need to run on a machine with ObjectBox native library installed.
+
+## Manual QA Gate Before Stage 4E
+
+Decimal quantity:
+
+* [ ] Create invoice qty 1.5, price RM10 -> line total RM15
+* [ ] Create invoice qty 0.25, price RM100 -> line total RM25
+* [ ] Save invoice -> reopen edit -> decimal quantity persists
+* [ ] Detail page shows decimal quantity
+* [ ] PDF preview/share shows decimal quantity and correct totals
+* [ ] Edit qty 1.5 -> 2.25 -> save -> reopen -> correct
+* [ ] Whole qty 1/2 still works
+* [ ] Invalid qty 0 rejected
+* [ ] Invalid qty -1 rejected
+* [ ] Invalid qty 1.2345 rejected
+* [ ] Invalid qty 1,5 rejected
+
+Legacy Item cleanup:
+
+* [ ] Debug build only: Settings -> Maintenance visible
+* [ ] Release build: Maintenance action hidden
+* [ ] Dry Run runs without deleting
+* [ ] Dry Run report is understandable
+* [ ] Delete Orphans disabled when no orphans
+* [ ] Delete Orphans requires confirmation
+* [ ] Delete Orphans does not delete invoices
+* [ ] Delete Orphans does not delete Invoice.lines
+* [ ] Run dry-run on production-like data before real delete
+
+ObjectBox runtime:
+
+* [ ] Backfill tests pass
+* [ ] Dual-write tests pass
+* [ ] InvoiceLine reader tests pass
+* [ ] Decimal persistence tests pass
+* [ ] Uniqueness tests pass
+* [ ] Settings reactivity tests pass
+* [ ] Orphan cleanup tests pass
+
+## Stage 4E Gate
+
+Do not start Stage 4E until:
+
+1. default analyze/test are green,
+2. ObjectBox tagged tests pass on a machine with `libobjectbox.dylib`,
+3. decimal quantity manual QA passes,
+4. legacy item cleanup dry-run is reviewed,
+5. real orphan delete, if run, is confirmed safe.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
