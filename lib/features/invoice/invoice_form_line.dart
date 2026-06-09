@@ -39,6 +39,20 @@ class InvoiceFormLine {
     quantityMilli: quantityMilli ?? this.quantityMilli,
   );
 
+  /// Subtotal (cents) = Σ of each form line's `unitPriceCents × quantityMilli`
+  /// (half-up at the cent via [InvoiceLineMath.lineTotalCents]). The
+  /// authoritative source for the form's live + stored subtotal (Step 4C-4D-2C).
+  static int subtotalCents(List<InvoiceFormLine> lines) {
+    var total = 0;
+    for (final line in lines) {
+      total += InvoiceLineMath.lineTotalCents(
+        unitPriceCents: line.item.effectiveUnitPriceCents,
+        quantityMilli: line.quantityMilli,
+      );
+    }
+    return total;
+  }
+
   /// Resolve the form-line list for a loaded invoice — prefers `Invoice.lines`
   /// (authoritative `quantityMilli`, paired with [items] by `sortOrder`) and
   /// falls back to legacy [items]. Mirrors `InvoiceLineReader` but keeps the

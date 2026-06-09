@@ -531,6 +531,22 @@ In-memory state plumbing only — **no UI/write/subtotal/PDF/schema changes; no 
 
 ---
 
+## Stage 4C-4D-2C — Completed (2026-06-09) — totals/write consume state.lines
+
+Order swapped (per decision): persistence/totals first, decimal UI next. **No UI change; no visible behaviour change** (UI still integer → all quantities whole → identical to before).
+
+- **Subtotal:** `notifier.calculateSubtotalCents` = `InvoiceFormLine.subtotalCents(state.lines)`; form `_onSubmit` feeds it via `subtotalCentsOverride`. Discount/tax/total/balance unchanged (composer).
+- **Persistence:** `onUpsert` builds `Invoice.lines` via `InvoiceLineBuilder.fromFormLines(state.lines)` — preserves `quantityMilli` exactly; legacy `Item.stockQuantity` no longer drives lines/totals. `fromItems` retained (delegates to `fromFormLines`).
+- **Authoritative = `InvoiceFormLine.quantityMilli`.** Legacy compat rule: `legacyQuantity = quantityMilli ~/ 1000` (truncation, documented); whole quantities → line-based == item-based (parity), so save/totals are byte-identical today.
+- **Files:** `invoice_form_line.dart` (`subtotalCents`), `invoice_line_builder.dart` (`fromFormLines`; `fromItems` delegates), `invoice_notifier.dart` (subtotal + persistence + import cleanup), `invoice_form_page.dart` (`_onSubmit` override + removed `invoice_line_view` import); tests `invoice_form_line_test.dart` (+subtotalCents), `invoice_line_builder_test.dart` (+fromFormLines), `invoice_line_dualwrite_objectbox_test.dart` (+decimal persistence); docs.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 200 passed, 9 skipped (+7).
+- ⚠️ ObjectBox-tagged tests still unrun here (`libobjectbox.dylib`) — run `flutter test --tags objectbox --run-skipped` on a native-lib machine; the decimal-persistence + write/replace behaviour is store-level.
+- **Decimal UI is now safe to implement** — totals + persistence already read `quantityMilli`.
+- **Not done (as scoped):** form UI/decimal input, PDF totals, payment, schema/generated, orphan cleanup — untouched; `Invoice.items`/`Item`/`Item.invoiceId` retained.
+- **Next:** Stage 4C-4D-2B — decimal quantity field in the form UI.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

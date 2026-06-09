@@ -23,7 +23,6 @@ import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
 import '../../invoice_composer.dart';
-import '../../invoice_line_view.dart';
 import '../../providers/invoice_notifier.dart';
 import '../../providers/invoice_state.dart';
 import '../../data/invoice_model.dart';
@@ -162,7 +161,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
         _selectedInvoiceType = InvoiceTypeExtension.fromName(
           state.invoice!.invoiceType,
         );
-        _selectedStatus = InvoiceStatusExtension.fromName(state.invoice!.status);
+        _selectedStatus = InvoiceStatusExtension.fromName(
+          state.invoice!.status,
+        );
         _selectedPaymentStatus = PaymentStatusExtension.fromName(
           state.invoice!.paymentStatus,
         );
@@ -395,14 +396,11 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
     // Single source of truth for the money spine (see InvoiceComposer). The
     // typed discount amount takes precedence over the rate, matching the form.
-    // Step 4C-4C: subtotal is derived from the unified line adapter (same source
-    // as the dual-written lines and the detail/PDF item rows); discount/tax/
-    // total/balance still flow through the composer.
+    // Step 4C-4D-2C: subtotal comes from the form lines' authoritative
+    // quantityMilli (via the notifier); discount/tax/total/balance still flow
+    // through the composer.
     final totals = InvoiceComposer.compose(
-      subtotalCentsOverride: InvoiceLineReader.subtotalCents(
-        lines: const [],
-        items: state.items ?? const [],
-      ),
+      subtotalCentsOverride: notifier.calculateSubtotalCents(),
       discountAmountCents: discountAmount.minorUnits,
       taxRates: (state.taxes ?? const []).map((tax) => tax.rate),
       paidAmountCents: paidAmount.minorUnits,

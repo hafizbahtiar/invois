@@ -16,7 +16,6 @@ import 'package:invois/features/term/data/term_model.dart';
 
 import '../invoice_form_line.dart';
 import '../invoice_line_builder.dart';
-import '../invoice_line_view.dart';
 import 'invoice_state.dart';
 import '../data/invoice_model.dart';
 import '../data/invoice_numbering.dart';
@@ -229,14 +228,13 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     state = state.copyWith(items: updatedItems, lines: updatedLines);
   }
 
-  // Subtotal via the unified line adapter (Step 4C-4C): same lines-preferred /
-  // items-fallback source as the detail/PDF item rows. No persisted lines exist
-  // at compose time, so this resolves from the in-memory items.
+  // Subtotal from the in-memory form lines (Step 4C-4D-2C): authoritative
+  // `quantityMilli` per line. `lines` is kept in lockstep with `items`, so whole
+  // quantities are identical to before; a future decimal UI flows through here.
   int calculateSubtotalCents() {
-    final items = state.items;
-    if (items == null || items.isEmpty) return 0;
-
-    return InvoiceLineReader.subtotalCents(lines: const [], items: items);
+    final lines = state.lines;
+    if (lines == null || lines.isEmpty) return 0;
+    return InvoiceFormLine.subtotalCents(lines);
   }
 
   double calculateSubtotal() {
@@ -317,12 +315,13 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       }
     }
 
-    // Step 4C-4B: dual-write Invoice.lines mirroring the just-saved items
-    // (built after the items loop so sourceItemId reflects assigned ids).
-    // Replaces any prior lines; totals/stored snapshot are unchanged.
+    // Step 4C-4D-2C: persist Invoice.lines from the authoritative form lines
+    // (preserving quantityMilli exactly), not rebuilt from rounded items.
+    // Built after the items loop so the lines' sourceItemId reflects assigned
+    // item ids. Replaces any prior lines.
     await _repository.replaceInvoiceLines(
       savedInvoice.id!,
-      InvoiceLineBuilder.fromItems(state.items ?? const []),
+      InvoiceLineBuilder.fromFormLines(state.lines ?? const []),
     );
 
     // Save taxes — always clear first so removals persist.

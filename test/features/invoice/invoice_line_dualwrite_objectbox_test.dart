@@ -8,6 +8,7 @@ import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/data/invoice_local_source.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/data/invoice_repository.dart';
+import 'package:invois/features/invoice/invoice_form_line.dart';
 import 'package:invois/features/invoice/invoice_line_builder.dart';
 import 'package:invois/features/invoice/invoice_line_view.dart';
 import 'package:invois/features/item/item_model.dart';
@@ -120,5 +121,25 @@ void main() {
     final invoice = store.box<Invoice>().get(saved.id!)!;
     expect(invoice.subtotalCents, 10000); // from draft(), untouched
     expect(invoice.totalCents, 10000);
+  });
+
+  test('fromFormLines persists the exact decimal quantityMilli (Step 4C-4D-2C)',
+      () async {
+    final saved = (await repo.create(draft('INV-DEC')) as Ok<Invoice>).value;
+
+    await repo.replaceInvoiceLines(
+      saved.id!,
+      InvoiceLineBuilder.fromFormLines([
+        InvoiceFormLine(
+          item: item('Hours', qty: 1, unitPriceCents: 1000),
+          quantityMilli: 1500, // 1.5 — must survive persistence
+        ),
+      ]),
+    );
+
+    final invoice = store.box<Invoice>().get(saved.id!)!;
+    expect(invoice.lines.single.quantityMilli, 1500);
+    // The unified reader (detail/PDF) then sees 1.5 x RM10 = RM15.00.
+    expect(InvoiceLineReader.fromInvoice(invoice).single.lineTotalCents, 1500);
   });
 }

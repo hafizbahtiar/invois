@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/invoice_composer.dart';
+import 'package:invois/features/invoice/invoice_form_line.dart';
 import 'package:invois/features/invoice/invoice_line_builder.dart';
 import 'package:invois/features/item/item_model.dart';
 
@@ -82,5 +83,30 @@ void main() {
       ),
     );
     expect(builtSubtotal, composerSubtotal);
+  });
+
+  group('fromFormLines (authoritative quantityMilli)', () {
+    test('preserves exact quantityMilli (not from stockQuantity)', () {
+      final lines = InvoiceLineBuilder.fromFormLines([
+        InvoiceFormLine(
+          item: item('A', id: 7, stockQuantity: 1, unitPriceCents: 1000),
+          quantityMilli: 1500, // 1.5 — diverges from stockQuantity
+        ),
+      ]);
+      expect(lines.single.quantityMilli, 1500);
+      expect(lines.single.unitPriceCents, 1000);
+      expect(lines.single.sourceItemId, 7);
+      expect(lines.single.sortOrder, 0);
+    });
+
+    test('preserves order and maps fields', () {
+      final lines = InvoiceLineBuilder.fromFormLines([
+        InvoiceFormLine(item: item('A'), quantityMilli: 1000),
+        InvoiceFormLine(item: item('B'), quantityMilli: 2500),
+      ]);
+      expect(lines.map((l) => l.name), ['A', 'B']);
+      expect(lines.map((l) => l.quantityMilli), [1000, 2500]);
+      expect(lines.map((l) => l.sortOrder), [0, 1]);
+    });
   });
 }

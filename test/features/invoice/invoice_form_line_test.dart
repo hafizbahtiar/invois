@@ -104,4 +104,38 @@ void main() {
       );
     });
   });
+
+  group('subtotalCents (drives live + stored subtotal)', () {
+    InvoiceFormLine fl(int quantityMilli, {int unitPriceCents = 1000}) =>
+        InvoiceFormLine(
+          item: item('X', unitPriceCents: unitPriceCents),
+          quantityMilli: quantityMilli,
+        );
+
+    test('empty -> 0', () => expect(InvoiceFormLine.subtotalCents(const []), 0));
+
+    test('whole quantity (2 x RM10) -> 2000', () {
+      expect(InvoiceFormLine.subtotalCents([fl(2000)]), 2000);
+    });
+
+    test('non-whole quantity (1.5 x RM10) -> 1500', () {
+      expect(InvoiceFormLine.subtotalCents([fl(1500)]), 1500);
+    });
+
+    test('multiple lines sum', () {
+      expect(
+        InvoiceFormLine.subtotalCents([fl(1500), fl(2500), fl(1000)]),
+        1500 + 2500 + 1000,
+      );
+    });
+
+    test('uses quantityMilli, NOT the item stockQuantity', () {
+      // Item says stock 1, but the form line says 1.5 -> subtotal must be 1.5x.
+      final line = InvoiceFormLine(
+        item: item('X', stockQuantity: 1, unitPriceCents: 1000),
+        quantityMilli: 1500,
+      );
+      expect(InvoiceFormLine.subtotalCents([line]), 1500);
+    });
+  });
 }

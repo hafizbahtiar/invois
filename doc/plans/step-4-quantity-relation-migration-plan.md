@@ -299,3 +299,15 @@ Matches the plan, with these concrete choices:
 - **Compatibility rule:** for the integer UI/write path, `legacyQuantity = quantityMilli ~/ 1000` (documented truncation). New/edited items derive `quantityMilli` from `stockQuantity × 1000`; only loaded-from-lines invoices carry a potentially-fractional value (none exist pre-UI), preserved without loss.
 - Tests: pure `invoice_form_line_test.dart` (fromItem mapping, legacyQuantity, resolve lines-win/fallback/empty, non-whole held without loss).
 - Next: 4C-4D-2B — wire the decimal field + parser/formatter into the form UI and make the write path persist `quantityMilli` on the line.
+
+## Step 4C-4D-2C — Implementation Notes (totals/write consume state.lines)
+
+> Order swapped per decision: persistence/totals first (2C), decimal UI second (2B-next).
+
+- **Subtotal** (`notifier.calculateSubtotalCents`) now = `InvoiceFormLine.subtotalCents(state.lines)` (Σ `lineTotalCents(unitPrice, quantityMilli)`); the form `_onSubmit` feeds this via `subtotalCentsOverride`. Discount/tax/total/balance still flow through `InvoiceComposer`.
+- **Persistence** (`onUpsert`) now builds `Invoice.lines` via `InvoiceLineBuilder.fromFormLines(state.lines)` — preserves `quantityMilli` exactly. `fromItems` retained (delegates to `fromFormLines` via `InvoiceFormLine.fromItem`) for the legacy/backfill path + tests.
+- **Authoritative source = `InvoiceFormLine.quantityMilli`.** Legacy `Item.stockQuantity` is still written via the legacy items path (integer from the current UI) but no longer drives totals or line persistence.
+- **Legacy compatibility rule:** `legacyQuantity = quantityMilli ~/ 1000` (truncation, documented). While the UI is integer, `quantityMilli` is always whole so line-based == item-based (parity; no visible change). When the decimal UI lands, it will set `quantityMilli` authoritatively and set `Item.stockQuantity = legacyQuantity` purely for compat (never feeding totals/persistence).
+- **No visible behaviour change:** UI still integer; whole-quantity invoices save and total exactly as before.
+- Tests: `InvoiceFormLine.subtotalCents` (whole/non-whole/multiple/empty/uses-quantityMilli-not-stockQuantity); `InvoiceLineBuilder.fromFormLines` (preserves exact quantityMilli, order, fields); tagged persistence test (1500 survives save; reader sees 1.5×).
+- **Decimal UI is now safe to implement** (2B-next): totals + persistence already read `quantityMilli`.
