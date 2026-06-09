@@ -479,6 +479,30 @@ Subtotal calculation switched to the unified line adapter; the rest of the money
 
 ---
 
+## Checkpoint — Invoice line migration (pre-4C-4D) (2026-06-09)
+
+State of the 4B→4C line migration before the first user-visible change (decimal quantity UI):
+
+| Stage | Status |
+|-------|--------|
+| 4B — `InvoiceLine` schema + idempotent backfill | done (`dac779d`) |
+| 4C-1 — `InvoiceLineReader`/`InvoiceLineView` read adapter | done (`3c851f8`) |
+| 4C-2 — invoice **detail** item rows read lines (fallback) | done (`e789f23`) |
+| 4C-3 — **PDF** item table reads lines (fallback) | done (`3c9b813`) |
+| 4C-4A — totals/composer parity audit + tests | done (`7509163`) |
+| 4C-4B — **dual-write** `Invoice.lines` on save | done (`de60366`) |
+| 4C-4C — **subtotal** derived from lines | done (`3e5e559`) |
+| 4C-4D — decimal-quantity form input | **NOT started** |
+| 4D — orphan cleanup / 4E — retire legacy `items` | not started |
+
+- **Reads on lines:** detail, PDF item table, subtotal. **Writes:** legacy `items` + `Invoice.lines` (dual-write). **Stored snapshot:** unchanged source for PDF/detail/dashboard totals. **Form UI:** still integer quantity. **Legacy `Invoice.items` / `Item` / `Item.invoiceId`:** retained; no orphan cleanup.
+- **Branch health:** `flutter analyze` → No issues found; `flutter test` → **153 passed, 9 skipped** (the 9 skips are the objectbox-tagged suites). Working tree clean.
+- **ObjectBox-tagged tests: PENDING.** `libobjectbox.dylib` is not present on this machine's loader paths; not installed (per instruction). The 9 tagged suites — backfill, dual-write/replace, line reader, uniqueness (3B/3C), settings reactivity — **have not been run against a real store.**
+- **Manual QA needed** (before/with 4C-4D): on a device, create + edit invoices and confirm detail, PDF, and subtotal match the legacy values for existing (pre-migration) and new invoices; verify edit replaces lines (no dup/orphan).
+- **Risk of proceeding to 4C-4D without the tagged run:** 4C-4D makes totals + persisted lines user-visible for fractional quantities. The pure tests prove the math/adapter, but the **store-level** write/replace, backfill, and reader behaviour are still unverified on a real ObjectBox store. **Recommended:** run `flutter test --tags objectbox --run-skipped` on a native-lib machine before 4C-4D.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
