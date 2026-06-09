@@ -18,10 +18,23 @@ class InvoiceFormLine {
 
   const InvoiceFormLine({required this.item, required this.quantityMilli});
 
-  /// Whole-unit integer quantity for the current integer UI/write path.
-  /// Truncates any fraction — documented; no fractional data exists before the
-  /// decimal UI, and the precise value is retained in [quantityMilli].
-  int get legacyQuantity => quantityMilli ~/ InvoiceLineMath.milliPerUnit;
+  /// Whole-unit integer for the legacy [Item.stockQuantity] compat field:
+  /// floor(quantity), clamped to a minimum of 1 so legacy code/validation that
+  /// assumes a positive integer quantity still passes (e.g. a 0.25 line stores
+  /// stockQuantity 1). Compatibility only — never drives totals/lines; the
+  /// precise value is retained in [quantityMilli].
+  static int legacyQuantityFor(int quantityMilli) {
+    final whole = quantityMilli ~/ InvoiceLineMath.milliPerUnit;
+    return whole < 1 ? 1 : whole;
+  }
+
+  int get legacyQuantity => legacyQuantityFor(quantityMilli);
+
+  /// Line total in cents (`unitPrice × quantityMilli`, half-up at the cent).
+  int get lineTotalCents => InvoiceLineMath.lineTotalCents(
+    unitPriceCents: item.effectiveUnitPriceCents,
+    quantityMilli: quantityMilli,
+  );
 
   /// From a legacy item: quantity derived from `stockQuantity`
   /// (null/≤0 → one unit), mirroring [InvoiceLineMath.quantityMilliFromLegacy].

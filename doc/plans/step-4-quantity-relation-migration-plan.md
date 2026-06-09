@@ -311,3 +311,14 @@ Matches the plan, with these concrete choices:
 - **No visible behaviour change:** UI still integer; whole-quantity invoices save and total exactly as before.
 - Tests: `InvoiceFormLine.subtotalCents` (whole/non-whole/multiple/empty/uses-quantityMilli-not-stockQuantity); `InvoiceLineBuilder.fromFormLines` (preserves exact quantityMilli, order, fields); tagged persistence test (1500 survives save; reader sees 1.5×).
 - **Decimal UI is now safe to implement** (2B-next): totals + persistence already read `quantityMilli`.
+
+## Step 4C-4D-2B — Implementation Notes (decimal quantity UI, end-to-end)
+
+- **Item dialog:** quantity field is decimal (`TextInputType.numberWithOptions(decimal: true)`), validated by `InvoiceQuantityInput.parse` (user-friendly errors); prefilled via `InvoiceQuantityInput.format(quantityMilli)`.
+- **Add/update:** parse → `quantityMilli`; `notifier.addItem/updateItem(item, quantityMilli:)` store it on the `InvoiceFormLine`; `Item.stockQuantity = InvoiceFormLine.legacyQuantityFor(quantityMilli)` (floor, **clamped ≥ 1**) for legacy compat only.
+- **Display:** form item list + pricing summary now iterate `state.lines`, showing `InvoiceQuantityInput.format(quantityMilli)` and `line.lineTotalCents`. Live subtotal/discount/tax/total already line-based (2C).
+- **Edit existing:** prefill quantity from `Invoice.lines` (via 2A load + `InvoiceFormLine.resolve`, lines-win); a 1.5 line shows "1.5".
+- **Save/reopen:** persists `quantityMilli` exactly (2C `fromFormLines`); reopen prefills the decimal; detail + PDF show it (4C-2/4C-3).
+- **Compat rule:** `legacyQuantityFor = max(1, floor(quantity))` — a `0.25` line stores `stockQuantity 1` so the legacy `InvoiceValidation` (qty ≤ 0 check) still passes; never drives totals/lines.
+- Tests: model (`legacyQuantityFor` clamp, `lineTotalCents`) + parser→line→subtotal pipeline (pure); existing tagged persistence/reader tests cover round-trip.
+- **Remaining:** run objectbox-tagged suites on a native-lib machine; **4D** orphan cleanup; **4E** retire legacy `Invoice.items`/`Item`/`Item.invoiceId`. (The add-item sheet is still the legacy `DraggableScrollableSheet` — cosmetic, audit P2-007, out of scope here.)

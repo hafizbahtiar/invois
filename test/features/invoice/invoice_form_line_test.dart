@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/invoice_form_line.dart';
+import 'package:invois/features/invoice/invoice_quantity_input.dart';
 import 'package:invois/features/item/item_model.dart';
 
-/// Step 4C-4D-2A: in-memory decimal-quantity carrier for the form. Pure tests
-/// (no store, no UI).
+/// Step 4C-4D-2A/2C/2B: in-memory decimal-quantity carrier for the form. Pure
+/// tests (no store, no UI).
 void main() {
   Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) => Item(
     name: name,
@@ -136,6 +137,59 @@ void main() {
         quantityMilli: 1500,
       );
       expect(InvoiceFormLine.subtotalCents([line]), 1500);
+    });
+  });
+
+  group('legacyQuantityFor (Item.stockQuantity compat, clamped >= 1)', () {
+    test('whole quantities floor', () {
+      expect(InvoiceFormLine.legacyQuantityFor(1000), 1);
+      expect(InvoiceFormLine.legacyQuantityFor(2000), 2);
+      expect(InvoiceFormLine.legacyQuantityFor(2500), 2); // 2.5 -> 2
+    });
+    test('fractional < 1 clamps to 1 (so legacy validation passes)', () {
+      expect(InvoiceFormLine.legacyQuantityFor(250), 1); // 0.25 -> 1
+      expect(InvoiceFormLine.legacyQuantityFor(999), 1); // 0.999 -> 1
+      expect(InvoiceFormLine.legacyQuantityFor(1), 1); // 0.001 -> 1
+    });
+  });
+
+  group('lineTotalCents getter', () {
+    test('1.5 x RM10 = RM15.00', () {
+      final l = InvoiceFormLine(
+        item: item('X', unitPriceCents: 1000),
+        quantityMilli: 1500,
+      );
+      expect(l.lineTotalCents, 1500);
+    });
+    test('0.25 x RM10 = RM2.50', () {
+      final l = InvoiceFormLine(
+        item: item('X', unitPriceCents: 1000),
+        quantityMilli: 250,
+      );
+      expect(l.lineTotalCents, 250);
+    });
+  });
+
+  group('parser -> form line -> subtotal (UI pipeline, Step 4C-4D-2B)', () {
+    test('typing "1.5" yields a 1.5x subtotal', () {
+      final q = InvoiceQuantityInput.parse('1.5').quantityMilli!;
+      final line = InvoiceFormLine(
+        item: item('X', unitPriceCents: 1000),
+        quantityMilli: q,
+      );
+      expect(q, 1500);
+      expect(InvoiceFormLine.subtotalCents([line]), 1500);
+      expect(line.legacyQuantity, 1); // compat stockQuantity
+    });
+
+    test('typing "0.25" yields a 0.25x subtotal, compat stock 1', () {
+      final q = InvoiceQuantityInput.parse('0.25').quantityMilli!;
+      final line = InvoiceFormLine(
+        item: item('X', unitPriceCents: 1000),
+        quantityMilli: q,
+      );
+      expect(InvoiceFormLine.subtotalCents([line]), 250);
+      expect(line.legacyQuantity, 1);
     });
   });
 }

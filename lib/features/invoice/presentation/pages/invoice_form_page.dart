@@ -23,6 +23,8 @@ import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
 import '../../invoice_composer.dart';
+import '../../invoice_form_line.dart';
+import '../../invoice_quantity_input.dart';
 import '../../providers/invoice_notifier.dart';
 import '../../providers/invoice_state.dart';
 import '../../data/invoice_model.dart';
@@ -540,9 +542,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     ref.read(invoiceFormProvider.notifier).clearSignature();
   }
 
-  void _showAddItemDialog({Item? existingItem}) {
+  void _showAddItemDialog({InvoiceFormLine? existingLine}) {
     if (_isReadOnly) return;
-    // Clear previous values or set to existing item values
+    final existingItem = existingLine?.item;
+    // Clear previous values or set to existing line values
     if (existingItem != null) {
       _itemNameController.text = existingItem.name;
       _itemDescriptionController.text = existingItem.description ?? '';
@@ -550,7 +553,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
         existingItem.effectiveUnitPriceCents,
         currencyCode: _selectedCurrency,
       ).toDouble().toStringAsFixed(2);
-      _itemQuantityController.text = existingItem.stockQuantity.toString();
+      // Prefill the precise quantity (e.g. "1.5") from the form line.
+      _itemQuantityController.text = InvoiceQuantityInput.format(
+        existingLine!.quantityMilli,
+      );
     } else {
       _itemNameController.clear();
       _itemDescriptionController.clear();
@@ -658,18 +664,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                               child: MyTextField(
                                 controller: _itemQuantityController,
                                 label: 'Quantity',
-                                keyboardType: TextInputType.number,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
                                 validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (int.tryParse(value) == null) {
-                                    return 'Invalid number';
-                                  }
-                                  if (int.parse(value) <= 0) {
-                                    return 'Must be greater than 0';
-                                  }
-                                  return null;
+                                  final result = InvoiceQuantityInput.parse(
+                                    value ?? '',
+                                  );
+                                  return result.isValid ? null : result.error;
                                 },
                               ),
                             ),
@@ -703,8 +706,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       onPressed: () {
                         if (_itemFormKey.currentState!.validate()) {
                           final price = _parseMoney(_itemPriceController.text);
-                          final quantity =
-                              int.tryParse(_itemQuantityController.text) ?? 1;
+                          final parsed = InvoiceQuantityInput.parse(
+                            _itemQuantityController.text,
+                          );
+                          // Validator already blocks invalid input; defensive.
+                          if (!parsed.isValid) return;
+                          final quantityMilli = parsed.quantityMilli!;
 
                           final item = Item(
                             id: existingItem?.id,
@@ -713,17 +720,25 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                             unitPrice: price.toDouble(),
                             unitPriceCents: price.minorUnits,
                             currency: _selectedCurrency,
-                            stockQuantity: quantity,
+                            // Legacy compatibility only (never drives totals/lines).
+                            stockQuantity: InvoiceFormLine.legacyQuantityFor(
+                              quantityMilli,
+                            ),
                           );
 
+                          final notifier = ref.read(
+                            invoiceFormProvider.notifier,
+                          );
                           if (existingItem != null) {
-                            ref
-                                .read(invoiceFormProvider.notifier)
-                                .updateItem(item);
+                            notifier.updateItem(
+                              item,
+                              quantityMilli: quantityMilli,
+                            );
                           } else {
-                            ref
-                                .read(invoiceFormProvider.notifier)
-                                .addItem(item);
+                            notifier.addItem(
+                              item,
+                              quantityMilli: quantityMilli,
+                            );
                           }
 
                           _refreshPricingCalculations();
@@ -1344,25 +1359,22 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          // Show item details
-          if (state.items != null && state.items!.isNotEmpty) ...[
-            ...state.items!.map(
-              (item) => Padding(
+          // Show item details (decimal-aware, from the authoritative form lines)
+          if (state.lines != null && state.lines!.isNotEmpty) ...[
+            ...state.lines!.map(
+              (line) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: Text(
-                        '${item.name} (${item.stockQuantity ?? 1} × ${_formatMoneyCents(item.effectiveUnitPriceCents)})',
+                        '${line.item.name} (${InvoiceQuantityInput.format(line.quantityMilli)} × ${_formatMoneyCents(line.item.effectiveUnitPriceCents)})',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                     Text(
-                      _formatMoneyCents(
-                        item.effectiveUnitPriceCents *
-                            (item.stockQuantity ?? 1),
-                      ),
+                      _formatMoneyCents(line.lineTotalCents),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -1469,12 +1481,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   }
 
   Widget _buildItemsList(InvoiceFormState state) {
-    final items = state.items ?? [];
+    final lines = state.lines ?? const <InvoiceFormLine>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (items.isEmpty)
+        if (lines.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: Center(
@@ -1486,34 +1498,31 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
               ),
             ),
           ),
-        if (items.isNotEmpty)
+        if (lines.isNotEmpty)
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
+            itemCount: lines.length,
             itemBuilder: (context, index) {
-              final itemData = items[index];
+              final line = lines[index];
               return MyTile(
                 isRounded: true,
                 icon: Icons.shopping_cart,
-                title: itemData.name,
+                title: line.item.name,
                 isReadOnly: _isReadOnly,
                 subtitle:
-                    '${_formatMoneyCents(itemData.effectiveUnitPriceCents)} x ${itemData.stockQuantity ?? 1}',
+                    '${_formatMoneyCents(line.item.effectiveUnitPriceCents)} x ${InvoiceQuantityInput.format(line.quantityMilli)}',
                 trailing: Text(
-                  _formatMoneyCents(
-                    itemData.effectiveUnitPriceCents *
-                        (itemData.stockQuantity ?? 1),
-                  ),
+                  _formatMoneyCents(line.lineTotalCents),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                onTap: () => _showAddItemDialog(existingItem: itemData),
-                onLongPress: () => _removeItem(itemData),
+                onTap: () => _showAddItemDialog(existingLine: line),
+                onLongPress: () => _removeItem(line.item),
               );
             },
           ),
         const SizedBox(height: 8),
-        if (items.isNotEmpty)
+        if (lines.isNotEmpty)
           Align(
             alignment: Alignment.centerRight,
             child: Padding(

@@ -547,6 +547,21 @@ Order swapped (per decision): persistence/totals first, decimal UI next. **No UI
 
 ---
 
+## Stage 4C-4D-2B — Completed (2026-06-09) — decimal quantity UI (end-to-end)
+
+The invoice item quantity is now decimal end-to-end (input → state → totals → persistence → reopen → detail/PDF). First user-visible change of the line migration.
+
+- **Input:** item dialog quantity field is decimal (`numberWithOptions(decimal: true)`), validated by `InvoiceQuantityInput.parse` (accepts `1`, `1.5`, `0.25`, `.5`, `2.250`; rejects empty/`0`/negative/`abc`/`1.2345`/`1,5`/`1.` with specific messages); prefilled via `InvoiceQuantityInput.format`.
+- **State/persistence:** `addItem`/`updateItem` now take `quantityMilli` → stored on `InvoiceFormLine`; saved exactly via `fromFormLines` (2C). `Item.stockQuantity = legacyQuantityFor(quantityMilli)` = `max(1, floor(qty))` — compat only (keeps legacy `InvoiceValidation` passing for sub-unit quantities), never drives totals/lines.
+- **Display:** form item list + pricing summary iterate `state.lines` (decimal quantity + `lineTotalCents`); live subtotal/discount/tax/total reflect decimals (2C). Detail + PDF already read lines (4C-2/4C-3). Edit prefills the decimal from `Invoice.lines` (2A load).
+- **Files:** `invoice_form_line.dart` (`legacyQuantityFor` clamp, `lineTotalCents`), `invoice_notifier.dart` (`addItem`/`updateItem` signatures), `invoice_form_page.dart` (dialog field/validator/keyboard/submit + list/summary read `state.lines`); `invoice_form_line_test.dart` (+clamp/lineTotal/pipeline); docs.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 206 passed, 9 skipped (+6).
+- ⚠️ ObjectBox-tagged tests still unrun here (`libobjectbox.dylib`) — run `flutter test --tags objectbox --run-skipped` on a native-lib machine, plus manual QA (enter 1.5 / 0.25, save, reopen, check detail + PDF).
+- **Not done (as scoped):** schema/generated, orphan cleanup, legacy-path retirement, payment, settings refresh — untouched; `Invoice.items`/`Item`/`Item.invoiceId` retained. Add-item sheet still legacy `DraggableScrollableSheet` (P2-007, cosmetic).
+- **Remaining work:** native-lib tagged run + manual QA → **4D** orphan cleanup → **4E** retire legacy `items`.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

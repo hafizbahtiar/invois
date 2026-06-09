@@ -180,18 +180,19 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     state = state.copyWith(items: [], lines: []);
   }
 
-  // Add a new item to the temporary items list
-  void addItem(Item item) {
+  // Add a new line: keeps `items` (legacy) and `lines` (authoritative
+  // quantityMilli) in lockstep. [quantityMilli] is the precise quantity.
+  void addItem(Item item, {required int quantityMilli}) {
     final List<Item> updatedItems = [...state.items!, item];
     final List<InvoiceFormLine> updatedLines = [
       ...?state.lines,
-      InvoiceFormLine.fromItem(item),
+      InvoiceFormLine(item: item, quantityMilli: quantityMilli),
     ];
     state = state.copyWith(items: updatedItems, lines: updatedLines);
   }
 
-  // Update an existing item in the temporary items list
-  void updateItem(Item updatedItem) {
+  // Update an existing line by item id, carrying the precise [quantityMilli].
+  void updateItem(Item updatedItem, {required int quantityMilli}) {
     if (state.items == null) return;
 
     final List<Item> updatedItems = state.items!.map((item) {
@@ -205,7 +206,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     final List<InvoiceFormLine> updatedLines = (state.lines ?? const [])
         .map(
           (line) => line.item.id == updatedItem.id
-              ? InvoiceFormLine.fromItem(updatedItem)
+              ? InvoiceFormLine(item: updatedItem, quantityMilli: quantityMilli)
               : line,
         )
         .toList();
