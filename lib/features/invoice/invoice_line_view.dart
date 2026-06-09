@@ -122,4 +122,19 @@ class InvoiceLineReader {
     lines: invoice.lines.toList(),
     items: invoice.items.toList(),
   );
+
+  /// Subtotal in cents = Σ of the resolved lines' totals (same lines-preferred /
+  /// items-fallback source as [resolve]). The composer/notifier feed this in as
+  /// the subtotal so totals and the detail/PDF item rows share one source
+  /// (Step 4C-4C).
+  static int subtotalCents({
+    required List<InvoiceLine> lines,
+    required List<Item> items,
+  }) {
+    var total = 0;
+    for (final view in resolve(lines: lines, items: items)) {
+      total += view.lineTotalCents;
+    }
+    return total;
+  }
 }

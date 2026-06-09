@@ -271,3 +271,14 @@ Matches the plan, with these concrete choices:
 - **Transaction note:** lines are written as one more sequential step alongside items/taxes/terms (the existing non-transactional save pattern). `replaceInvoiceLines` itself batches via `removeMany`/`putMany`. A single all-in-one transaction is a future hardening, not changed here.
 - **Tests:** pure `invoice_line_builder_test.dart`; objectbox-tagged `invoice_line_dualwrite_objectbox_test.dart` (create writes both; edit replaces—no dup/orphan; empty clears lines but keeps legacy items; idempotent; stored subtotal unchanged).
 - **Next:** 4C-4C — switch totals/composer to derive from `InvoiceLineReader` (guard qty ≤ 0), keeping the stored snapshot; then 4C-4D form decimal input.
+
+## Step 4C-4C — Implementation Notes (subtotal from lines)
+
+- **Subtotal source switched** to `InvoiceLineReader.subtotalCents(lines, items)` (Σ `InvoiceLineView.lineTotalCents`, lines-preferred / items-fallback). Discount/tax/total/balance still flow through `InvoiceComposer`.
+- `InvoiceComposer.compose` gained `subtotalCentsOverride` (and `lines` is now optional, default `const []`); when the override is present it's used, else subtotal is computed from `lines` as before (back-compat for existing composer tests).
+- `invoice_notifier.calculateSubtotalCents` and the form `_onSubmit` now feed the line-derived subtotal; the form's live pricing summary + tax base use the same value.
+- **qty ≤ 0 guard:** the adapter maps invalid legacy qty (≤0/null) to one unit, so subtotal can't go to 0 from a corrupt row; documented + tested. (Validation still blocks qty ≤ 0 at save.)
+- **Unchanged:** stored `effective*Cents` snapshot remains the persisted source for PDF/detail/dashboard totals; tax/discount/payment logic; form UI (no decimal input yet); PDF totals rendering.
+- **Parity:** for valid whole-quantity invoices, override-subtotal == legacy composer subtotal, so all downstream totals are byte-identical (tested).
+- **Tests:** `invoice_subtotal_source_test.dart` (subtotal source + override-vs-lines parity + decimal flow); existing `invoice_composer_test` still passes via the `lines` path.
+- **Next:** 4C-4D — form decimal-quantity input (writes fractional lines; subtotal already line-based).

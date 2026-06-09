@@ -463,6 +463,22 @@ First write-path change. On create/update the app **continues writing legacy `In
 
 ---
 
+## Stage 4C-4C — Completed (2026-06-09) — subtotal from InvoiceLineReader
+
+Subtotal calculation switched to the unified line adapter; the rest of the money flow is unchanged.
+
+- **Subtotal** now = `InvoiceLineReader.subtotalCents(lines, items)` (Σ `InvoiceLineView.lineTotalCents`, lines-preferred / items-fallback) — the same source as the detail/PDF item rows and the dual-written lines. **Discount/tax/total/balance still flow through `InvoiceComposer`.**
+- `InvoiceComposer.compose` gained `subtotalCentsOverride` (+ `lines` now optional); override wins, else computes from `lines` (back-compat). `invoice_notifier.calculateSubtotalCents` + form `_onSubmit` feed the line-derived subtotal.
+- **qty ≤ 0 guard:** adapter maps invalid/≤0 legacy qty to one unit (validation still blocks qty ≤ 0 at save); documented + tested.
+- **Parity:** for valid whole-quantity invoices, override-subtotal == legacy composer subtotal → all downstream totals byte-identical. Stored `effective*Cents` snapshot remains the persisted source for PDF/detail/dashboard; tax/discount/payment unchanged.
+- **Files:** `invoice_line_view.dart` (`subtotalCents`), `invoice_composer.dart` (`subtotalCentsOverride`), `invoice_notifier.dart`, `invoice_form_page.dart` (`_onSubmit` + import); new `invoice_subtotal_source_test.dart`; docs.
+- **Tests:** subtotal source (lines/items/empty/invalid-qty) + compose override-vs-lines parity (with discount+tax+paid) + decimal subtotal flow. Existing `invoice_composer_test` passes via the `lines` path. `flutter analyze` → No issues found; `flutter test` → 153 passed, 9 skipped (+6).
+- ⚠️ ObjectBox-tagged tests still unrun here (`libobjectbox.dylib`) — run `flutter test --tags objectbox --run-skipped` on a native-lib machine.
+- **Not done (as scoped):** form UI/decimal input, PDF totals rendering, payment, schema/generated, orphan cleanup — all untouched; `Invoice.items`/`Item`/`Item.invoiceId` retained.
+- **Next:** Stage 4C-4D — form decimal-quantity input (writes fractional lines; subtotal already line-based).
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

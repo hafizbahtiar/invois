@@ -14,8 +14,8 @@ import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
-import '../invoice_composer.dart';
 import '../invoice_line_builder.dart';
+import '../invoice_line_view.dart';
 import 'invoice_state.dart';
 import '../data/invoice_model.dart';
 import '../data/invoice_numbering.dart';
@@ -204,19 +204,14 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     state = state.copyWith(items: updatedItems);
   }
 
-  // Calculate the subtotal of all items (delegates to the pure composer).
+  // Subtotal via the unified line adapter (Step 4C-4C): same lines-preferred /
+  // items-fallback source as the detail/PDF item rows. No persisted lines exist
+  // at compose time, so this resolves from the in-memory items.
   int calculateSubtotalCents() {
     final items = state.items;
     if (items == null || items.isEmpty) return 0;
 
-    return InvoiceComposer.subtotalCents(
-      items.map(
-        (item) => ComposerLine(
-          unitPriceCents: item.effectiveUnitPriceCents,
-          quantity: item.stockQuantity ?? 1,
-        ),
-      ),
-    );
+    return InvoiceLineReader.subtotalCents(lines: const [], items: items);
   }
 
   double calculateSubtotal() {

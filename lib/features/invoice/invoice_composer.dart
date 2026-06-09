@@ -89,15 +89,20 @@ class InvoiceComposer {
   ///
   /// When [discountAmountCents] is provided it takes precedence over
   /// [discountRate] (the form lets the user type either; the typed amount wins).
+  ///
+  /// [subtotalCentsOverride] lets callers supply a subtotal computed elsewhere
+  /// (Step 4C-4C: from `InvoiceLineReader`, so totals share the same line source
+  /// as detail/PDF). When null, the subtotal is computed from [lines] as before.
   static InvoiceTotals compose({
-    required Iterable<ComposerLine> lines,
+    Iterable<ComposerLine> lines = const [],
+    int? subtotalCentsOverride,
     int? discountAmountCents,
     double discountRate = 0.0,
     Iterable<double> taxRates = const [],
     int paidAmountCents = 0,
     String currencyCode = 'MYR',
   }) {
-    final subtotal = subtotalCents(lines);
+    final subtotal = subtotalCentsOverride ?? subtotalCents(lines);
     final discount = discountAmountCents ??
         discountFromRate(
           subtotalCents: subtotal,
