@@ -322,3 +322,12 @@ Matches the plan, with these concrete choices:
 - **Compat rule:** `legacyQuantityFor = max(1, floor(quantity))` — a `0.25` line stores `stockQuantity 1` so the legacy `InvoiceValidation` (qty ≤ 0 check) still passes; never drives totals/lines.
 - Tests: model (`legacyQuantityFor` clamp, `lineTotalCents`) + parser→line→subtotal pipeline (pure); existing tagged persistence/reader tests cover round-trip.
 - **Remaining:** run objectbox-tagged suites on a native-lib machine; **4D** orphan cleanup; **4E** retire legacy `Invoice.items`/`Item`/`Item.invoiceId`. (The add-item sheet is still the legacy `DraggableScrollableSheet` — cosmetic, audit P2-007, out of scope here.)
+
+## Stage 4D — Implementation Notes (orphan legacy Item cleanup)
+
+- **Ownership confirmed safe:** `Item` is invoice-owned only — no catalog route/list/repository, no standalone `Item` creation, `Item.invoiceId` never set, only `box<Item>()` use is the read-only money backfill. So an Item referenced by no `Invoice.items` is a true orphan.
+- **Service:** `OrphanItemCleanup` (`data/invoice_item_orphan_cleanup.dart`) with `run({required bool dryRun})` → `OrphanItemCleanupReport(scannedItems, referencedItems, orphanItems, deletedItems, skippedItems, warnings)`.
+- **Safety rule:** an Item is preserved if it appears in any `Invoice.items` relation **or** is named by any `InvoiceLine.sourceItemId` (provenance guard); everything else is deleted. Delete runs in a write transaction via `removeMany`. **Delete-capable** (not dry-run-only) because ownership is unambiguous.
+- **No automatic startup run** — `main.dart` unchanged; the cleanup is explicit/tested only, so no silent data deletion.
+- Tests: pure report getters; tagged (no-orphan→0, dry-run reports but keeps, delete removes, referenced preserved, multi-invoice preserved, idempotent, sourceItemId-guard preserves).
+- **Next:** 4E — retire legacy `Invoice.items` / `Item` / `Item.invoiceId` once everything reads/writes lines and a one-time orphan cleanup has run in production.

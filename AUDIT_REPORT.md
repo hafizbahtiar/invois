@@ -591,6 +591,22 @@ The invoice item quantity is now decimal end-to-end (input → state → totals 
 
 ---
 
+## Stage 4D — Completed (2026-06-09) — orphan legacy Item cleanup (P2-001)
+
+Delete-capable cleanup for orphaned legacy `Item` rows. **Not run automatically** (no silent deletion); `main.dart` unchanged.
+
+- **Ownership verified safe:** `Item` is invoice-owned only — no catalog feature (no route/list/repository/standalone creation), `Item.invoiceId` never set, only read-only backfill touches the box. So unreferenced Items are true orphans.
+- **Service:** `OrphanItemCleanup` (`lib/features/invoice/data/invoice_item_orphan_cleanup.dart`), `run({required bool dryRun})` → `OrphanItemCleanupReport(scannedItems, referencedItems, orphanItems, deletedItems, skippedItems, warnings)`.
+- **Safety rule:** preserve an Item if referenced by any `Invoice.items` **or** any `InvoiceLine.sourceItemId` (provenance guard); delete the rest via `removeMany` in a write transaction. Idempotent.
+- **Startup:** disabled — explicit/tested call only.
+- **Files:** new `invoice_item_orphan_cleanup.dart`; tests `invoice_item_orphan_cleanup_test.dart` (pure report), `invoice_item_orphan_cleanup_objectbox_test.dart` (tagged: no-orphan/dry-run/delete/referenced-preserved/multi-invoice/idempotent/sourceItemId-guard).
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 207 passed, 10 skipped (+1 pure, +1 tagged suite).
+- ⚠️ ObjectBox-tagged tests unrun here (`libobjectbox.dylib`) — run `flutter test --tags objectbox --run-skipped` on a native-lib machine; do a **dry-run on real data** before any production delete.
+- **Not done (as scoped):** no schema/generated changes; legacy `Invoice.items`/`Item`/`Item.invoiceId` retained (4E); no UI/totals/PDF/payment changes; no automatic cleanup wiring.
+- **Next:** Stage 4E — retire the legacy `Invoice.items` relation + `Item`/`Item.invoiceId` (after a production dry-run/cleanup and the native-lib tagged run).
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
