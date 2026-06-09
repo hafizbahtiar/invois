@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/generate_route.dart';
 import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
+import 'package:invois/features/invoice/data/invoice_line_backfill.dart';
 import 'package:invois/features/invoice/data/invoice_money_backfill.dart';
 import 'package:invois/features/setting/providers/settings_notifier.dart';
 
@@ -12,6 +13,12 @@ void main() async {
   final moneyBackfill = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
   if (moneyBackfill.hasChanges) {
     debugPrint('S3 money backfill completed: $moneyBackfill');
+  }
+  // Step 4B (additive): create InvoiceLine snapshots from legacy items. Runs
+  // after the money backfill so unit-price cents are populated. Idempotent.
+  final lineBackfill = InvoiceLineBackfill(ObjectBoxDatabase.instance).run();
+  if (lineBackfill.hasChanges) {
+    debugPrint('S4 invoice line backfill completed: $lineBackfill');
   }
   runApp(const ProviderScope(child: MyApp()));
 }

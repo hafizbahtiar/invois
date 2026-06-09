@@ -912,10 +912,87 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "20:154264768169560377",
+      "lastPropertyId": "13:965294799388350681",
+      "name": "InvoiceLine",
+      "properties": [
+        {
+          "id": "1:562945502357369065",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4512833496546669575",
+          "name": "invoiceId",
+          "indexId": "23:1809382668821139718",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Invoice"
+        },
+        {
+          "id": "3:7203340204088643125",
+          "name": "sourceItemId",
+          "type": 6
+        },
+        {
+          "id": "4:6351212291201478895",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "5:4790133732162722689",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "6:7987983869374780010",
+          "name": "unit",
+          "type": 9
+        },
+        {
+          "id": "7:773843946270596820",
+          "name": "currency",
+          "type": 9
+        },
+        {
+          "id": "8:3791225313874365952",
+          "name": "unitPriceCents",
+          "type": 6
+        },
+        {
+          "id": "9:4760388209671179915",
+          "name": "quantityMilli",
+          "type": 6
+        },
+        {
+          "id": "10:897855289106329669",
+          "name": "taxRateBasisPoints",
+          "type": 6
+        },
+        {
+          "id": "11:4450307115375971855",
+          "name": "sortOrder",
+          "type": 6
+        },
+        {
+          "id": "12:141927610615941162",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "13:965294799388350681",
+          "name": "updatedAt",
+          "type": 10
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "19:1637471470037547940",
-  "lastIndexId": "22:8656462993882657750",
+  "lastEntityId": "20:154264768169560377",
+  "lastIndexId": "23:1809382668821139718",
   "lastRelationId": "6:914202053874196970",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

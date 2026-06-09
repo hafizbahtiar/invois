@@ -181,3 +181,13 @@ Each stage: separate commit, `flutter analyze` + `flutter test` + (where relevan
 - Startup: `main.dart` (run line backfill alongside `S3MoneyBackfill`).
 - Tests: `invoice_composer_test.dart` / new `invoice_line_math_test.dart`, `invoice_repository_objectbox_test.dart`, `pdf_generation_test.dart`, new backfill test.
 - `Item`: only retired/trimmed in 4E (not in 4B/4C).
+
+## Step 4B — Implementation Notes (as built)
+
+Matches the plan, with these concrete choices:
+- Entity `InvoiceLine` created at `lib/features/invoice/data/invoice_line_model.dart` with the recommended fields. Tax captured as `taxRateBasisPoints` (snapshot of `Item.taxRate`); invoice-level taxes remain on `Invoice.taxes` (unchanged).
+- Relation: `@Backlink() ToMany<InvoiceLine> lines` on `Invoice` (backlink of `InvoiceLine.invoice`). `Invoice.items` retained.
+- Helper `InvoiceLineMath` (`lib/features/invoice/invoice_line_math.dart`): `quantityMilliFromLegacy`, `lineTotalCents` (integer half-up: `(unitPriceCents*quantityMilli ± 500) ~/ 1000`), `formatQuantity`.
+- Backfill `InvoiceLineBackfill` (`lib/features/invoice/data/invoice_line_backfill.dart`) + report; wired into `main()` after `S3MoneyBackfill`. Idempotent (skips invoices that already have `lines` or have no `items`).
+- Generated files regenerated via `dart run build_runner build` only.
+- Not done in 4B (as planned): no read/write switch, no decimal-qty UI, no orphan deletion, `Invoice.items`/`Item`/`Item.invoiceId` all retained.

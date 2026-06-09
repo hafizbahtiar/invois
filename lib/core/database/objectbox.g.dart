@@ -16,6 +16,7 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import '../../features/business/data/business_model.dart';
 import '../../features/client/data/client_model.dart';
+import '../../features/invoice/data/invoice_line_model.dart';
 import '../../features/invoice/data/invoice_model.dart';
 import '../../features/item/item_model.dart';
 import '../../features/shared/models/address_model.dart';
@@ -785,7 +786,13 @@ final _entities = <obx_int.ModelEntity>[
         targetId: const obx_int.IdUid(14, 703755413875240882),
       ),
     ],
-    backlinks: <obx_int.ModelBacklink>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'lines',
+        srcEntity: 'InvoiceLine',
+        srcField: '',
+      ),
+    ],
   ),
   obx_int.ModelEntity(
     id: const obx_int.IdUid(18, 18681990011544788),
@@ -1110,6 +1117,97 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(20, 154264768169560377),
+    name: 'InvoiceLine',
+    lastPropertyId: const obx_int.IdUid(13, 965294799388350681),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 562945502357369065),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4512833496546669575),
+        name: 'invoiceId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(23, 1809382668821139718),
+        relationField: 'invoice',
+        relationTarget: 'Invoice',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 7203340204088643125),
+        name: 'sourceItemId',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 6351212291201478895),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 4790133732162722689),
+        name: 'description',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 7987983869374780010),
+        name: 'unit',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 773843946270596820),
+        name: 'currency',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 3791225313874365952),
+        name: 'unitPriceCents',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 4760388209671179915),
+        name: 'quantityMilli',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 897855289106329669),
+        name: 'taxRateBasisPoints',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 4450307115375971855),
+        name: 'sortOrder',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 141927610615941162),
+        name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(13, 965294799388350681),
+        name: 'updatedAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -1155,8 +1253,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(19, 1637471470037547940),
-    lastIndexId: const obx_int.IdUid(22, 8656462993882657750),
+    lastEntityId: const obx_int.IdUid(20, 154264768169560377),
+    lastIndexId: const obx_int.IdUid(23, 1809382668821139718),
     lastRelationId: const obx_int.IdUid(6, 914202053874196970),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [
@@ -2121,6 +2219,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
         obx_int.RelInfo<Invoice>.toMany(4, object.id!): object.items,
         obx_int.RelInfo<Invoice>.toMany(5, object.id!): object.taxes,
         obx_int.RelInfo<Invoice>.toMany(6, object.id!): object.terms,
+        obx_int.RelInfo<InvoiceLine>.toOneBacklink(
+          2,
+          object.id!,
+          (InvoiceLine srcObject) => srcObject.invoice,
+        ): object.lines,
       },
       getId: (Invoice object) => object.id,
       setId: (Invoice object, int id) {
@@ -2428,6 +2531,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
           object.terms,
           store,
           obx_int.RelInfo<Invoice>.toMany(6, object.id!),
+        );
+        obx_int.InternalToManyAccess.setRelInfo<Invoice>(
+          object.lines,
+          store,
+          obx_int.RelInfo<InvoiceLine>.toOneBacklink(
+            2,
+            object.id!,
+            (InvoiceLine srcObject) => srcObject.invoice,
+          ),
         );
         return object;
       },
@@ -2862,6 +2974,127 @@ obx_int.ModelDefinition getObjectBoxModel() {
           updatedAt: updatedAtParam,
         );
 
+        return object;
+      },
+    ),
+    InvoiceLine: obx_int.EntityDefinition<InvoiceLine>(
+      model: _entities[8],
+      toOneRelations: (InvoiceLine object) => [object.invoice],
+      toManyRelations: (InvoiceLine object) => {},
+      getId: (InvoiceLine object) => object.id,
+      setId: (InvoiceLine object, int id) {
+        object.id = id;
+      },
+      objectToFB: (InvoiceLine object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final descriptionOffset = object.description == null
+            ? null
+            : fbb.writeString(object.description!);
+        final unitOffset = object.unit == null
+            ? null
+            : fbb.writeString(object.unit!);
+        final currencyOffset = object.currency == null
+            ? null
+            : fbb.writeString(object.currency!);
+        fbb.startTable(14);
+        fbb.addInt64(0, object.id ?? 0);
+        fbb.addInt64(1, object.invoice.targetId);
+        fbb.addInt64(2, object.sourceItemId);
+        fbb.addOffset(3, nameOffset);
+        fbb.addOffset(4, descriptionOffset);
+        fbb.addOffset(5, unitOffset);
+        fbb.addOffset(6, currencyOffset);
+        fbb.addInt64(7, object.unitPriceCents);
+        fbb.addInt64(8, object.quantityMilli);
+        fbb.addInt64(9, object.taxRateBasisPoints);
+        fbb.addInt64(10, object.sortOrder);
+        fbb.addInt64(11, object.createdAt?.millisecondsSinceEpoch);
+        fbb.addInt64(12, object.updatedAt?.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id ?? 0;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final createdAtValue = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          26,
+        );
+        final updatedAtValue = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          28,
+        );
+        final idParam = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          4,
+        );
+        final sourceItemIdParam = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          8,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 12);
+        final unitParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 14);
+        final currencyParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 16);
+        final unitPriceCentsParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
+        final quantityMilliParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
+        final taxRateBasisPointsParam = const fb.Int64Reader()
+            .vTableGetNullable(buffer, rootOffset, 22);
+        final sortOrderParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          0,
+        );
+        final createdAtParam = createdAtValue == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+        final updatedAtParam = updatedAtValue == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(updatedAtValue);
+        final object = InvoiceLine(
+          id: idParam,
+          sourceItemId: sourceItemIdParam,
+          name: nameParam,
+          description: descriptionParam,
+          unit: unitParam,
+          currency: currencyParam,
+          unitPriceCents: unitPriceCentsParam,
+          quantityMilli: quantityMilliParam,
+          taxRateBasisPoints: taxRateBasisPointsParam,
+          sortOrder: sortOrderParam,
+          createdAt: createdAtParam,
+          updatedAt: updatedAtParam,
+        );
+        object.invoice.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
+        );
+        object.invoice.attach(store);
         return object;
       },
     ),
@@ -3451,6 +3684,11 @@ class Invoice_ {
   static final terms = obx.QueryRelationToMany<Invoice, Term>(
     _entities[5].relations[2],
   );
+
+  /// see [Invoice.lines]
+  static final lines = obx.QueryBacklinkToMany<InvoiceLine, Invoice>(
+    InvoiceLine_.invoice,
+  );
 }
 
 /// [Item] entity fields to define ObjectBox queries.
@@ -3698,5 +3936,73 @@ class Signature_ {
   /// See [Signature.imageBytes].
   static final imageBytes = obx.QueryByteVectorProperty<Signature>(
     _entities[7].properties[14],
+  );
+}
+
+/// [InvoiceLine] entity fields to define ObjectBox queries.
+class InvoiceLine_ {
+  /// See [InvoiceLine.id].
+  static final id = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[0],
+  );
+
+  /// See [InvoiceLine.invoice].
+  static final invoice = obx.QueryRelationToOne<InvoiceLine, Invoice>(
+    _entities[8].properties[1],
+  );
+
+  /// See [InvoiceLine.sourceItemId].
+  static final sourceItemId = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[2],
+  );
+
+  /// See [InvoiceLine.name].
+  static final name = obx.QueryStringProperty<InvoiceLine>(
+    _entities[8].properties[3],
+  );
+
+  /// See [InvoiceLine.description].
+  static final description = obx.QueryStringProperty<InvoiceLine>(
+    _entities[8].properties[4],
+  );
+
+  /// See [InvoiceLine.unit].
+  static final unit = obx.QueryStringProperty<InvoiceLine>(
+    _entities[8].properties[5],
+  );
+
+  /// See [InvoiceLine.currency].
+  static final currency = obx.QueryStringProperty<InvoiceLine>(
+    _entities[8].properties[6],
+  );
+
+  /// See [InvoiceLine.unitPriceCents].
+  static final unitPriceCents = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[7],
+  );
+
+  /// See [InvoiceLine.quantityMilli].
+  static final quantityMilli = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[8],
+  );
+
+  /// See [InvoiceLine.taxRateBasisPoints].
+  static final taxRateBasisPoints = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[9],
+  );
+
+  /// See [InvoiceLine.sortOrder].
+  static final sortOrder = obx.QueryIntegerProperty<InvoiceLine>(
+    _entities[8].properties[10],
+  );
+
+  /// See [InvoiceLine.createdAt].
+  static final createdAt = obx.QueryDateProperty<InvoiceLine>(
+    _entities[8].properties[11],
+  );
+
+  /// See [InvoiceLine.updatedAt].
+  static final updatedAt = obx.QueryDateProperty<InvoiceLine>(
+    _entities[8].properties[12],
   );
 }

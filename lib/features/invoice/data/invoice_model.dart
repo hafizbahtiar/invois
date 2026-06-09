@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/core/utils/safe_parse.dart';
+import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/data/term_model.dart';
@@ -212,6 +213,12 @@ class Invoice extends Equatable {
 
   // One-to-many relationship with Term
   final ToMany<Term> terms = ToMany<Term>();
+
+  // S4 / Step 4B (additive): dedicated invoice line snapshots, backlink of
+  // [InvoiceLine.invoice]. Coexists with [items]; app reads/writes still use
+  // [items] until Step 4C.
+  @Backlink()
+  final ToMany<InvoiceLine> lines = ToMany<InvoiceLine>();
 
   Invoice({
     this.id = 0,

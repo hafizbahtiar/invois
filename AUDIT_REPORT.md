@@ -316,6 +316,45 @@ Planning only — **no app code, no ObjectBox schema, no generated files changed
 
 ---
 
+## Stage 4B — Completed (2026-06-09) — additive InvoiceLine schema + idempotent backfill
+
+Additive only. The legacy `Invoice.items` / `Item.stockQuantity` path **still drives all app reads/writes** (form, composer/totals, detail, list, PDF) — nothing was switched, removed, or deleted.
+
+**What was added**
+- New entity **`InvoiceLine`** (`lib/features/invoice/data/invoice_line_model.dart`): `id`, `ToOne<Invoice> invoice`, `sourceItemId?`, `name`, `description?`, `unit?`, `currency?`, `unitPriceCents` (cents), `quantityMilli` (`1000 = 1.000`), `taxRateBasisPoints?` (snapshot), `sortOrder`, `createdAt/updatedAt`.
+- **`@Backlink() ToMany<InvoiceLine> lines` on `Invoice`** (canonical, single relation to the line's `ToOne`). `Invoice.items` kept intact.
+- Pure helper **`InvoiceLineMath`**: `quantityMilliFromLegacy`, `lineTotalCents` (integer half-up), `formatQuantity`.
+- **`InvoiceLineBackfill`** + report (mirrors `S3MoneyBackfill`), wired into `main()` after the money backfill.
+
+**Backfill behaviour** (idempotent, non-destructive)
+- Per invoice: skip if it already has `lines`; skip if it has no legacy `items`; else create one `InvoiceLine` per `Item` in legacy order (`sortOrder = index`), snapshotting `name/description/unit/currency`, `unitPriceCents = item.effectiveUnitPriceCents`, `quantityMilli = (stockQuantity ?? 1 / ≤0) → *1000`, tax rate as basis points.
+- Never deletes/mutates `Item` rows; never changes invoice totals or the `items` relation; safe to run on every launch.
+
+**Schema / generated files changed (via build_runner — not hand-edited)**
+- `objectbox-model.json` + `objectbox.g.dart`: added `InvoiceLine` entity (+ its `invoiceId` ToOne backlinked by `Invoice.lines`). Verified `Invoice.items/taxes/terms` unchanged; purely additive diff.
+
+**Files changed**
+- New: `invoice_line_model.dart`, `invoice_line_math.dart`, `data/invoice_line_backfill.dart`.
+- Edited: `invoice_model.dart` (import + `lines` backlink), `main.dart` (run backfill).
+- Regenerated: `objectbox-model.json`, `objectbox.g.dart`.
+- Tests: new `invoice_line_math_test.dart` (pure), new `invoice_line_backfill_objectbox_test.dart` (tagged).
+
+**Tests added**
+- Pure (16): `quantityMilliFromLegacy` (null/0/neg → 1000; 2→2000; 5→5000), `lineTotalCents` (whole/decimal/half-up/boundary/zero), `formatQuantity`.
+- ObjectBox-tagged: creates one line per legacy item w/ order + snapshot; idempotent; doesn't delete Item rows; skips empty invoices; invalid qty → one unit; store opens with regenerated model.
+
+**Test result**
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **121 passed, 5 skipped** (was 105; +16 pure; +1 skipped tagged suite).
+- ⚠️ ObjectBox-tagged tests **could not run here** (`libobjectbox.dylib` unavailable). Compile-verified by analyze. **Run on a native-lib machine: `flutter test --tags objectbox --run-skipped`** — this also confirms the regenerated model opens against existing data and the backfill behaves.
+
+**Remaining risks after 4B**
+- Tagged tests + regenerated-model-open + backfill behaviour unverified in this environment (need native lib) — **run before shipping**.
+- App still reads/writes the legacy `items` path (intended); `InvoiceLine` data is written but not yet consumed.
+- 4C (switch reads/writes), 4D (orphan cleanup), 4E (retire legacy relation) remain; all P2/P3 items remain.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
