@@ -3,7 +3,6 @@ import 'package:invois/core/error/failure_mapper.dart';
 import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
@@ -31,7 +30,7 @@ final invoiceRepositoryProvider = Provider<InvoiceRepository>(
 /// - Reactive reads return a [Stream] that throws [AppFailure] on error
 ///   (surfaced as `AsyncError` by `StreamProvider`).
 /// - `create`/`update`/`updateStatus`/`delete` return [Result].
-/// - Relation helpers (items/taxes/terms) are fire-and-forget mutations.
+/// - Relation helpers (taxes/terms/lines) are fire-and-forget mutations.
 class InvoiceRepository {
   final InvoiceLocalSource _local;
 
@@ -186,15 +185,8 @@ class InvoiceRepository {
     }
   }
 
-  // ---- Items ----
-  Future<void> addItemToInvoice(int invoiceId, Item item) =>
-      _local.addItemToInvoice(invoiceId, _withDualWrittenItem(item));
-  Future<void> clearItemsFromInvoice(int invoiceId) =>
-      _local.clearItemsFromInvoice(invoiceId);
-
   // ---- Invoice lines ----
-  /// Replace the invoice's [InvoiceLine] snapshots. Legacy `items` are
-  /// unchanged.
+  /// Replace the invoice's [InvoiceLine] snapshots.
   Future<void> replaceInvoiceLines(int invoiceId, List<InvoiceLine> lines) =>
       _local.replaceInvoiceLines(invoiceId, lines);
 
@@ -224,21 +216,6 @@ class InvoiceRepository {
       totalCents: invoice.effectiveTotalCents,
       paidAmountCents: invoice.effectivePaidAmountCents,
       balanceDueCents: invoice.effectiveBalanceDueCents,
-    );
-  }
-
-  Item _withDualWrittenItem(Item item) {
-    return item.copyWith(
-      unitPrice: item.effectiveUnitPriceCents / 100,
-      costPrice: item.effectiveCostPriceCents == null
-          ? null
-          : item.effectiveCostPriceCents! / 100,
-      wholesalePrice: item.effectiveWholesalePriceCents == null
-          ? null
-          : item.effectiveWholesalePriceCents! / 100,
-      unitPriceCents: item.effectiveUnitPriceCents,
-      costPriceCents: item.effectiveCostPriceCents,
-      wholesalePriceCents: item.effectiveWholesalePriceCents,
     );
   }
 

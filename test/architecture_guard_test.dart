@@ -51,41 +51,41 @@ void main() {
     );
   });
 
-  test(
-    'production code does not call legacy invoice item fallback readers',
-    () {
-      final violations = <String>[];
+  test('production code has no legacy invoice item schema references', () {
+    final violations = <String>[];
 
-      final dartFiles = libDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'))
-          .where(
-            (f) =>
-                !f.path.endsWith('lib/features/invoice/invoice_line_view.dart'),
-          );
+    final dartFiles = libDir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .where((f) => !f.path.endsWith('lib/core/database/objectbox.g.dart'));
 
-      final fallbackCalls = RegExp(
-        r'InvoiceLineReader\.(resolveWithLegacyFallback|'
+    final legacyPatterns = <RegExp, String>{
+      RegExp(r'''features/item/item_model\.dart'''): 'imports item_model.dart',
+      RegExp(
+        r'\bInvoiceLineReader\.(resolveWithLegacyFallback|'
         r'fromInvoiceWithLegacyFallback|'
         r'subtotalCentsWithLegacyFallback)\s*\(',
-      );
+      ): 'uses legacy fallback',
+      RegExp(r'\binvoice\.items\b'): 'reads Invoice.items',
+      RegExp(r'\bBox<Item>\b|\bbox<Item>\s*\('): 'opens Item box',
+    };
 
-      for (final file in dartFiles) {
-        final content = file.readAsStringSync();
-        if (fallbackCalls.hasMatch(content)) {
-          violations.add(file.path);
+    for (final file in dartFiles) {
+      final content = file.readAsStringSync();
+      for (final entry in legacyPatterns.entries) {
+        if (entry.key.hasMatch(content)) {
+          violations.add('${file.path} ${entry.value}');
         }
       }
+    }
 
-      expect(
-        violations,
-        isEmpty,
-        reason:
-            'Production reads must stay line-only. Legacy fallback readers '
-            'are reserved for migration/recovery tests and helpers.\n'
-            'Offenders:\n${violations.join('\n')}',
-      );
-    },
-  );
+    expect(
+      violations,
+      isEmpty,
+      reason:
+          'Legacy Item schema is retired. Offenders:\n'
+          '${violations.join('\n')}',
+    );
+  });
 }

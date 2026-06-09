@@ -85,8 +85,6 @@ class InvoiceGenerator {
     final businessAddress = business.streetAddress1;
     final clientAddress = client.streetAddress1;
 
-    // Stage 4E-2: production PDF reads Invoice.lines only. Legacy Invoice.items
-    // fallback is reserved for migration/recovery tests.
     final lineViews = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
     if (lineViews.isEmpty) {
       throw Exception('Invoice must have at least one item');

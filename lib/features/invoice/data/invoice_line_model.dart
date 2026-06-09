@@ -3,12 +3,7 @@ import 'package:objectbox/objectbox.dart';
 
 import 'invoice_model.dart';
 
-/// A dedicated, invoice-owned line snapshot (S4 / Step 4B).
-///
-/// Added additively alongside the legacy `Invoice.items` relation. Nothing
-/// reads or writes lines for app behaviour yet — Step 4B only creates the
-/// entity, the `@Backlink` relation, and an idempotent backfill. The read/write
-/// switch happens in Step 4C.
+/// A dedicated, invoice-owned line snapshot.
 ///
 /// Money is in integer minor units (cents); quantity is in thousandths
 /// (`quantityMilli`, `1000 == 1.000`) — see [InvoiceLineMath].
@@ -21,8 +16,8 @@ class InvoiceLine extends Equatable {
   /// Owning invoice (canonical relation; backlinked by `Invoice.lines`).
   final ToOne<Invoice> invoice = ToOne<Invoice>();
 
-  /// Provenance only — the legacy `Item.id` this line was derived from, if any.
-  /// Never used to recompute; the line is a self-contained snapshot.
+  /// Historical provenance only. Never used to recompute; the line is a
+  /// self-contained snapshot.
   final int? sourceItemId;
 
   final String name;

@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
-import 'package:invois/features/setting/presentation/pages/legacy_item_cleanup_page.dart';
 import 'package:invois/features/setting/providers/settings_state.dart';
 import 'package:invois/features/shared/widgets/app_bottom_sheet.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
@@ -158,28 +156,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       }
                     },
                   ),
-
-                  // Maintenance — debug builds only (not customer-facing).
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 18),
-                    SimpleHeaderSection(
-                      title: 'Maintenance',
-                      variant: SimpleHeaderVariant.iconic,
-                      icon: Icons.build,
-                      subtitle: 'Developer tools (debug builds only)',
-                    ),
-                    MyTile(
-                      icon: Icons.cleaning_services,
-                      title: 'Legacy Item Cleanup',
-                      subtitle: 'Find / remove orphan legacy item rows',
-                      isRounded: true,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const LegacyItemCleanupPage(),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

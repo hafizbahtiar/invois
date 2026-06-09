@@ -1,48 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/invoice_line_math.dart';
 
-/// Step 4B: pure quantity/line-total rules (no store needed).
+/// Pure quantity/line-total rules (no store needed).
 void main() {
-  group('InvoiceLineMath.quantityMilliFromLegacy', () {
-    test('null -> 1000 (one unit)', () {
-      expect(InvoiceLineMath.quantityMilliFromLegacy(null), 1000);
-    });
-
-    test('zero -> 1000', () {
-      expect(InvoiceLineMath.quantityMilliFromLegacy(0), 1000);
-    });
-
-    test('negative -> 1000', () {
-      expect(InvoiceLineMath.quantityMilliFromLegacy(-3), 1000);
-    });
-
-    test('2 -> 2000', () {
-      expect(InvoiceLineMath.quantityMilliFromLegacy(2), 2000);
-    });
-
-    test('5 -> 5000', () {
-      expect(InvoiceLineMath.quantityMilliFromLegacy(5), 5000);
-    });
-  });
-
   group('InvoiceLineMath.lineTotalCents', () {
     test('whole quantity: RM10.00 x 2 = 2000c', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 1000, quantityMilli: 2000),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 1000,
+          quantityMilli: 2000,
+        ),
         2000,
       );
     });
 
     test('decimal quantity: RM10.00 x 2.5 = 2500c', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 1000, quantityMilli: 2500),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 1000,
+          quantityMilli: 2500,
+        ),
         2500,
       );
     });
 
     test('half-up rounding: RM3.33 x 1.5 = 4.995 -> 500c', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 333, quantityMilli: 1500),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 333,
+          quantityMilli: 1500,
+        ),
         500,
       );
     });
@@ -56,7 +43,10 @@ void main() {
 
     test('exact one unit: RM3.33 x 1 = 333c', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 333, quantityMilli: 1000),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 333,
+          quantityMilli: 1000,
+        ),
         333,
       );
     });

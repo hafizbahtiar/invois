@@ -781,6 +781,21 @@ Scope: reduce remaining non-production legacy dependencies before schema retirem
 
 ---
 
+## Stage 4E-4 — Completed (2026-06-10) — retire legacy Item schema
+
+Scope: final legacy invoice item schema retirement. `InvoiceLine` is now the only invoice line data model.
+
+- **Schema retired:** removed `Invoice.items`, the `Item` entity/model, `Item.invoiceId`, and `Item.stockQuantity`; regenerated `objectbox-model.json` and `objectbox.g.dart` with build_runner.
+- **Generator result:** ObjectBox reported removal of the missing `Invoice.items` relation and `Item` entity from the model.
+- **Form carrier replaced:** `InvoiceFormLine` is now a plain Dart form draft with line fields (`name`, `description`, `unit`, `currency`, `unitPriceCents`, `quantityMilli`, `taxRateBasisPoints`, `sortOrder`, temporary `id`, optional `sourceItemId`) and is not an ObjectBox entity.
+- **Migration/cleanup retired:** removed `InvoiceLineBackfill`, `OrphanItemCleanup`, the debug Settings legacy cleanup page/action, legacy item relation helpers, and legacy fallback reader APIs.
+- **Tests updated:** removed obsolete legacy fallback/backfill/orphan cleanup tests; updated form-line, line-builder, validation, subtotal, PDF, repository, and ObjectBox-tagged line persistence tests for the final line-only architecture.
+- **Guard updated:** architecture guard now blocks reintroducing `item_model.dart`, legacy fallback reader calls, `invoice.items`, or `Box<Item>` in production `lib/` code.
+- **Not changed:** decimal quantity behavior, payment logic, PDF layout, home UI, and branch setup.
+- **Release risk:** ObjectBox tagged migration/open tests still must run on a machine with `libobjectbox.dylib`, ideally against a pre-4E store fixture. Take an external export or ObjectBox store backup before releasing this schema-retirement build.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

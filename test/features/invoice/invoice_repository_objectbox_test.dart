@@ -4,11 +4,11 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/result/result.dart';
+import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/data/invoice_local_source.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/data/invoice_query.dart';
 import 'package:invois/features/invoice/data/invoice_repository.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_local_source.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
@@ -139,24 +139,28 @@ void main() {
       expect(fetched?.effectivePaidAmountCents, 0);
     });
 
-    test('markAsPaid reconciles paid/balance/paymentStatus and status', () async {
-      // total = 10000 cents from the draft() helper.
-      final saved = (await repo.create(draft('INV-PAID')) as Ok<Invoice>).value;
+    test(
+      'markAsPaid reconciles paid/balance/paymentStatus and status',
+      () async {
+        // total = 10000 cents from the draft() helper.
+        final saved =
+            (await repo.create(draft('INV-PAID')) as Ok<Invoice>).value;
 
-      final result = await repo.markAsPaid(saved.id!);
-      expect(result, isA<Ok<void>>());
+        final result = await repo.markAsPaid(saved.id!);
+        expect(result, isA<Ok<void>>());
 
-      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
-      expect(fetched.status, InvoiceStatus.paid.name);
-      expect(fetched.paymentStatus, PaymentStatus.paid.name);
-      expect(fetched.effectivePaidAmountCents, 10000);
-      expect(fetched.effectiveBalanceDueCents, 0);
-      expect(fetched.isFullyPaid, isTrue);
-      // Legacy double dual-write stays consistent with the cents spine.
-      expect(fetched.paidAmount, 100.0);
-      expect(fetched.balanceDue, 0.0);
-      expect(fetched.paidDate, isNotNull);
-    });
+        final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(fetched.status, InvoiceStatus.paid.name);
+        expect(fetched.paymentStatus, PaymentStatus.paid.name);
+        expect(fetched.effectivePaidAmountCents, 10000);
+        expect(fetched.effectiveBalanceDueCents, 0);
+        expect(fetched.isFullyPaid, isTrue);
+        // Legacy double dual-write stays consistent with the cents spine.
+        expect(fetched.paidAmount, 100.0);
+        expect(fetched.balanceDue, 0.0);
+        expect(fetched.paidDate, isNotNull);
+      },
+    );
 
     test('markAsPaid with a partial amount -> partiallyPaid', () async {
       final saved =
@@ -171,67 +175,84 @@ void main() {
       expect(fetched.isFullyPaid, isFalse);
     });
 
-    test('markAsPaid preserves line items (no relation loss on update)', () async {
-      final saved =
-          (await repo.create(draft('INV-ITEMS')) as Ok<Invoice>).value;
-      await repo.addItemToInvoice(
-        saved.id!,
-        Item(name: 'Widget', unitPrice: 100, unitPriceCents: 10000),
-      );
+    test(
+      'markAsPaid preserves invoice lines (no relation loss on update)',
+      () async {
+        final saved =
+            (await repo.create(draft('INV-LINES')) as Ok<Invoice>).value;
+        await repo.replaceInvoiceLines(saved.id!, [
+          InvoiceLine(
+            name: 'Widget',
+            unitPriceCents: 10000,
+            quantityMilli: 1000,
+          ),
+        ]);
 
-      await repo.markAsPaid(saved.id!);
+        await repo.markAsPaid(saved.id!);
 
-      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
-      expect(fetched.items.length, 1);
-      expect(fetched.items.first.name, 'Widget');
-      expect(fetched.status, InvoiceStatus.paid.name);
-    });
+        final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(fetched.lines.length, 1);
+        expect(fetched.lines.first.name, 'Widget');
+        expect(fetched.status, InvoiceStatus.paid.name);
+      },
+    );
 
-    test('paid -> sent reconciles payment fields back to unpaid (Step 2B)',
-        () async {
-      final saved = (await repo.create(draft('INV-REV1')) as Ok<Invoice>).value;
-      await repo.markAsPaid(saved.id!); // now fully paid
+    test(
+      'paid -> sent reconciles payment fields back to unpaid (Step 2B)',
+      () async {
+        final saved =
+            (await repo.create(draft('INV-REV1')) as Ok<Invoice>).value;
+        await repo.markAsPaid(saved.id!); // now fully paid
 
-      final result = await repo.markAsSent(saved.id!);
-      expect(result, isA<Ok<void>>());
+        final result = await repo.markAsSent(saved.id!);
+        expect(result, isA<Ok<void>>());
 
-      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
-      expect(fetched.status, InvoiceStatus.sent.name);
-      expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
-      expect(fetched.effectivePaidAmountCents, 0);
-      expect(fetched.effectiveBalanceDueCents, 10000);
-      expect(fetched.isFullyPaid, isFalse);
-    });
+        final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(fetched.status, InvoiceStatus.sent.name);
+        expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
+        expect(fetched.effectivePaidAmountCents, 0);
+        expect(fetched.effectiveBalanceDueCents, 10000);
+        expect(fetched.isFullyPaid, isFalse);
+      },
+    );
 
-    test('paid -> draft (markAsUnpaid) does not keep paid payment data (Step 2B)',
-        () async {
-      final saved = (await repo.create(draft('INV-REV2')) as Ok<Invoice>).value;
-      await repo.markAsPaid(saved.id!);
+    test(
+      'paid -> draft (markAsUnpaid) does not keep paid payment data (Step 2B)',
+      () async {
+        final saved =
+            (await repo.create(draft('INV-REV2')) as Ok<Invoice>).value;
+        await repo.markAsPaid(saved.id!);
 
-      final result =
-          await repo.markAsUnpaid(saved.id!, status: InvoiceStatus.draft);
-      expect(result, isA<Ok<void>>());
+        final result = await repo.markAsUnpaid(
+          saved.id!,
+          status: InvoiceStatus.draft,
+        );
+        expect(result, isA<Ok<void>>());
 
-      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
-      expect(fetched.status, InvoiceStatus.draft.name);
-      expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
-      expect(fetched.effectivePaidAmountCents, 0);
-      expect(fetched.effectiveBalanceDueCents, 10000);
-    });
+        final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(fetched.status, InvoiceStatus.draft.name);
+        expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
+        expect(fetched.effectivePaidAmountCents, 0);
+        expect(fetched.effectiveBalanceDueCents, 10000);
+      },
+    );
 
-    test('markAsUnpaid preserves line items (Step 2B)', () async {
+    test('markAsUnpaid preserves invoice lines (Step 2B)', () async {
       final saved = (await repo.create(draft('INV-REV3')) as Ok<Invoice>).value;
-      await repo.addItemToInvoice(
-        saved.id!,
-        Item(name: 'Service', unitPrice: 100, unitPriceCents: 10000),
-      );
+      await repo.replaceInvoiceLines(saved.id!, [
+        InvoiceLine(
+          name: 'Service',
+          unitPriceCents: 10000,
+          quantityMilli: 1000,
+        ),
+      ]);
       await repo.markAsPaid(saved.id!);
 
       await repo.markAsUnpaid(saved.id!, status: InvoiceStatus.draft);
 
       final fetched = (await repo.getCompleteInvoice(saved.id!))!;
-      expect(fetched.items.length, 1);
-      expect(fetched.items.first.name, 'Service');
+      expect(fetched.lines.length, 1);
+      expect(fetched.lines.first.name, 'Service');
     });
   });
 

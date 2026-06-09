@@ -3,7 +3,6 @@ import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/data/term_model.dart';
 import 'package:objectbox/objectbox.dart';
@@ -205,18 +204,13 @@ class Invoice extends Equatable {
   @Property(type: PropertyType.date)
   final DateTime? updatedAt;
 
-  // Relationships with ObjectBox
-  final ToMany<Item> items = ToMany<Item>();
-
   // One-to-many relationship with Tax
   final ToMany<Tax> taxes = ToMany<Tax>();
 
   // One-to-many relationship with Term
   final ToMany<Term> terms = ToMany<Term>();
 
-  // S4 / Step 4B (additive): dedicated invoice line snapshots, backlink of
-  // [InvoiceLine.invoice]. Coexists with [items]; app reads/writes still use
-  // [items] until Step 4C.
+  // Dedicated invoice line snapshots, backlink of [InvoiceLine.invoice].
   @Backlink()
   final ToMany<InvoiceLine> lines = ToMany<InvoiceLine>();
 
@@ -469,32 +463,6 @@ class Invoice extends Equatable {
     return 'Invoice(id: $id, invoiceNumber: $invoiceNumber, invoiceNumberPrefix: $invoiceNumberPrefix, status: $status, total: $total, balanceDue: $balanceDue)';
   }
 
-  // ================================
-  //    MARK: Item
-  // ================================
-
-  /// Add an item to the invoice
-  void addItem(Item item) {
-    items.add(item);
-  }
-
-  /// Remove an item from the invoice
-  void removeItem(Item item) {
-    items.remove(item);
-  }
-
-  /// Clear all items from the invoice
-  void clearItems() {
-    items.clear();
-  }
-
-  /// Get sorted items by sort order
-  List<Item> get sortedItems {
-    final sorted = items.toList();
-    sorted.sort((a, b) => a.name.compareTo(b.name));
-    return sorted;
-  }
-
   /// Check if invoice is overdue
   bool get isOverdue {
     final current = InvoiceStatusExtension.fromName(status);
@@ -578,7 +546,7 @@ class Invoice extends Equatable {
   /// Check if invoice can be sent
   bool get canSend {
     return InvoiceStatusExtension.fromName(status) == InvoiceStatus.draft &&
-        items.isNotEmpty;
+        lines.isNotEmpty;
   }
 
   /// Check if invoice can be marked as paid

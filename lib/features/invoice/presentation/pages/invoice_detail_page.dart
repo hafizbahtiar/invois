@@ -458,8 +458,6 @@ class _LineItemsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final invoice = data.invoice;
-    // Stage 4E-2: production detail reads Invoice.lines only. Legacy
-    // Invoice.items fallback is reserved for migration/recovery tests.
     final lineViews = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
 
     return Column(

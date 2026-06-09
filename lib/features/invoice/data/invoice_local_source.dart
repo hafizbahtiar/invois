@@ -3,7 +3,6 @@ import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/invoice_payment.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
@@ -461,37 +460,6 @@ class InvoiceLocalSource {
   }
 
   // ================================
-  //    MARK: Item
-  // ================================
-
-  Future<List<Item>> getInvoiceItems(int invoiceId) async {
-    final invoice = _invoiceBox.get(invoiceId);
-    if (invoice == null) return [];
-    return invoice.items.toList();
-  }
-
-  Future<void> addItemToInvoice(int invoiceId, Item item) async {
-    final invoice = _invoiceBox.get(invoiceId);
-    if (invoice == null) return;
-    invoice.addItem(item);
-    _invoiceBox.put(invoice);
-  }
-
-  Future<void> removeItemFromInvoice(int invoiceId, Item item) async {
-    final invoice = _invoiceBox.get(invoiceId);
-    if (invoice == null) return;
-    invoice.removeItem(item);
-    _invoiceBox.put(invoice);
-  }
-
-  Future<void> clearItemsFromInvoice(int invoiceId) async {
-    final invoice = _invoiceBox.get(invoiceId);
-    if (invoice == null) return;
-    invoice.clearItems();
-    _invoiceBox.put(invoice);
-  }
-
-  // ================================
   //    MARK: Invoice lines
   // ================================
 
@@ -499,8 +467,7 @@ class InvoiceLocalSource {
   ///
   /// Deletes the existing owned line rows (no orphans) and writes the fresh set
   /// with their `invoice` relation set. Idempotent: re-running with the same
-  /// input yields the same rows/count/order. Legacy `Invoice.items` are left
-  /// untouched.
+  /// input yields the same rows/count/order.
   Future<void> replaceInvoiceLines(
     int invoiceId,
     List<InvoiceLine> lines,

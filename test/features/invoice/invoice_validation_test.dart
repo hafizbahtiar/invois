@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/data/invoice_validation.dart';
-import 'package:invois/features/item/item_model.dart';
+import 'package:invois/features/invoice/invoice_form_line.dart';
 
 void main() {
   Invoice invoice({
@@ -28,24 +28,23 @@ void main() {
     );
   }
 
-  Item item({int quantity = 1, int unitPriceCents = 1000}) {
-    return Item(
+  InvoiceFormLine line({int quantityMilli = 1000, int unitPriceCents = 1000}) {
+    return InvoiceFormLine(
       name: 'Line item',
-      unitPrice: unitPriceCents / 100,
-      stockQuantity: quantity,
+      quantityMilli: quantityMilli,
       unitPriceCents: unitPriceCents,
     );
   }
 
   String? validate({
     Invoice? invoiceOverride,
-    List<Item>? items,
+    List<InvoiceFormLine>? lines,
     bool hasBusiness = true,
     bool hasClient = true,
   }) {
     return InvoiceValidation.validateForSave(
       invoice: invoiceOverride ?? invoice(),
-      items: items ?? [item()],
+      lines: lines ?? [line()],
       hasBusiness: hasBusiness,
       hasClient: hasClient,
     );
@@ -70,19 +69,19 @@ void main() {
   });
 
   test('rejects no line items', () {
-    expect(validate(items: []), 'Please add at least one line item.');
+    expect(validate(lines: []), 'Please add at least one line item.');
   });
 
   test('rejects zero quantity', () {
     expect(
-      validate(items: [item(quantity: 0)]),
+      validate(lines: [line(quantityMilli: 0)]),
       'Line item quantity must be greater than 0.',
     );
   });
 
   test('rejects negative unit price', () {
     expect(
-      validate(items: [item(unitPriceCents: -1)]),
+      validate(lines: [line(unitPriceCents: -1)]),
       'Line item price cannot be negative.',
     );
   });

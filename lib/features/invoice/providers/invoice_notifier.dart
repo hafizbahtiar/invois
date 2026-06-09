@@ -8,7 +8,6 @@ import 'package:invois/features/business/providers/business_notifier.dart';
 import 'package:invois/features/business/data/business_repository.dart';
 import 'package:invois/features/client/providers/client_notifier.dart';
 import 'package:invois/features/client/data/client_repository.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
@@ -95,21 +94,14 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
             .getSignatureById(signatureId);
       }
 
-      // Load line snapshots, taxes, and terms. Stage 4E-2 keeps production edit
-      // loading line-only; legacy item fallback remains available only for
-      // migration/recovery helpers and tests.
+      // Load line snapshots, taxes, and terms. Stage 4E-4 is line-only.
       final taxes = invoice.taxes.toList();
       final terms = invoice.terms.toList();
       final linesRelation = invoice.lines.toList();
-      final lines = InvoiceFormLine.resolve(
-        items: const [],
-        lines: linesRelation,
-      );
-      final items = [for (final line in lines) line.item];
+      final lines = InvoiceFormLine.resolve(lines: linesRelation);
 
       state = state.copyWith(
         invoice: invoice,
-        items: items,
         lines: lines,
         taxes: taxes,
         terms: terms,
@@ -177,62 +169,29 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   }
 
   void resetItems() {
-    // Keep the in-memory line carrier (Step 4C-4D-2A) in lockstep with items.
-    state = state.copyWith(items: [], lines: []);
+    state = state.copyWith(lines: []);
   }
 
-  // Add a new line: keeps `items` (legacy) and `lines` (authoritative
-  // quantityMilli) in lockstep. [quantityMilli] is the precise quantity.
-  void addItem(Item item, {required int quantityMilli}) {
-    final List<Item> updatedItems = [...state.items!, item];
-    final List<InvoiceFormLine> updatedLines = [
-      ...?state.lines,
-      InvoiceFormLine(item: item, quantityMilli: quantityMilli),
-    ];
-    state = state.copyWith(items: updatedItems, lines: updatedLines);
+  void addLine(InvoiceFormLine line) {
+    state = state.copyWith(lines: [...?state.lines, line]);
   }
 
-  // Update an existing line by item id, carrying the precise [quantityMilli].
-  void updateItem(Item updatedItem, {required int quantityMilli}) {
-    if (state.items == null) return;
-
-    final List<Item> updatedItems = state.items!.map((item) {
-      // Using a temporary ID to identify items in the list
-      if (item.id == updatedItem.id) {
-        return updatedItem;
-      }
-      return item;
-    }).toList();
-
+  void updateLine(InvoiceFormLine updatedLine) {
     final List<InvoiceFormLine> updatedLines = (state.lines ?? const [])
-        .map(
-          (line) => line.item.id == updatedItem.id
-              ? InvoiceFormLine(item: updatedItem, quantityMilli: quantityMilli)
-              : line,
-        )
+        .map((line) => line.id == updatedLine.id ? updatedLine : line)
         .toList();
 
-    state = state.copyWith(items: updatedItems, lines: updatedLines);
+    state = state.copyWith(lines: updatedLines);
   }
 
-  // Remove an item from the temporary items list
-  void removeItem(Item itemToRemove) {
-    if (state.items == null) return;
-
-    final List<Item> updatedItems = state.items!
-        .where((item) => item.id != itemToRemove.id)
-        .toList();
-
+  void removeLine(InvoiceFormLine lineToRemove) {
     final List<InvoiceFormLine> updatedLines = (state.lines ?? const [])
-        .where((line) => line.item.id != itemToRemove.id)
+        .where((line) => line.id != lineToRemove.id)
         .toList();
 
-    state = state.copyWith(items: updatedItems, lines: updatedLines);
+    state = state.copyWith(lines: updatedLines);
   }
 
-  // Subtotal from the in-memory form lines (Step 4C-4D-2C): authoritative
-  // `quantityMilli` per line. `lines` is kept in lockstep with `items`, so whole
-  // quantities are identical to before; a future decimal UI flows through here.
   int calculateSubtotalCents() {
     final lines = state.lines;
     if (lines == null || lines.isEmpty) return 0;
@@ -309,10 +268,8 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
 
     final savedInvoice = (result as Ok<Invoice>).value;
 
-    // Stage 4E-1: do not write newly submitted form rows to legacy
-    // Invoice.items/Item. Persist only Invoice.lines from the authoritative
-    // form lines, preserving quantityMilli exactly. Existing legacy rows are
-    // left untouched for fallback/cleanup compatibility.
+    // Stage 4E-4: persist only Invoice.lines from the authoritative form lines,
+    // preserving quantityMilli exactly.
     await _repository.replaceInvoiceLines(
       savedInvoice.id!,
       InvoiceLineBuilder.fromFormLines(state.lines ?? const []),
@@ -397,10 +354,10 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   }
 
   Future<ValidationFailure?> _validateForSave(Invoice invoice) async {
-    final items = state.items ?? const <Item>[];
+    final lines = state.lines ?? const <InvoiceFormLine>[];
     final validationMessage = InvoiceValidation.validateForSave(
       invoice: invoice,
-      items: items,
+      lines: lines,
       hasBusiness: invoice.businessId != null && invoice.businessId! > 0,
       hasClient: invoice.clientId != null && invoice.clientId! > 0,
     );

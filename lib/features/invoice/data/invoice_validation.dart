@@ -1,5 +1,4 @@
-import 'package:invois/features/item/item_model.dart';
-
+import '../invoice_form_line.dart';
 import 'invoice_model.dart';
 import 'invoice_numbering.dart';
 
@@ -8,7 +7,7 @@ class InvoiceValidation {
 
   static String? validateForSave({
     required Invoice invoice,
-    required List<Item> items,
+    required List<InvoiceFormLine> lines,
     required bool hasBusiness,
     required bool hasClient,
   }) {
@@ -19,15 +18,15 @@ class InvoiceValidation {
       return 'Invoice number is required.';
     }
 
-    if (items.isEmpty) {
+    if (lines.isEmpty) {
       return 'Please add at least one line item.';
     }
 
-    for (final item in items) {
-      if ((item.stockQuantity ?? 1) <= 0) {
+    for (final line in lines) {
+      if (line.quantityMilli <= 0) {
         return 'Line item quantity must be greater than 0.';
       }
-      if (item.effectiveUnitPriceCents < 0) {
+      if (line.unitPriceCents < 0) {
         return 'Line item price cannot be negative.';
       }
     }

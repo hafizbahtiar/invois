@@ -421,3 +421,47 @@ migration/recovery helpers. No schema retirement was performed.
   backfill/recovery.
 - Next: run ObjectBox-tagged tests on a native-lib machine, complete manual QA
   and old-store verification, then start a dedicated schema-retirement stage.
+
+## Stage 4E-4 Completion Notes
+
+Completed: legacy invoice item schema and migration/recovery tooling retired.
+
+- Removed `Invoice.items` from `Invoice`.
+- Removed the `Item` ObjectBox entity/model, including `Item.invoiceId` and
+  `stockQuantity`.
+- Regenerated ObjectBox files with build_runner. The generator reported:
+  - `Relation Invoice.items(...) not found in the code, removing from the model`
+  - `Entity Item(...) not found in the code, removing from the model`
+- Replaced the form's temporary ObjectBox `Item` carrier with plain
+  `InvoiceFormLine` draft fields:
+  - `name`
+  - `description`
+  - `unit`
+  - `currency`
+  - `unitPriceCents`
+  - `quantityMilli`
+  - `taxRateBasisPoints`
+  - `sortOrder`
+  - temporary `id`
+  - optional historical `sourceItemId`
+- Removed legacy fallback reader APIs:
+  - `resolveWithLegacyFallback`
+  - `fromInvoiceWithLegacyFallback`
+  - `subtotalCentsWithLegacyFallback`
+- Removed retired migration/cleanup tooling:
+  - `InvoiceLineBackfill`
+  - `OrphanItemCleanup`
+  - debug Settings legacy cleanup page/action
+  - legacy item relation helpers in local source/repository
+- Removed obsolete legacy fallback/backfill/orphan cleanup tests.
+- Updated tests around the final line-only architecture:
+  - form draft rows are non-entity values,
+  - line builder persists `InvoiceLine` snapshots from form drafts,
+  - validation checks form lines directly,
+  - detail/PDF/subtotal readers are line-only,
+  - ObjectBox-tagged line persistence tests compile against the final schema,
+  - architecture guard blocks reintroducing legacy item schema references.
+- Backup recommendation remains: take an external export or ObjectBox store
+  copy before releasing this schema-retirement build.
+- Native ObjectBox migration/open verification remains required on a machine
+  with `libobjectbox.dylib`, including an old pre-4E store fixture.

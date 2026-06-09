@@ -6,7 +6,6 @@ import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/setting/providers/settings_notifier.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_query.dart';
@@ -74,6 +73,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   final _itemDescriptionController = TextEditingController();
   final _itemPriceController = TextEditingController();
   final _itemQuantityController = TextEditingController();
+  int _nextTemporaryLineId = -1;
 
   bool _isReadOnly = true;
   bool _isInvoiceNumberManuallyEdited = false;
@@ -544,18 +544,17 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
   void _showAddItemDialog({InvoiceFormLine? existingLine}) {
     if (_isReadOnly) return;
-    final existingItem = existingLine?.item;
     // Clear previous values or set to existing line values
-    if (existingItem != null) {
-      _itemNameController.text = existingItem.name;
-      _itemDescriptionController.text = existingItem.description ?? '';
+    if (existingLine != null) {
+      _itemNameController.text = existingLine.name;
+      _itemDescriptionController.text = existingLine.description ?? '';
       _itemPriceController.text = Money(
-        existingItem.effectiveUnitPriceCents,
+        existingLine.unitPriceCents,
         currencyCode: _selectedCurrency,
       ).toDouble().toStringAsFixed(2);
       // Prefill the precise quantity (e.g. "1.5") from the form line.
       _itemQuantityController.text = InvoiceQuantityInput.format(
-        existingLine!.quantityMilli,
+        existingLine.quantityMilli,
       );
     } else {
       _itemNameController.clear();
@@ -596,7 +595,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
-                  existingItem != null ? 'Edit Item' : 'Add Item',
+                  existingLine != null ? 'Edit Item' : 'Add Item',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -697,9 +696,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       onPressed: () => Navigator.pop(context),
                       child: Text('Cancel'),
                     ),
-                    if (existingItem != null)
+                    if (existingLine != null)
                       TextButton(
-                        onPressed: () => _removeItem(existingItem),
+                        onPressed: () => _removeLine(existingLine),
                         child: Text('Remove'),
                       ),
                     ElevatedButton(
@@ -713,39 +712,33 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                           if (!parsed.isValid) return;
                           final quantityMilli = parsed.quantityMilli!;
 
-                          final item = Item(
-                            id: existingItem?.id,
+                          final line = InvoiceFormLine(
+                            id: existingLine?.id ?? _nextTemporaryLineId--,
                             name: _itemNameController.text,
                             description: _itemDescriptionController.text,
-                            unitPrice: price.toDouble(),
                             unitPriceCents: price.minorUnits,
                             currency: _selectedCurrency,
-                            // Legacy compatibility only (never drives totals/lines).
-                            stockQuantity: InvoiceFormLine.legacyQuantityFor(
-                              quantityMilli,
-                            ),
+                            quantityMilli: quantityMilli,
+                            taxRateBasisPoints:
+                                existingLine?.taxRateBasisPoints,
+                            sortOrder: existingLine?.sortOrder ?? 0,
+                            sourceItemId: existingLine?.sourceItemId,
                           );
 
                           final notifier = ref.read(
                             invoiceFormProvider.notifier,
                           );
-                          if (existingItem != null) {
-                            notifier.updateItem(
-                              item,
-                              quantityMilli: quantityMilli,
-                            );
+                          if (existingLine != null) {
+                            notifier.updateLine(line);
                           } else {
-                            notifier.addItem(
-                              item,
-                              quantityMilli: quantityMilli,
-                            );
+                            notifier.addLine(line);
                           }
 
                           _refreshPricingCalculations();
                           Navigator.pop(context);
                         }
                       },
-                      child: Text(existingItem != null ? 'Update' : 'Add'),
+                      child: Text(existingLine != null ? 'Update' : 'Add'),
                     ),
                   ],
                 ),
@@ -757,9 +750,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     );
   }
 
-  void _removeItem(Item item) {
+  void _removeLine(InvoiceFormLine line) {
     Navigator.pop(context);
-    ref.read(invoiceFormProvider.notifier).removeItem(item);
+    ref.read(invoiceFormProvider.notifier).removeLine(line);
     _refreshPricingCalculations();
   }
 
@@ -1369,7 +1362,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        '${line.item.name} (${InvoiceQuantityInput.format(line.quantityMilli)} × ${_formatMoneyCents(line.item.effectiveUnitPriceCents)})',
+                        '${line.name} (${InvoiceQuantityInput.format(line.quantityMilli)} × ${_formatMoneyCents(line.unitPriceCents)})',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -1508,16 +1501,16 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
               return MyTile(
                 isRounded: true,
                 icon: Icons.shopping_cart,
-                title: line.item.name,
+                title: line.name,
                 isReadOnly: _isReadOnly,
                 subtitle:
-                    '${_formatMoneyCents(line.item.effectiveUnitPriceCents)} x ${InvoiceQuantityInput.format(line.quantityMilli)}',
+                    '${_formatMoneyCents(line.unitPriceCents)} x ${InvoiceQuantityInput.format(line.quantityMilli)}',
                 trailing: Text(
                   _formatMoneyCents(line.lineTotalCents),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 onTap: () => _showAddItemDialog(existingLine: line),
-                onLongPress: () => _removeItem(line.item),
+                onLongPress: () => _removeLine(line),
               );
             },
           ),
