@@ -306,6 +306,16 @@ Scope: **Business.email, Business.phone, Client.email** (uniqueness) + defensive
 
 ---
 
+## Stage 4A — Plan created (P1-003 quantity + P2 item relation/orphans)
+
+Planning only — **no app code, no ObjectBox schema, no generated files changed.**
+
+- Wrote `doc/plans/step-4-quantity-relation-migration-plan.md` covering: current state (line items stored via the standalone `Invoice.items` ToMany; quantity overloaded onto `Item.stockQuantity`; a second dead `Item.invoiceId` ToOne with no `@Backlink`; orphans because `clear` drops links not rows), confirmed problems, business rules, target design, options, quantity representation, schema/migration/read-switch/orphan-cleanup plans, tests, QA, risks/rollback, ordering, and impacted files.
+- **Recommended design:** dedicated **`InvoiceLine`** entity (Option A) with a single `@Backlink` relation, snapshot fields (name/desc/unit/unitPrice/tax), `sortOrder`, and decimal **`quantityMilli` (int, 1.000 = 1000)**; line total via exact integer half-up rounding. (Option C — embedded serialized lines — documented as the simpler fallback.)
+- **Recommended next stage:** **4B** (additive `InvoiceLine` + `@Backlink` + idempotent backfill, regenerate via build_runner, objectbox-tagged tests) — needs its own approval and a native-lib test run; nothing is deleted until 4D.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
