@@ -186,6 +186,53 @@ void main() {
       expect(fetched.items.first.name, 'Widget');
       expect(fetched.status, InvoiceStatus.paid.name);
     });
+
+    test('paid -> sent reconciles payment fields back to unpaid (Step 2B)',
+        () async {
+      final saved = (await repo.create(draft('INV-REV1')) as Ok<Invoice>).value;
+      await repo.markAsPaid(saved.id!); // now fully paid
+
+      final result = await repo.markAsSent(saved.id!);
+      expect(result, isA<Ok<void>>());
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.status, InvoiceStatus.sent.name);
+      expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
+      expect(fetched.effectivePaidAmountCents, 0);
+      expect(fetched.effectiveBalanceDueCents, 10000);
+      expect(fetched.isFullyPaid, isFalse);
+    });
+
+    test('paid -> draft (markAsUnpaid) does not keep paid payment data (Step 2B)',
+        () async {
+      final saved = (await repo.create(draft('INV-REV2')) as Ok<Invoice>).value;
+      await repo.markAsPaid(saved.id!);
+
+      final result =
+          await repo.markAsUnpaid(saved.id!, status: InvoiceStatus.draft);
+      expect(result, isA<Ok<void>>());
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.status, InvoiceStatus.draft.name);
+      expect(fetched.paymentStatus, PaymentStatus.unpaid.name);
+      expect(fetched.effectivePaidAmountCents, 0);
+      expect(fetched.effectiveBalanceDueCents, 10000);
+    });
+
+    test('markAsUnpaid preserves line items (Step 2B)', () async {
+      final saved = (await repo.create(draft('INV-REV3')) as Ok<Invoice>).value;
+      await repo.addItemToInvoice(
+        saved.id!,
+        Item(name: 'Service', unitPrice: 100, unitPriceCents: 10000),
+      );
+      await repo.markAsPaid(saved.id!);
+
+      await repo.markAsUnpaid(saved.id!, status: InvoiceStatus.draft);
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.items.length, 1);
+      expect(fetched.items.first.name, 'Service');
+    });
   });
 
   group('InvoiceRepository numbering', () {

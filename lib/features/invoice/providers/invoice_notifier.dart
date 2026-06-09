@@ -332,13 +332,21 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     );
   }
 
-  /// Centralised status change. Selecting [InvoiceStatus.paid] reconciles the
-  /// payment fields (paid/balance/paymentStatus) instead of writing the status
-  /// alone — preventing a "Paid" invoice that still shows a balance due.
+  /// Centralised status change — the single path every status-changing UI uses.
+  /// Payment fields are always reconciled so invoice status and payment can
+  /// never diverge:
+  ///   - paid -> mark fully paid (balance 0, paymentStatus paid)
+  ///   - sent -> mark sent (status + sentDate), payment reset to unpaid
+  ///   - any other status -> payment reset to unpaid
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
-    final result = status == InvoiceStatus.paid
-        ? await _repository.markAsPaid(id)
-        : await _repository.updateStatus(id, status);
+    final Result<void> result;
+    if (status == InvoiceStatus.paid) {
+      result = await _repository.markAsPaid(id);
+    } else if (status == InvoiceStatus.sent) {
+      result = await _repository.markAsSent(id);
+    } else {
+      result = await _repository.markAsUnpaid(id, status: status);
+    }
     state = state.copyWith(
       isLoading: false,
       error: result.failureOrNull?.message,

@@ -304,13 +304,49 @@ class InvoiceLocalSource {
     return updateInvoiceFields(id, paymentStatus: paymentStatus.name);
   }
 
-  // Mark invoice as sent
-  Future<bool> markAsSent(int id) async {
+  // Set [status] and reconcile the payment fields so status and payment never
+  // diverge (paid => fully paid, any other status => unpaid). Used by
+  // markAsSent / markAsUnpaid; markAsPaid stays separate as it supports a
+  // partial [paidAmount] and stamps paidDate.
+  Future<bool> _applyStatusReconcilingPayment(
+    int id,
+    InvoiceStatus status, {
+    DateTime? sentDate,
+  }) async {
+    final invoice = _invoiceBox.get(id);
+    if (invoice == null) return false;
+
+    final outcome = InvoicePayment.forStatus(
+      status,
+      totalCents: invoice.effectiveTotalCents,
+    );
+
     return updateInvoiceFields(
       id,
-      status: InvoiceStatus.sent.name,
+      status: status.name,
+      sentDate: sentDate,
+      paymentStatus: outcome.paymentStatus.name,
+      paidAmount: outcome.paidAmountCents / 100,
+      balanceDue: outcome.balanceDueCents / 100,
+      paidAmountCents: outcome.paidAmountCents,
+      balanceDueCents: outcome.balanceDueCents,
+    );
+  }
+
+  // Mark invoice as sent (status + sentDate). Reconciles payment to unpaid when
+  // transitioning away from paid; a no-op on payment for already-unpaid rows.
+  Future<bool> markAsSent(int id) {
+    return _applyStatusReconcilingPayment(
+      id,
+      InvoiceStatus.sent,
       sentDate: DateTime.now(),
     );
+  }
+
+  // Move the invoice to a non-paid [status] and reconcile its payment fields
+  // back to unpaid so a previously-paid invoice can't keep paid payment data.
+  Future<bool> markAsUnpaid(int id, {required InvoiceStatus status}) {
+    return _applyStatusReconcilingPayment(id, status);
   }
 
   // Mark invoice as viewed

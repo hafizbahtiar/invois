@@ -168,6 +168,19 @@ class InvoiceRepository {
     }
   }
 
+  /// Move the invoice to a non-paid [status], reconciling the payment fields
+  /// back to unpaid so status and payment can never diverge.
+  Future<Result<void>> markAsUnpaid(int id, {required InvoiceStatus status}) async {
+    try {
+      final ok = await _local.markAsUnpaid(id, status: status);
+      return ok
+          ? const Ok(null)
+          : const Err(DatabaseFailure('Failed to update invoice status'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
   // ---- Items ----
   Future<void> addItemToInvoice(int invoiceId, Item item) =>
       _local.addItemToInvoice(invoiceId, _withDualWrittenItem(item));

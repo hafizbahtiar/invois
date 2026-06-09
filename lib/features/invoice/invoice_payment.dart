@@ -48,4 +48,20 @@ class InvoicePayment {
       paymentStatus: PaymentStatus.unpaid,
     );
   }
+
+  /// The payment outcome that keeps an invoice's [status] and its payment fields
+  /// consistent. This is the invariant the lifecycle enforces:
+  ///   - [InvoiceStatus.paid]  -> fully paid (balance 0, paymentStatus paid)
+  ///   - any other status      -> unpaid (paid 0, balance == total)
+  ///
+  /// The app has no partial-payment entry UI, so a non-paid status always maps
+  /// to fully unpaid (see AUDIT_REPORT.md, Step 2B).
+  static PaymentOutcome forStatus(
+    InvoiceStatus status, {
+    required int totalCents,
+  }) {
+    return status == InvoiceStatus.paid
+        ? pay(totalCents: totalCents)
+        : unpaid(totalCents: totalCents);
+  }
 }

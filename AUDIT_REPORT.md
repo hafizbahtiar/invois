@@ -99,6 +99,57 @@ Wired the previously-dead `markAsSent`/`markAsPaid` through repository → notif
 
 ---
 
+## Stage 2B — Completed (2026-06-09) — close the reverse-transition gap (P1-002)
+
+Closes the remaining divergence: reverting a paid invoice to a non-paid status no longer leaves the payment fields reading "paid". No ObjectBox schema/generated-file changes; no quantity/@Backlink work; no dependency changes; no partial-payment UI added.
+
+**Behaviour now enforced (single invariant)**
+`status == paid  ⟺  fully paid` ; `status != paid  ⟹  unpaid`. Every status-changing UI funnels through `InvoiceFormNotifier.updateInvoiceStatus`, which routes:
+- `paid` → `markAsPaid` (paid=total, balance=0, paymentStatus=paid).
+- `sent` → `markAsSent` (status+sentDate; payment reconciled to unpaid).
+- any other status → `markAsUnpaid(status:)` (payment reconciled to unpaid: paid=0, balance=total, paymentStatus=unpaid).
+
+**Fixes completed**
+- New pure invariant helper `InvoicePayment.forStatus(status, totalCents)` — the store-free source of truth (paid→paid, else→unpaid).
+- `InvoiceLocalSource`: new private `_applyStatusReconcilingPayment` (uses `forStatus`); `markAsSent` now reconciles payment; new `markAsUnpaid(id, {status})`. `markAsPaid` unchanged (still supports partial + paidDate).
+- `InvoiceRepository`: new `markAsUnpaid` (`Result`).
+- `InvoiceFormNotifier.updateInvoiceStatus`: three-way routing (paid / sent / other) — all reconcile.
+- **Entry-point audit:** the only status-writing UIs are the home "Change Status" dialog (`updateInvoiceStatus`) and the detail actions (`markInvoiceAsSent`/`markInvoiceAsPaid`); both already route through the notifier. The invoice list partial only navigates; `home_page` `setStatus` is the list *filter*, not a status write. No UI mutates status directly.
+
+**Files changed**
+- `lib/features/invoice/invoice_payment.dart` — `forStatus`.
+- `lib/features/invoice/data/invoice_local_source.dart` — `_applyStatusReconcilingPayment`, `markAsSent` (reconciles), `markAsUnpaid`.
+- `lib/features/invoice/data/invoice_repository.dart` — `markAsUnpaid`.
+- `lib/features/invoice/providers/invoice_notifier.dart` — `updateInvoiceStatus` three-way reconciling routing.
+- `test/features/invoice/invoice_payment_test.dart` — `forStatus` invariant group.
+- `test/features/invoice/invoice_repository_objectbox_test.dart` — paid→sent, paid→draft, and item-preservation-on-unpaid (objectbox-tagged).
+
+**Tests added**
+- 2 pure unit tests (`forStatus`: paid→paid; every non-paid status→unpaid) — default suite.
+- 3 ObjectBox integration tests (paid→sent reconciles, paid→draft reconciles, markAsUnpaid preserves items) — **objectbox-tagged**.
+
+**Test result**
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **99 passed, 1 skipped** (was 97; +2).
+- ⚠️ ObjectBox-tagged tests still **could not run here** (`libobjectbox.dylib` unavailable). They compile (verified by analyze). **Run `flutter test --tags objectbox --run-skipped` on a machine with the native lib** to confirm Step 2 + 2B integration tests.
+
+**Decisions / conservative rules (as requested)**
+- **No partial-payment entry UI exists**, so any non-paid status maps to *fully* unpaid. A hypothetical partial payment (only creatable via the data-layer `markAsPaid(paidAmount:)`, not the UI) would be reset on a status revert — acceptable given no partial UI; revisit if/when partial-payment UI lands.
+- `cancelled` / `refunded` are treated as non-paid → unpaid under the uniform rule. There is no payment-history feature, so the prior paid amount is not retained. Flagged as a future nuance (a real `refunded` flow would keep a record).
+- `paidDate` is **not cleared** on revert (the `copyWith`-based `updateInvoiceFields` can't write null without touching shared semantics/schema). It's cosmetic and not shown on the detail screen; the meaningful fields (status/paidAmount/balanceDue/paymentStatus) are reconciled. Noted as minor future cleanup.
+
+**Is P1-002 now fully closed?**
+- **Yes for status/payment consistency** — forward (→paid) and reverse (paid→any) transitions are reconciled across all entry points; status and payment can no longer diverge. Covered by pure unit tests (invariant) + objectbox-tagged integration tests (persistence; pending a native-lib run).
+- **Remaining (separate, non-divergence) future work:** a real partial-payment **amount-entry UI**, a payment-history/refund model, and clearing `paidDate` on revert. These are enhancements, not the consistency bug.
+
+**Remaining risks after Stage 2B**
+- ObjectBox-tagged tests unverified in this environment (need native lib).
+- Relation preservation continues to rely on the existing shared `updateInvoiceFields` path (now asserted by tagged tests, not run here).
+- `cancelled`/`refunded` semantics simplified to unpaid; `paidDate` retained on revert.
+- All P1-003/P2/P3 items remain untouched.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

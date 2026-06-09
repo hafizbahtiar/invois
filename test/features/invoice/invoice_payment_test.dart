@@ -49,4 +49,27 @@ void main() {
       expect(o.paymentStatus, PaymentStatus.unpaid);
     });
   });
+
+  group('InvoicePayment.forStatus (Step 2B invariant)', () {
+    test('paid status -> fully paid fields', () {
+      final o = InvoicePayment.forStatus(InvoiceStatus.paid, totalCents: 10000);
+      expect(o.paidAmountCents, 10000);
+      expect(o.balanceDueCents, 0);
+      expect(o.paymentStatus, PaymentStatus.paid);
+    });
+
+    test('every non-paid status -> unpaid fields (no divergence)', () {
+      for (final status in InvoiceStatus.values) {
+        if (status == InvoiceStatus.paid) continue;
+        final o = InvoicePayment.forStatus(status, totalCents: 10000);
+        expect(
+          o.paymentStatus,
+          PaymentStatus.unpaid,
+          reason: 'status=$status must map to unpaid',
+        );
+        expect(o.paidAmountCents, 0, reason: 'status=$status -> paid 0');
+        expect(o.balanceDueCents, 10000, reason: 'status=$status -> balance=total');
+      }
+    });
+  });
 }
