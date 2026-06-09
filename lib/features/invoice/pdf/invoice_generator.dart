@@ -15,8 +15,8 @@ import 'package:signature/signature.dart' as signature_lib;
 import 'package:invois/features/business/data/business_model.dart';
 import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
+import 'package:invois/features/invoice/invoice_line_view.dart';
 import 'package:invois/features/invoice/pdf/pdf_fonts.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 
 /// Generates PDF invoices.
@@ -85,7 +85,11 @@ class InvoiceGenerator {
     final businessAddress = business.streetAddress1;
     final clientAddress = client.streetAddress1;
 
-    if (invoice.items.isEmpty) {
+    // Step 4C-3: read lines through the unified adapter — prefers the new
+    // Invoice.lines snapshots, falls back to legacy Invoice.items. Totals and
+    // the write path are unchanged.
+    final lineViews = InvoiceLineReader.fromInvoice(invoice);
+    if (lineViews.isEmpty) {
       throw Exception('Invoice must have at least one item');
     }
 
@@ -124,7 +128,7 @@ class InvoiceGenerator {
           ),
           pw.SizedBox(height: 15),
           _buildItemsTable(
-            items: invoice.items.toList(),
+            lines: lineViews,
             invoice: invoice,
             bodyStyle: bodyStyle,
             bodyBoldStyle: bodyBoldStyle,
@@ -379,7 +383,7 @@ class InvoiceGenerator {
   /// Items table that flows across pages in [pw.MultiPage]: the header row
   /// repeats on each page, and the table splits row-by-row.
   static pw.Widget _buildItemsTable({
-    required List<Item> items,
+    required List<InvoiceLineView> lines,
     required Invoice invoice,
     required pw.TextStyle bodyStyle,
     required pw.TextStyle bodyBoldStyle,
@@ -436,14 +440,13 @@ class InvoiceGenerator {
             ),
           ],
         ),
-        ...items.asMap().entries.map((entry) {
+        ...lines.asMap().entries.map((entry) {
           final index = entry.key;
-          final item = entry.value;
-          final quantity = item.stockQuantity ?? 1;
+          final line = entry.value;
           final unitPriceStr =
-              '$currencySymbol${(item.effectiveUnitPriceCents / 100).toStringAsFixed(2)}';
+              '$currencySymbol${(line.unitPriceCents / 100).toStringAsFixed(2)}';
           final totalPriceStr =
-              '$currencySymbol${(item.effectiveUnitPriceCents * quantity / 100).toStringAsFixed(2)}';
+              '$currencySymbol${(line.lineTotalCents / 100).toStringAsFixed(2)}';
           return pw.TableRow(
             decoration: pw.BoxDecoration(
               color: index.isEven ? PdfColors.white : PdfColors.grey50,
@@ -454,11 +457,11 @@ class InvoiceGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(item.name, style: bodyStyle),
-                    if (item.description != null &&
-                        item.description!.isNotEmpty)
+                    pw.Text(line.name, style: bodyStyle),
+                    if (line.description != null &&
+                        line.description!.isNotEmpty)
                       pw.Text(
-                        item.description!,
+                        line.description!,
                         style: pw.TextStyle(
                           font: fontItalic,
                           fontSize: 9,
@@ -471,7 +474,7 @@ class InvoiceGenerator {
               pw.Padding(
                 padding: const pw.EdgeInsets.all(12),
                 child: pw.Text(
-                  quantity.toString(),
+                  line.displayQuantity,
                   style: bodyStyle,
                   textAlign: pw.TextAlign.center,
                 ),

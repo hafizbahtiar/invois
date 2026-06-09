@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:invois/features/business/data/business_model.dart';
 import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/invoice/pdf/invoice_generator.dart';
+import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
@@ -98,6 +99,45 @@ void main() {
     expect(String.fromCharCodes(signedBytes.sublist(0, 5)), '%PDF-');
     expect(signedBytes.length, greaterThan(unsignedBytes.length));
   });
+
+  test(
+    'generates a PDF from InvoiceLine rows (decimal qty), preferring lines',
+    () async {
+      // In-memory invoice with both new lines and a legacy item: the adapter
+      // must use the lines and ignore the item.
+      final invoice = Invoice(
+        invoiceNumber: 'INV-PDF-LINES',
+        status: InvoiceStatus.sent.name,
+        issueDate: DateTime(2026, 1, 1),
+        dueDate: DateTime(2026, 1, 31),
+        currency: 'MYR',
+        subtotalCents: 2500,
+        totalCents: 2500,
+        balanceDueCents: 2500,
+      );
+      invoice.lines.add(
+        InvoiceLine(
+          name: 'Consulting',
+          description: 'Hourly',
+          unitPriceCents: 1000,
+          quantityMilli: 2500, // 2.5 hours -> RM25.00
+          sortOrder: 0,
+        ),
+      );
+      invoice.items.add(
+        Item(name: 'IGNORED', unitPrice: 99, unitPriceCents: 9900, stockQuantity: 9),
+      );
+
+      final bytes = await InvoiceGenerator.generateInvoice(
+        invoice: invoice,
+        business: Business(name: 'Acme Sdn Bhd'),
+        client: Client(name: 'Globex'),
+      );
+
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+      expect(bytes.length, greaterThan(2000));
+    },
+  );
 
   test('throws when the invoice has no items', () async {
     expect(

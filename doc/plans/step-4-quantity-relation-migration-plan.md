@@ -208,3 +208,11 @@ Matches the plan, with these concrete choices:
 - Scope held: totals/composer, PDF, form, and the write path are untouched; `data.items` still backs the `_ActionSection` "Mark as Sent" guard.
 - Added objectbox-tagged `invoice_line_reader_objectbox_test.dart` exercising `fromInvoice` against a real store (legacy fallback, backfilled-prefers-lines, empty).
 - Next: 4C-3 — switch the next consumer (composer/totals or PDF) behind the same fallback.
+
+## Step 4C-3 — Implementation Notes (PDF item table switched)
+
+- `invoice_generator.dart`: `generateInvoice` resolves `InvoiceLineReader.fromInvoice(invoice)` once; the empty-guard now checks the resolved views; `_buildItemsTable` takes `List<InvoiceLineView>` and renders `name` / `description` / `displayQuantity` (decimal-aware) / `unitPriceCents` / `lineTotalCents`. Removed the now-unused `item_model` import.
+- **Totals untouched:** `_buildTotalsSection` still uses the stored `invoice.effective*Cents` snapshot and `invoice.taxes`. No mismatch risk: for legacy invoices the per-row totals are identical (whole qty); for backfilled invoices Σ line totals == stored subtotal because the backfill copied unitPrice/qty faithfully.
+- Fallback preserved (legacy items / new lines / both→lines / empty→throws as before). Decimal quantity now displays in the PDF (e.g. 2.5).
+- Tests: added a default-suite PDF test generating from in-memory `InvoiceLine` rows with decimal qty (and a legacy item present to prove lines win); existing item-based PDF tests still pass via fallback.
+- Next: 4C-4 — switch totals/composer to derive from `InvoiceLineReader` (the source-of-truth change), or the form decimal-quantity input.

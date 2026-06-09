@@ -416,6 +416,20 @@ First read consumer switched. **Detail display only** — totals/composer, PDF, 
 
 ---
 
+## Stage 4C-3 — Completed (2026-06-09) — PDF item table via InvoiceLineReader
+
+PDF item table read path switched. **Item table only** — PDF totals, the composer/totals source of truth, the form, and the write path are untouched.
+
+- **Changed:** `invoice_generator.dart` — `generateInvoice` resolves `InvoiceLineReader.fromInvoice(invoice)` once; empty-guard checks the resolved views; `_buildItemsTable` now takes `List<InvoiceLineView>` and renders `name` / `description` / `displayQuantity` (decimal-aware) / `unitPriceCents` / `lineTotalCents`. Removed the now-unused `item_model` import.
+- **No totals mismatch:** `_buildTotalsSection` still uses stored `invoice.effective*Cents` + `invoice.taxes`. Legacy per-row totals are unchanged (whole qty); backfilled Σ line totals equal the stored subtotal (backfill copied unit price/qty faithfully). If a future change makes totals derive from lines, that's a separate, deliberate step (4C-4).
+- **Fallback:** legacy `items` / new `lines` / both → lines / empty → throws (as before). Decimal quantity now prints (e.g. `2.5`).
+- **Files:** `invoice_generator.dart`; `pdf_generation_test.dart` (+1 default-suite test: generate from in-memory `InvoiceLine` decimal rows, lines-preferred); docs.
+- **Tests:** new default PDF test for the lines path; existing item-based PDF tests pass via fallback; 4C-1 pure tests cover mapping. `flutter analyze` → No issues found; `flutter test` → 133 passed, 8 skipped (+1).
+- **Not done (as scoped):** totals/composer/notifier, form, writes untouched; no schema/generated changes; no orphan cleanup; `Invoice.items`/`Item`/`Item.invoiceId` retained.
+- **Next:** Stage 4C-4 — switch totals/composer to derive from `InvoiceLineReader` (source-of-truth change) or add the form decimal-quantity input.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
