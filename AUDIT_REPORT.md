@@ -150,6 +150,67 @@ Closes the remaining divergence: reverting a paid invoice to a non-paid status n
 
 ---
 
+## Stage 3A — Verification of P1-004 (signature nullable `@Unique`)
+
+Verification-only. No schema, generated-file, dependency, or app-code changes — just characterisation tests + this finding.
+
+**What was inspected**
+- `signature_model.dart` — `@Unique() String? email;`, `@Unique() String? phone;`.
+- `objectbox-model.json` — email/phone `flags: 2080` = `UNIQUE (0x20) | INDEX_HASH64 (0x800)`, **no `NOT_NULL (0x4)`** ⇒ both **unique and nullable**.
+- `signature_form_page.dart` — email **and** phone are `isRequired: true` with "is required" validators; blanks are normalised to `null` via `StringUtils.nullIfBlank` (not `""`).
+- `signature_local_source.insertSignature` / `SignatureRepository.create` — a put failure (incl. `UniqueViolationException`) is caught and surfaced as `Err`, not thrown.
+- Schema sweep of all entities (see table below).
+
+**Entities sharing the pattern (global `@Unique`, nullable):**
+
+| Entity | email | phone |
+|--------|-------|-------|
+| Business | unique | unique |
+| Client | unique | not unique |
+| Signature | unique | unique |
+
+**Findings**
+1. **Confirmed:** email/phone on Signature are `@Unique` + nullable (and the same global-unique pattern exists on Business and Client.email).
+2. **The originally-feared symptom is NOT reachable via the UI.** The signature form *requires* non-empty email and phone, so a contactless signature can't be created through the app — the "second contactless signature blocked by null-unique" scenario can't occur in normal use.
+3. **Empty-string conflict is avoided** at the form layer: blanks become `null` (`nullIfBlank`), so two blank-contact signatures would store `null`, not `""`. (The *model/repository* do **not** normalise `""`→`null`; a non-UI caller passing `""` could still collide. Optional hardening below.)
+4. **The real latent defect is GLOBAL uniqueness, not null handling.** Because the unique index is app-wide, a user cannot:
+   - reuse the same email/phone for signatures across their **own multiple businesses**, or
+   - have two signatures (or businesses/clients) share contact info,
+   even though that is legitimate. This is almost certainly the bug worth fixing, and it is **per-entity scope / index design** — a **schema change**.
+5. **Null-unique runtime behaviour is UNVERIFIED here** (no native `libobjectbox.dylib`). Best-known ObjectBox behaviour is that a unique index permits multiple null values; the added tagged tests assert this and will fail if it doesn't hold.
+
+**Tests added** (`test/features/signature/signature_unique_objectbox_test.dart`, objectbox-tagged):
+- two null email+phone signatures both succeed (expected rule);
+- two null-contact signatures under the same business both succeed;
+- duplicate non-empty email rejected (characterises current global uniqueness);
+- same email across different businesses rejected (demonstrates uniqueness is global, not per-business).
+
+**Verification commands**
+- `flutter analyze` → No issues found (compiles the new tagged test).
+- `flutter test` → unchanged default suite (tagged tests skipped).
+- **Run the verification on a machine with the native lib:** `flutter test --tags objectbox --run-skipped`.
+
+**Is P1-004 confirmed?**
+- The annotation (nullable `@Unique`) is **confirmed**.
+- The *UI-blocking* symptom is **not confirmed** (email/phone are required, so contactless signatures aren't created via the app).
+- The *meaningful* defect — **global uniqueness preventing legitimate reuse of contact info across businesses** — is **confirmed by inspection** and characterised by tagged tests (pending a native-lib run).
+
+**Does it need a schema change?** **Yes** — the fix (drop `@Unique`, or replace with app-level/per-business uniqueness) changes the ObjectBox model. Per scope, **not done here.**
+
+### Proposed Step 3B (schema-safe fix — needs approval)
+- **Decide the rule** per field: (a) drop uniqueness on contact fields entirely (simplest; rely on app validation), or (b) enforce uniqueness per `businessId` at the app layer (query-before-save) while removing the DB `@Unique`.
+- **Apply to Business, Client.email, Signature** consistently.
+- **Schema/migration:** removing `@Unique` drops the unique index → bumps `objectbox-model.json` + regenerates `objectbox.g.dart`. ObjectBox tolerates dropping an index without data migration, but the model id/uid bookkeeping must be regenerated via the build runner (not hand-edited). Risk: low-to-moderate (index removal is non-destructive to row data; must regenerate, not edit, generated files).
+- **Optional non-schema hardening (could ship first):** normalise `""`→`null` for contact fields in the repositories/models so non-UI callers can't trip the index with empty strings.
+- **Tests:** flip the duplicate-email tagged tests to assert the chosen rule; add per-business uniqueness tests if option (b).
+
+**Remaining risks after 3A**
+- Tagged tests unverified in this environment (need native lib).
+- Global-unique defect remains until Step 3B.
+- `""`→`null` normalisation only at the form layer (non-UI callers unguarded).
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
