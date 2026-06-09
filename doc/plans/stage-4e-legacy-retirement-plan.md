@@ -182,22 +182,34 @@ Exit criteria:
 - Old invoice fixtures pass because backfill created `InvoiceLine` rows first.
 - ObjectBox tagged tests pass.
 
-### 4E-3: Remove `Item.invoiceId` If Unused
+### 4E-3: Isolate Non-Production Legacy Dependencies
 
-Goal: remove dead scalar ownership field before or with entity retirement.
+Goal: make the remaining legacy fallback path explicit and keep it out of
+production reads before any schema-change work.
 
-- Confirm no production or test code uses `Item.invoiceId`.
-- Remove the field only in a schema-change step with generated ObjectBox files regenerated.
-- If the entire `Item` entity is removed in 4E-4, this is subsumed by entity removal.
+- Do not remove schema in this step.
+- Rename or document legacy fallback APIs as migration/recovery-only.
+- Keep `InvoiceLineBackfill`, `OrphanItemCleanup`, and legacy relation helpers
+  until old-store migration and cleanup are proven.
+- Remove only dead/obsolete tests or references that no longer protect
+  migration/recovery behavior.
+- Add a guard so production code cannot call legacy fallback readers
+  accidentally.
 
 Exit criteria:
 
-- Generated model opens an existing store in a native ObjectBox migration test.
+- Production detail/PDF/subtotal/form load continue to use line-only reads.
+- Legacy fallback tests remain only as migration/recovery coverage.
+- `Item.invoiceId` remains until a later schema-change step or full `Item`
+  entity removal.
 
-### 4E-4: Remove `Item` Model Only If No References Remain
+### 4E-4: Remove `Item.invoiceId` / `Item` Schema Only If No References Remain
 
 Goal: delete the legacy entity only after code and tests no longer import it.
 
+- Confirm no production or test code uses `Item.invoiceId`.
+- If `Item` remains temporarily, remove `Item.invoiceId` only in a schema-change
+  step with generated ObjectBox files regenerated.
 - Delete `lib/features/item/item_model.dart` only if no app feature uses catalog/inventory concepts.
 - Remove `Invoice.items` from `Invoice`.
 - Remove legacy relation helper methods from `Invoice`.
@@ -375,3 +387,37 @@ Completed: production invoice reads now use `Invoice.lines` only.
 - Data deletion was not performed.
 
 Next: run ObjectBox tagged tests on a native-lib machine, complete manual QA against backfilled old invoices and new line-only invoices, then plan schema retirement (`Item.invoiceId`, `Invoice.items`, and possibly `Item`) with a store-open migration fixture.
+
+## Stage 4E-3 Completion Notes
+
+Completed: remaining legacy fallback readers are isolated and named as
+migration/recovery helpers. No schema retirement was performed.
+
+- `InvoiceLineReader.resolveWithLegacyFallback`,
+  `fromInvoiceWithLegacyFallback`, and
+  `subtotalCentsWithLegacyFallback` are the only fallback reader APIs.
+- Production consumers continue to use `resolveLinesOnly`,
+  `fromInvoiceLinesOnly`, and `subtotalCentsFromLines`.
+- Added an architecture guard that fails if production `lib/` code calls the
+  migration/recovery fallback readers outside `invoice_line_view.dart`.
+- Retained migration/recovery dependencies:
+  - `InvoiceLineBackfill` reads `Invoice.items` to create `Invoice.lines` for
+    old stores.
+  - `OrphanItemCleanup` reads `Invoice.items` and `Item` rows so old orphan rows
+    can still be dry-run or explicitly deleted before schema retirement.
+  - Legacy relation helpers in the local source/repository remain for
+    ObjectBox-tagged migration, cleanup, and old-data tests.
+  - `InvoiceLineBuilder.fromItems`, `InvoiceLineView.fromItem`, and
+    `InvoiceLineMath.quantityMilliFromLegacy` remain to keep the backfill and
+    recovery mapping testable.
+  - The invoice form still uses `Item` as a temporary, non-persisted form
+    carrier; removing that is a separate form-state refactor and not schema
+    retirement.
+- Retained schema dependencies:
+  - `Invoice.items`, `Item`, `Item.invoiceId`, `stockQuantity`,
+    `objectbox-model.json`, and `objectbox.g.dart` are unchanged.
+- Tests now name the legacy path as migration/recovery fallback. The old parity
+  tests remain because they protect the legacy-to-line conversion used by
+  backfill/recovery.
+- Next: run ObjectBox-tagged tests on a native-lib machine, complete manual QA
+  and old-store verification, then start a dedicated schema-retirement stage.

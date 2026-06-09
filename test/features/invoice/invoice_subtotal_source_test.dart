@@ -31,50 +31,56 @@ void main() {
     });
   });
 
-  group('InvoiceLineReader.subtotalCents migration/recovery fallback', () {
-    test('falls back to legacy items', () {
-      expect(
-        InvoiceLineReader.subtotalCents(
-          lines: const [],
-          items: [
-            item('A', stockQuantity: 2),
-            item('B', stockQuantity: 1, unitPriceCents: 500),
-          ],
-        ),
-        2500,
-      );
-    });
+  group(
+    'InvoiceLineReader.subtotalCentsWithLegacyFallback migration/recovery fallback',
+    () {
+      test('falls back to legacy items', () {
+        expect(
+          InvoiceLineReader.subtotalCentsWithLegacyFallback(
+            lines: const [],
+            items: [
+              item('A', stockQuantity: 2),
+              item('B', stockQuantity: 1, unitPriceCents: 500),
+            ],
+          ),
+          2500,
+        );
+      });
 
-    test('uses lines when present (decimal supported)', () {
-      expect(
-        InvoiceLineReader.subtotalCents(
-          lines: [
-            InvoiceLine(name: 'A', unitPriceCents: 1000, quantityMilli: 2500),
-          ],
-          items: [item('IGNORED', stockQuantity: 9, unitPriceCents: 9900)],
-        ),
-        2500,
-      );
-    });
+      test('uses lines when present (decimal supported)', () {
+        expect(
+          InvoiceLineReader.subtotalCentsWithLegacyFallback(
+            lines: [
+              InvoiceLine(name: 'A', unitPriceCents: 1000, quantityMilli: 2500),
+            ],
+            items: [item('IGNORED', stockQuantity: 9, unitPriceCents: 9900)],
+          ),
+          2500,
+        );
+      });
 
-    test('empty -> 0', () {
-      expect(
-        InvoiceLineReader.subtotalCents(lines: const [], items: const []),
-        0,
-      );
-    });
+      test('empty -> 0', () {
+        expect(
+          InvoiceLineReader.subtotalCentsWithLegacyFallback(
+            lines: const [],
+            items: const [],
+          ),
+          0,
+        );
+      });
 
-    test('invalid legacy qty (<=0) defensively maps to one unit', () {
-      // Documented adapter rule (vs legacy composer which would use 0).
-      expect(
-        InvoiceLineReader.subtotalCents(
-          lines: const [],
-          items: [item('A', stockQuantity: 0, unitPriceCents: 1000)],
-        ),
-        1000,
-      );
-    });
-  });
+      test('invalid legacy qty (<=0) defensively maps to one unit', () {
+        // Documented adapter rule (vs legacy composer which would use 0).
+        expect(
+          InvoiceLineReader.subtotalCentsWithLegacyFallback(
+            lines: const [],
+            items: [item('A', stockQuantity: 0, unitPriceCents: 1000)],
+          ),
+          1000,
+        );
+      });
+    },
+  );
 
   group('compose: subtotalCentsOverride parity with the lines path', () {
     test('legacy whole-quantity invoice with discount + tax matches', () {
@@ -82,7 +88,7 @@ void main() {
         item('A', stockQuantity: 1, unitPriceCents: 1000),
         item('B', stockQuantity: 3, unitPriceCents: 333),
       ];
-      final lineSubtotal = InvoiceLineReader.subtotalCents(
+      final lineSubtotal = InvoiceLineReader.subtotalCentsWithLegacyFallback(
         lines: const [],
         items: items,
       );
@@ -114,7 +120,7 @@ void main() {
 
     test('decimal-quantity subtotal flows through discount/tax/total', () {
       // 2.5 x RM10 = RM25.00 subtotal
-      final subtotal = InvoiceLineReader.subtotalCents(
+      final subtotal = InvoiceLineReader.subtotalCentsWithLegacyFallback(
         lines: [
           InvoiceLine(name: 'Hrs', unitPriceCents: 1000, quantityMilli: 2500),
         ],

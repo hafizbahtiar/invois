@@ -52,35 +52,41 @@ void main() {
     });
   });
 
-  group('InvoiceLineReader.resolve — migration/recovery fallback', () {
-    test('prefers InvoiceLine rows when lines is non-empty', () {
-      final views = InvoiceLineReader.resolve(
-        lines: [line('FromLine')],
-        items: [item('FromItem')],
-      );
-      expect(views.map((v) => v.name), ['FromLine']);
-    });
+  group(
+    'InvoiceLineReader.resolveWithLegacyFallback — migration/recovery fallback',
+    () {
+      test('prefers InvoiceLine rows when lines is non-empty', () {
+        final views = InvoiceLineReader.resolveWithLegacyFallback(
+          lines: [line('FromLine')],
+          items: [item('FromItem')],
+        );
+        expect(views.map((v) => v.name), ['FromLine']);
+      });
 
-    test('falls back to legacy items when lines is empty', () {
-      final views = InvoiceLineReader.resolve(
-        lines: const [],
-        items: [item('FromItem', stockQuantity: 2)],
-      );
-      expect(views.single.name, 'FromItem');
-      expect(views.single.quantityMilli, 2000);
-    });
+      test('falls back to legacy items when lines is empty', () {
+        final views = InvoiceLineReader.resolveWithLegacyFallback(
+          lines: const [],
+          items: [item('FromItem', stockQuantity: 2)],
+        );
+        expect(views.single.name, 'FromItem');
+        expect(views.single.quantityMilli, 2000);
+      });
 
-    test('empty invoice -> empty list', () {
-      expect(
-        InvoiceLineReader.resolve(lines: const [], items: const []),
-        isEmpty,
-      );
-    });
-  });
+      test('empty invoice -> empty list', () {
+        expect(
+          InvoiceLineReader.resolveWithLegacyFallback(
+            lines: const [],
+            items: const [],
+          ),
+          isEmpty,
+        );
+      });
+    },
+  );
 
   group('legacy quantity mapping', () {
     test('null -> 1000', () {
-      final v = InvoiceLineReader.resolve(
+      final v = InvoiceLineReader.resolveWithLegacyFallback(
         lines: const [],
         items: [item('A', stockQuantity: null)],
       ).single;
@@ -88,7 +94,7 @@ void main() {
     });
 
     test('<= 0 -> 1000', () {
-      final v = InvoiceLineReader.resolve(
+      final v = InvoiceLineReader.resolveWithLegacyFallback(
         lines: const [],
         items: [item('A', stockQuantity: 0)],
       ).single;
@@ -96,7 +102,7 @@ void main() {
     });
 
     test('2 -> 2000', () {
-      final v = InvoiceLineReader.resolve(
+      final v = InvoiceLineReader.resolveWithLegacyFallback(
         lines: const [],
         items: [item('A', stockQuantity: 2)],
       ).single;
@@ -114,7 +120,7 @@ void main() {
     });
 
     test('legacy item line total (RM10 x 3 = 3000c)', () {
-      final v = InvoiceLineReader.resolve(
+      final v = InvoiceLineReader.resolveWithLegacyFallback(
         lines: const [],
         items: [item('A', stockQuantity: 3, unitPriceCents: 1000)],
       ).single;
@@ -124,7 +130,7 @@ void main() {
 
   group('order preservation', () {
     test('InvoiceLine rows are sorted by sortOrder', () {
-      final views = InvoiceLineReader.resolve(
+      final views = InvoiceLineReader.resolveWithLegacyFallback(
         lines: [
           line('B', sortOrder: 1),
           line('A', sortOrder: 0),
@@ -136,7 +142,7 @@ void main() {
     });
 
     test('legacy items keep relation order, sortOrder assigned by index', () {
-      final views = InvoiceLineReader.resolve(
+      final views = InvoiceLineReader.resolveWithLegacyFallback(
         lines: const [],
         items: [item('first'), item('second'), item('third')],
       );
@@ -146,7 +152,7 @@ void main() {
   });
 
   test('mixed: when both lines and items exist, only lines are used', () {
-    final views = InvoiceLineReader.resolve(
+    final views = InvoiceLineReader.resolveWithLegacyFallback(
       lines: [line('L1'), line('L2', sortOrder: 1)],
       items: [item('I1'), item('I2')],
     );

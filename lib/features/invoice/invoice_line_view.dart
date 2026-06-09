@@ -111,7 +111,7 @@ class InvoiceLineReader {
   ///
   /// - If [lines] is non-empty: use it (sorted by `sortOrder`).
   /// - Else: map [items] in their given (relation) order.
-  static List<InvoiceLineView> resolve({
+  static List<InvoiceLineView> resolveWithLegacyFallback({
     required List<InvoiceLine> lines,
     required List<Item> items,
   }) {
@@ -124,8 +124,11 @@ class InvoiceLineReader {
 
   /// Migration/recovery convenience for a store-backed [Invoice]. Production
   /// consumers should use [fromInvoiceLinesOnly].
-  static List<InvoiceLineView> fromInvoice(Invoice invoice) =>
-      resolve(lines: invoice.lines.toList(), items: invoice.items.toList());
+  static List<InvoiceLineView> fromInvoiceWithLegacyFallback(Invoice invoice) =>
+      resolveWithLegacyFallback(
+        lines: invoice.lines.toList(),
+        items: invoice.items.toList(),
+      );
 
   /// Production subtotal in cents = Σ of line-only totals.
   static int subtotalCentsFromLines(List<InvoiceLine> lines) {
@@ -137,13 +140,14 @@ class InvoiceLineReader {
   }
 
   /// Migration/recovery subtotal in cents = Σ of the resolved lines' totals
-  /// (same lines-preferred / items-fallback source as [resolve]).
-  static int subtotalCents({
+  /// (same lines-preferred / items-fallback source as
+  /// [resolveWithLegacyFallback]).
+  static int subtotalCentsWithLegacyFallback({
     required List<InvoiceLine> lines,
     required List<Item> items,
   }) {
     var total = 0;
-    for (final view in resolve(lines: lines, items: items)) {
+    for (final view in resolveWithLegacyFallback(lines: lines, items: items)) {
       total += view.lineTotalCents;
     }
     return total;

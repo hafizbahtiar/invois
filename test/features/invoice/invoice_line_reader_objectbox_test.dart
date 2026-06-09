@@ -66,7 +66,7 @@ void main() {
     );
 
     final invoice = store.box<Invoice>().get(saved.id!)!;
-    final views = InvoiceLineReader.fromInvoice(invoice);
+    final views = InvoiceLineReader.fromInvoiceWithLegacyFallback(invoice);
 
     expect(views.single.name, 'Legacy');
     expect(views.single.quantityMilli, 2000); // stockQuantity 2 -> 2000
@@ -90,7 +90,7 @@ void main() {
       InvoiceLineBackfill(store).run();
 
       final invoice = store.box<Invoice>().get(saved.id!)!;
-      final views = InvoiceLineReader.fromInvoice(invoice);
+      final views = InvoiceLineReader.fromInvoiceWithLegacyFallback(invoice);
 
       expect(views.length, 1);
       expect(views.single.name, 'Source');
@@ -102,6 +102,6 @@ void main() {
   test('empty invoice -> empty views', () async {
     final saved = (await repo.create(draft('INV-L3')) as Ok<Invoice>).value;
     final invoice = store.box<Invoice>().get(saved.id!)!;
-    expect(InvoiceLineReader.fromInvoice(invoice), isEmpty);
+    expect(InvoiceLineReader.fromInvoiceWithLegacyFallback(invoice), isEmpty);
   });
 }

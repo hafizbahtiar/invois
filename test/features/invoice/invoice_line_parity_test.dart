@@ -8,12 +8,13 @@ import 'package:invois/features/item/item_model.dart';
 /// legacy composer subtotal for whole-quantity invoices — the precondition for
 /// later switching totals/composer to derive from `InvoiceLineReader`.
 void main() {
-  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) => Item(
-    name: name,
-    unitPrice: unitPriceCents / 100,
-    unitPriceCents: unitPriceCents,
-    stockQuantity: stockQuantity,
-  );
+  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) =>
+      Item(
+        name: name,
+        unitPrice: unitPriceCents / 100,
+        unitPriceCents: unitPriceCents,
+        stockQuantity: stockQuantity,
+      );
 
   // Legacy subtotal exactly as the composer computes it today.
   int composerSubtotal(List<Item> items) => InvoiceComposer.subtotalCents(
@@ -26,10 +27,11 @@ void main() {
   );
 
   // Subtotal via the new adapter (sum of per-line rounded totals).
-  int lineSubtotal(List<Item> items) => InvoiceLineReader.resolve(
-    lines: const [],
-    items: items,
-  ).fold(0, (sum, v) => sum + v.lineTotalCents);
+  int lineSubtotal(List<Item> items) =>
+      InvoiceLineReader.resolveWithLegacyFallback(
+        lines: const [],
+        items: items,
+      ).fold(0, (sum, v) => sum + v.lineTotalCents);
 
   group('legacy subtotal parity (composer == sum of line totals)', () {
     test('single item, qty 1', () {
@@ -84,21 +86,30 @@ void main() {
   group('decimal quantity line totals (new capability)', () {
     test('2.5 x RM10.00 = RM25.00', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 1000, quantityMilli: 2500),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 1000,
+          quantityMilli: 2500,
+        ),
         2500,
       );
     });
 
     test('1.5 x RM3.33 = RM5.00 (half-up at 4.995)', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 333, quantityMilli: 1500),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 333,
+          quantityMilli: 1500,
+        ),
         500,
       );
     });
 
     test('0.25 x RM10.00 = RM2.50', () {
       expect(
-        InvoiceLineMath.lineTotalCents(unitPriceCents: 1000, quantityMilli: 250),
+        InvoiceLineMath.lineTotalCents(
+          unitPriceCents: 1000,
+          quantityMilli: 250,
+        ),
         250,
       );
     });

@@ -762,6 +762,25 @@ Scope: production reads now expect authoritative `Invoice.lines`; legacy `Invoic
 
 ---
 
+## Stage 4E-3 — Completed (2026-06-10) — isolate legacy item migration code
+
+Scope: reduce remaining non-production legacy dependencies before schema retirement, without changing ObjectBox schema or deleting data.
+
+- **Fallback APIs made explicit:** legacy fallback reader methods are now named `resolveWithLegacyFallback`, `fromInvoiceWithLegacyFallback`, and `subtotalCentsWithLegacyFallback`.
+- **Production reads remain line-only:** detail, PDF, subtotal, and edit loading continue to use `Invoice.lines` via line-only readers.
+- **Guard added:** `architecture_guard_test.dart` fails if production `lib/` code calls the migration/recovery fallback readers outside their implementation file.
+- **Tests updated:** reader/subtotal/parity/ObjectBox-tagged tests now call the explicit migration/recovery fallback names. The parity tests remain because they protect old `Item` → `InvoiceLine` conversion behavior used by backfill/recovery.
+- **Remaining legacy references by design:**
+  - `Invoice.items`, `Item`, `Item.invoiceId`, `stockQuantity`, `objectbox-model.json`, and `objectbox.g.dart` remain unchanged until schema retirement.
+  - `InvoiceLineBackfill` still reads `Invoice.items` to create `Invoice.lines` for old stores.
+  - `OrphanItemCleanup` still reads `Invoice.items` / `Item` rows so old orphan rows can be dry-run or explicitly deleted before schema removal.
+  - Legacy relation helpers remain for ObjectBox-tagged migration, cleanup, and old-data tests.
+  - The invoice form still uses `Item` as a temporary, non-persisted form carrier; replacing that is a separate form-state refactor.
+- **Not done:** no ObjectBox schema change; no generated-file change; no `Item`/`Invoice.items`/`Item.invoiceId` removal; no data deletion; schema retirement not started.
+- **Next:** run ObjectBox-tagged tests on a native-lib machine, complete decimal/manual QA and old-store verification, then start a dedicated schema-removal stage.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
