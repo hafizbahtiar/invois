@@ -95,17 +95,17 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
             .getSignatureById(signatureId);
       }
 
-      // Load items, taxes, and terms
-      final items = invoice.items.toList();
+      // Load line snapshots, taxes, and terms. Stage 4E-2 keeps production edit
+      // loading line-only; legacy item fallback remains available only for
+      // migration/recovery helpers and tests.
       final taxes = invoice.taxes.toList();
       final terms = invoice.terms.toList();
-      // Stage 4E-1: carry editable form rows from authoritative Invoice.lines
-      // when present, falling back to legacy items only for old invoices that
-      // have not been backfilled yet.
+      final linesRelation = invoice.lines.toList();
       final lines = InvoiceFormLine.resolve(
-        items: items,
-        lines: invoice.lines.toList(),
+        items: const [],
+        lines: linesRelation,
       );
+      final items = [for (final line in lines) line.item];
 
       state = state.copyWith(
         invoice: invoice,

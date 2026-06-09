@@ -235,7 +235,8 @@ class _ActionSection extends ConsumerWidget {
     final invoice = data.invoice;
     final status = InvoiceStatusExtension.fromName(invoice.status);
     final canSend =
-        status == InvoiceStatus.draft && data.items.isNotEmpty;
+        status == InvoiceStatus.draft &&
+        InvoiceLineReader.fromInvoiceLinesOnly(invoice).isNotEmpty;
     final canMarkPaid = invoice.canMarkAsPaid;
 
     return Column(
@@ -307,7 +308,9 @@ class _ActionSection extends ConsumerWidget {
     final error = ref.read(invoiceFormProvider).error;
     MySnackBar.show(
       context,
-      message: ok ? 'Invoice marked as sent' : (error ?? 'Failed to mark as sent'),
+      message: ok
+          ? 'Invoice marked as sent'
+          : (error ?? 'Failed to mark as sent'),
       type: ok ? MySnackbarType.success : MySnackbarType.failed,
     );
     // Detail is a one-shot FutureProvider; refresh it so the new status shows.
@@ -327,7 +330,9 @@ class _ActionSection extends ConsumerWidget {
     final error = ref.read(invoiceFormProvider).error;
     MySnackBar.show(
       context,
-      message: ok ? 'Invoice marked as paid' : (error ?? 'Failed to mark as paid'),
+      message: ok
+          ? 'Invoice marked as paid'
+          : (error ?? 'Failed to mark as paid'),
       type: ok ? MySnackbarType.success : MySnackbarType.failed,
     );
     if (ok) ref.invalidate(invoiceDetailProvider(id));
@@ -453,10 +458,9 @@ class _LineItemsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final invoice = data.invoice;
-    // Step 4C-2: read line items through the unified adapter — prefers the new
-    // Invoice.lines snapshots, falls back to legacy Invoice.items. Totals/PDF/
-    // form/write paths are unchanged.
-    final lineViews = InvoiceLineReader.fromInvoice(invoice);
+    // Stage 4E-2: production detail reads Invoice.lines only. Legacy
+    // Invoice.items fallback is reserved for migration/recovery tests.
+    final lineViews = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

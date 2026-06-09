@@ -80,7 +80,7 @@ void main() {
     expect(store.box<Item>().count(), 0); // no new legacy rows
     expect(invoice.lines.length, 2); // lines written
 
-    final views = InvoiceLineReader.fromInvoice(invoice);
+    final views = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
     expect(views.map((v) => v.name), ['A', 'B']);
     expect(views[0].quantityMilli, 2000);
   });
@@ -175,7 +175,7 @@ void main() {
       expect(invoice.lines.single.quantityMilli, 1500);
       // The unified reader (detail/PDF) then sees 1.5 x RM10 = RM15.00.
       expect(
-        InvoiceLineReader.fromInvoice(invoice).single.lineTotalCents,
+        InvoiceLineReader.fromInvoiceLinesOnly(invoice).single.lineTotalCents,
         1500,
       );
       expect(invoice.items, isEmpty);
@@ -203,7 +203,7 @@ void main() {
       final invoice = store.box<Invoice>().get(saved.id!)!;
       expect(store.box<Item>().count(), legacyItemCount); // no new legacy rows
       expect(invoice.items.single.name, 'Legacy'); // old relation retained
-      final views = InvoiceLineReader.fromInvoice(invoice);
+      final views = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
       expect(views.single.name, 'Edited'); // lines are authoritative
       expect(views.single.quantityMilli, 2500);
     },

@@ -277,7 +277,7 @@ Cons:
 - Store open and downgrade failures become harder to recover from.
 - Cleanup cannot run after `Item` schema removal.
 
-Recommendation: use Option A unless a native ObjectBox migration/open test proves every production-like store is safely backfilled and manual QA passes. Stage 4E-1 stops legacy writes first; keep fallback/schema for one release, then remove read fallback and schema in later Stage 4E substeps.
+Recommendation: use Option A unless a native ObjectBox migration/open test proves every production-like store is safely backfilled and manual QA passes. Stage 4E-1 stops legacy writes first; Stage 4E-2 removes production fallback reads while retaining the fallback helper and schema for migration/recovery; schema retirement remains a later substep.
 
 ## Data Migration Strategy
 
@@ -350,4 +350,28 @@ Completed: `onUpsert` no longer clears or adds legacy `Invoice.items`.
 - Generated ObjectBox files were not regenerated.
 - Data deletion was not performed.
 
-Next: do not remove legacy read fallback or schema until ObjectBox tagged tests pass on a native-lib machine and manual QA confirms new line-only saves, old fallback invoices, detail, PDF, and cleanup behavior.
+Next: remove production legacy fallback reads while keeping the fallback helper/schema for migration and recovery.
+
+## Stage 4E-2 Completion Notes
+
+Completed: production invoice reads now use `Invoice.lines` only.
+
+- Added line-only reader APIs:
+  - `InvoiceLineReader.resolveLinesOnly(lines)`
+  - `InvoiceLineReader.fromInvoiceLinesOnly(invoice)`
+  - `InvoiceLineReader.subtotalCentsFromLines(lines)`
+- Kept migration/recovery fallback APIs:
+  - `InvoiceLineReader.resolve(lines, items)`
+  - `InvoiceLineReader.fromInvoice(invoice)`
+  - `InvoiceLineReader.subtotalCents(lines, items)`
+- Detail page line-item display and "Mark as Sent" availability now read `Invoice.lines` only.
+- PDF generation now reads `Invoice.lines` only and throws the existing empty-invoice error if no lines exist.
+- `InvoiceRepository.getCompleteInvoice` eagerly loads `lines` instead of legacy `items`.
+- `InvoiceDetailData` no longer carries legacy `List<Item>`.
+- Edit-form loading builds temporary form rows from `Invoice.lines` only. Old invoices missing lines show an empty form state rather than silently reading legacy items.
+- Legacy `Invoice.items` reads remain only in migration/recovery fallback, line backfill, orphan cleanup, and legacy ObjectBox relation helpers/tests.
+- Schema retained: `Item`, `Invoice.items`, and `Item.invoiceId` still exist.
+- Generated ObjectBox files were not regenerated.
+- Data deletion was not performed.
+
+Next: run ObjectBox tagged tests on a native-lib machine, complete manual QA against backfilled old invoices and new line-only invoices, then plan schema retirement (`Item.invoiceId`, `Invoice.items`, and possibly `Item`) with a store-open migration fixture.

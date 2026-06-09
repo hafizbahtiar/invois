@@ -42,13 +42,13 @@ void main() {
       balanceDueCents: 1000 * itemCount,
     );
     for (var i = 0; i < itemCount; i++) {
-      invoice.items.add(
-        Item(
+      invoice.lines.add(
+        InvoiceLine(
           name: 'Line item $i',
           description: 'Description for item $i',
-          unitPrice: 10.0,
           unitPriceCents: 1000,
-          stockQuantity: 1,
+          quantityMilli: 1000,
+          sortOrder: i,
         ),
       );
     }
@@ -101,9 +101,9 @@ void main() {
   });
 
   test(
-    'generates a PDF from InvoiceLine rows (decimal qty), preferring lines',
+    'generates a PDF from InvoiceLine rows (decimal qty), ignoring legacy items',
     () async {
-      // In-memory invoice with both new lines and a legacy item: the adapter
+      // In-memory invoice with both new lines and a legacy item: production
       // must use the lines and ignore the item.
       final invoice = Invoice(
         invoiceNumber: 'INV-PDF-LINES',
@@ -125,7 +125,12 @@ void main() {
         ),
       );
       invoice.items.add(
-        Item(name: 'IGNORED', unitPrice: 99, unitPriceCents: 9900, stockQuantity: 9),
+        Item(
+          name: 'IGNORED',
+          unitPrice: 99,
+          unitPriceCents: 9900,
+          stockQuantity: 9,
+        ),
       );
 
       final bytes = await InvoiceGenerator.generateInvoice(
@@ -139,7 +144,7 @@ void main() {
     },
   );
 
-  test('throws when the invoice has no items', () async {
+  test('throws when the invoice has no lines', () async {
     expect(
       () => InvoiceGenerator.generateInvoice(
         invoice: buildInvoice(0),

@@ -49,7 +49,7 @@ class InvoiceRepository {
   Future<Invoice?> getCompleteInvoice(int id) async {
     final invoice = await _local.getInvoiceById(id);
     if (invoice != null) {
-      invoice.items.toList();
+      invoice.lines.toList();
       invoice.taxes.toList();
       invoice.terms.toList();
     }

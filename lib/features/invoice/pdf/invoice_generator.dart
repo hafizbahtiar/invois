@@ -85,10 +85,9 @@ class InvoiceGenerator {
     final businessAddress = business.streetAddress1;
     final clientAddress = client.streetAddress1;
 
-    // Step 4C-3: read lines through the unified adapter — prefers the new
-    // Invoice.lines snapshots, falls back to legacy Invoice.items. Totals and
-    // the write path are unchanged.
-    final lineViews = InvoiceLineReader.fromInvoice(invoice);
+    // Stage 4E-2: production PDF reads Invoice.lines only. Legacy Invoice.items
+    // fallback is reserved for migration/recovery tests.
+    final lineViews = InvoiceLineReader.fromInvoiceLinesOnly(invoice);
     if (lineViews.isEmpty) {
       throw Exception('Invoice must have at least one item');
     }

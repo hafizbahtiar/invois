@@ -5,12 +5,7 @@ import 'data/invoice_model.dart';
 import 'invoice_line_math.dart';
 import 'package:invois/features/item/item_model.dart';
 
-/// A stable, source-agnostic read view of an invoice line.
-///
-/// Step 4C-1: a *read adapter only*. It unifies the new [InvoiceLine] rows and
-/// the legacy `Invoice.items` (`Item`) rows behind one shape so future
-/// consumers (totals/detail/PDF) can migrate without branching. Nothing
-/// consumes it yet; writes are unchanged.
+/// A stable read view of an invoice line.
 ///
 /// Money is in minor units (cents); quantity in thousandths (see
 /// [InvoiceLineMath]).
@@ -92,12 +87,27 @@ class InvoiceLineView extends Equatable {
   ];
 }
 
-/// Resolves the unified line view for an invoice, preferring the new
-/// [InvoiceLine] rows and falling back to the legacy `Item` rows.
+/// Resolves invoice line snapshots for production and migration/recovery paths.
 class InvoiceLineReader {
   const InvoiceLineReader._();
 
-  /// Pure resolution (no ObjectBox access) — the unit-testable core.
+  /// Production resolution: use only [InvoiceLine] rows.
+  ///
+  /// Stage 4E-2 intentionally does not fall back to legacy `Invoice.items`.
+  /// Missing lines produce an empty result rather than a crash.
+  static List<InvoiceLineView> resolveLinesOnly(List<InvoiceLine> lines) {
+    if (lines.isEmpty) return const [];
+    final sorted = [...lines]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return sorted.map(InvoiceLineView.fromLine).toList();
+  }
+
+  /// Production convenience for a store-backed [Invoice].
+  static List<InvoiceLineView> fromInvoiceLinesOnly(Invoice invoice) =>
+      resolveLinesOnly(invoice.lines.toList());
+
+  /// Migration/recovery resolution (no ObjectBox access) — the unit-testable
+  /// fallback core.
   ///
   /// - If [lines] is non-empty: use it (sorted by `sortOrder`).
   /// - Else: map [items] in their given (relation) order.
@@ -105,28 +115,29 @@ class InvoiceLineReader {
     required List<InvoiceLine> lines,
     required List<Item> items,
   }) {
-    if (lines.isNotEmpty) {
-      final sorted = [...lines]
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      return sorted.map(InvoiceLineView.fromLine).toList();
-    }
+    if (lines.isNotEmpty) return resolveLinesOnly(lines);
     return [
       for (var i = 0; i < items.length; i++)
         InvoiceLineView.fromItem(items[i], sortOrder: i),
     ];
   }
 
-  /// Convenience for future consumers: resolves from a store-backed [Invoice]
-  /// (touches the `lines`/`items` relations). Not used by tests.
-  static List<InvoiceLineView> fromInvoice(Invoice invoice) => resolve(
-    lines: invoice.lines.toList(),
-    items: invoice.items.toList(),
-  );
+  /// Migration/recovery convenience for a store-backed [Invoice]. Production
+  /// consumers should use [fromInvoiceLinesOnly].
+  static List<InvoiceLineView> fromInvoice(Invoice invoice) =>
+      resolve(lines: invoice.lines.toList(), items: invoice.items.toList());
 
-  /// Subtotal in cents = Σ of the resolved lines' totals (same lines-preferred /
-  /// items-fallback source as [resolve]). The composer/notifier feed this in as
-  /// the subtotal so totals and the detail/PDF item rows share one source
-  /// (Step 4C-4C).
+  /// Production subtotal in cents = Σ of line-only totals.
+  static int subtotalCentsFromLines(List<InvoiceLine> lines) {
+    var total = 0;
+    for (final view in resolveLinesOnly(lines)) {
+      total += view.lineTotalCents;
+    }
+    return total;
+  }
+
+  /// Migration/recovery subtotal in cents = Σ of the resolved lines' totals
+  /// (same lines-preferred / items-fallback source as [resolve]).
   static int subtotalCents({
     required List<InvoiceLine> lines,
     required List<Item> items,

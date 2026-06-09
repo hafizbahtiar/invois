@@ -740,6 +740,28 @@ Scope: stop production save/update from creating new legacy `Item` rows via `Inv
 
 ---
 
+## Stage 4E-2 — Completed (2026-06-10) — remove production legacy item fallback
+
+Scope: production reads now expect authoritative `Invoice.lines`; legacy `Invoice.items` fallback remains only for migration/recovery helpers and tests.
+
+- **Production reader added:** `InvoiceLineReader.fromInvoiceLinesOnly` / `resolveLinesOnly` read `Invoice.lines` only and return an empty list when no lines exist.
+- **Fallback retained but demoted:** `InvoiceLineReader.fromInvoice` / `resolve(lines, items)` still support old legacy fallback for migration/recovery tests and explicit tooling.
+- **Detail page:** line-items display and "Mark as Sent" availability now use line-only reads.
+- **PDF:** item table generation now uses line-only reads. A row with only legacy `Invoice.items` and no `Invoice.lines` now hits the existing "must have at least one item" error instead of silently falling back.
+- **Form edit load:** `getInvoiceById` builds editable form rows from `Invoice.lines` only. If an old invoice is missing backfilled lines, the form shows an empty line state rather than reading legacy items.
+- **Repository/provider:** `getCompleteInvoice` eagerly loads `lines` instead of `items`; `InvoiceDetailData` no longer carries `List<Item>`.
+- **Tests updated:** pure reader/subtotal tests cover line-only production behavior and retained migration fallback; PDF tests now build normal invoices from `Invoice.lines`; objectbox-tagged reader tests distinguish production line-only reads from migration fallback.
+- **Remaining legacy references by design:**
+  - `InvoiceLineBackfill` reads `Invoice.items` to migrate old invoices to `Invoice.lines`.
+  - `OrphanItemCleanup` reads `Invoice.items` to preserve referenced old rows and delete only true orphans.
+  - `InvoiceLineReader.fromInvoice` fallback remains for migration/recovery tests.
+  - legacy relation helpers (`addItemToInvoice`, `clearItemsFromInvoice`, etc.) remain for old-data tests/tools until schema retirement.
+  - `Item`/`Invoice.items`/`Item.invoiceId` schema remains unchanged.
+- **Not done:** no ObjectBox schema changes; no generated-file changes; no entity/relation/property removal; no data deletion; Stage 4E schema retirement not started.
+- **Next:** run objectbox-tagged tests on a native-lib machine, complete manual QA for new line-only invoices and pre-4E backfilled invoices, then plan schema retirement with a pre-4E store-open fixture and backup/export strategy.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

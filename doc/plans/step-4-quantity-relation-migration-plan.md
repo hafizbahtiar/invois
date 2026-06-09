@@ -351,3 +351,15 @@ Matches the plan, with these concrete choices:
 - **Schema:** no ObjectBox schema changes, no generated-file regeneration, no `Item`/`Invoice.items`/`Item.invoiceId` removal.
 - **Tests:** pure resolver/builder tests cover line-only form carriers and temporary ids; objectbox-tagged line persistence tests assert no new legacy `Item` rows and old legacy rows untouched.
 - **Next:** run objectbox-tagged tests on a native-lib machine and manual QA before any legacy read fallback or schema removal.
+
+## Stage 4E-2 — Implementation Notes (production line-only reads)
+
+- **Production reader:** `InvoiceLineReader.fromInvoiceLinesOnly` / `resolveLinesOnly` read only `Invoice.lines`; missing lines return an empty list.
+- **Fallback retained:** `InvoiceLineReader.fromInvoice` / `resolve(lines, items)` still perform lines-preferred legacy fallback, but are now migration/recovery helpers rather than production UI/PDF paths.
+- **Detail:** line item display and "Mark as Sent" availability read `Invoice.lines` only.
+- **PDF:** item table generation reads `Invoice.lines` only. Legacy-only invoices rely on the startup backfill before production PDF generation.
+- **Form edit load:** edit state is rebuilt from `Invoice.lines` only; legacy-only invoices show no editable lines instead of falling back.
+- **Repository/provider:** complete invoice loading eagerly touches `lines` instead of `items`; detail data no longer includes `List<Item>`.
+- **Still retained:** `InvoiceLineBackfill`, `OrphanItemCleanup`, legacy relation helpers, `Item`, `Invoice.items`, and `Item.invoiceId`.
+- **Schema:** no ObjectBox schema changes, no generated-file regeneration, no data deletion.
+- **Next:** native-lib objectbox tagged tests + manual QA, then schema retirement planning with a pre-4E store-open fixture.

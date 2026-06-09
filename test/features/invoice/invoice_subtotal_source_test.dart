@@ -4,22 +4,42 @@ import 'package:invois/features/invoice/invoice_composer.dart';
 import 'package:invois/features/invoice/invoice_line_view.dart';
 import 'package:invois/features/item/item_model.dart';
 
-/// Step 4C-4C: subtotal now flows from InvoiceLineReader; discount/tax/total
-/// still flow through the composer (now via subtotalCentsOverride).
+/// Subtotal coverage for production line-only reads and migration/recovery
+/// fallback reads. Discount/tax/total still flow through the composer via
+/// subtotalCentsOverride.
 void main() {
-  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) => Item(
-    name: name,
-    unitPrice: unitPriceCents / 100,
-    unitPriceCents: unitPriceCents,
-    stockQuantity: stockQuantity,
-  );
+  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) =>
+      Item(
+        name: name,
+        unitPrice: unitPriceCents / 100,
+        unitPriceCents: unitPriceCents,
+        stockQuantity: stockQuantity,
+      );
 
-  group('InvoiceLineReader.subtotalCents', () {
+  group('InvoiceLineReader.subtotalCentsFromLines', () {
+    test('uses lines only (decimal supported)', () {
+      expect(
+        InvoiceLineReader.subtotalCentsFromLines([
+          InvoiceLine(name: 'A', unitPriceCents: 1000, quantityMilli: 2500),
+        ]),
+        2500,
+      );
+    });
+
+    test('missing lines -> 0, no legacy fallback', () {
+      expect(InvoiceLineReader.subtotalCentsFromLines(const []), 0);
+    });
+  });
+
+  group('InvoiceLineReader.subtotalCents migration/recovery fallback', () {
     test('falls back to legacy items', () {
       expect(
         InvoiceLineReader.subtotalCents(
           lines: const [],
-          items: [item('A', stockQuantity: 2), item('B', stockQuantity: 1, unitPriceCents: 500)],
+          items: [
+            item('A', stockQuantity: 2),
+            item('B', stockQuantity: 1, unitPriceCents: 500),
+          ],
         ),
         2500,
       );

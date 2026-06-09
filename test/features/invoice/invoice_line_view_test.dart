@@ -3,15 +3,17 @@ import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/invoice_line_view.dart';
 import 'package:invois/features/item/item_model.dart';
 
-/// Step 4C-1: pure read adapter (prefers InvoiceLine, falls back to legacy
-/// Item). No ObjectBox store needed — entities are constructed directly.
+/// Pure line readers. Production uses InvoiceLine rows only; migration/recovery
+/// helpers keep the legacy Item fallback. No ObjectBox store needed — entities
+/// are constructed directly.
 void main() {
-  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) => Item(
-    name: name,
-    unitPrice: unitPriceCents / 100,
-    unitPriceCents: unitPriceCents,
-    stockQuantity: stockQuantity,
-  );
+  Item item(String name, {int? stockQuantity, int unitPriceCents = 1000}) =>
+      Item(
+        name: name,
+        unitPrice: unitPriceCents / 100,
+        unitPriceCents: unitPriceCents,
+        stockQuantity: stockQuantity,
+      );
 
   InvoiceLine line(
     String name, {
@@ -25,7 +27,32 @@ void main() {
     sortOrder: sortOrder,
   );
 
-  group('InvoiceLineReader.resolve — source preference', () {
+  group('InvoiceLineReader.resolveLinesOnly — production source', () {
+    test('uses InvoiceLine rows sorted by sortOrder', () {
+      final views = InvoiceLineReader.resolveLinesOnly([
+        line('B', sortOrder: 1),
+        line('A', sortOrder: 0),
+      ]);
+      expect(views.map((v) => v.name), ['A', 'B']);
+    });
+
+    test('does not fall back to legacy items', () {
+      final views = InvoiceLineReader.resolveLinesOnly(const []);
+      expect(views, isEmpty);
+    });
+
+    test('subtotalCentsFromLines uses only InvoiceLine rows', () {
+      expect(
+        InvoiceLineReader.subtotalCentsFromLines([
+          line('A', unitPriceCents: 1000, quantityMilli: 2500),
+          line('B', unitPriceCents: 500, quantityMilli: 1000),
+        ]),
+        3000,
+      );
+    });
+  });
+
+  group('InvoiceLineReader.resolve — migration/recovery fallback', () {
     test('prefers InvoiceLine rows when lines is non-empty', () {
       final views = InvoiceLineReader.resolve(
         lines: [line('FromLine')],

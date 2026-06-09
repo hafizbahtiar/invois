@@ -3,7 +3,6 @@ import 'package:invois/features/business/data/business_model.dart';
 import 'package:invois/features/business/data/business_repository.dart';
 import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/client/data/client_repository.dart';
-import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
@@ -18,7 +17,6 @@ class InvoiceDetailData {
   final Business? business;
   final Client? client;
   final Signature? signature;
-  final List<Item> items;
   final List<Tax> taxes;
   final List<Term> terms;
 
@@ -27,7 +25,6 @@ class InvoiceDetailData {
     required this.business,
     required this.client,
     required this.signature,
-    required this.items,
     required this.taxes,
     required this.terms,
   });
@@ -82,7 +79,6 @@ final invoiceDetailProvider = FutureProvider.autoDispose
         business: business,
         client: client,
         signature: signature,
-        items: invoice.items.toList(),
         taxes: invoice.taxes.toList(),
         terms: invoice.terms.toList(),
       );
