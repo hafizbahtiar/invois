@@ -209,6 +209,20 @@ class SignatureLocalSource {
     return queryBuilder.build().find();
   }
 
+  Future<Signature?> getDefaultActiveSignatureByBusinessId(
+    int? businessId,
+  ) async {
+    final queryBuilder = _signatureBox.query(
+      Signature_.isActive.equals(true) &
+          Signature_.isDefault.equals(true) &
+          ((businessId == null)
+              ? Signature_.businessId.isNull()
+              : Signature_.businessId.equals(businessId)),
+    );
+    final result = queryBuilder.build().findFirst();
+    return result;
+  }
+
   // Count total signatures
   Future<int> countSignatures() async {
     return _signatureBox.count();

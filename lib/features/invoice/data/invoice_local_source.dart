@@ -6,6 +6,7 @@ import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
 import 'invoice_model.dart';
+import 'invoice_numbering.dart';
 import 'invoice_query.dart';
 
 class InvoiceLocalSource {
@@ -157,10 +158,26 @@ class InvoiceLocalSource {
 
   // Get invoices by business ID
   Future<List<Invoice>> getInvoicesByBusinessId(int businessId) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices
-        .where((invoice) => invoice.businessId == businessId)
-        .toList();
+    final query = _invoiceBox.query(Invoice_.businessId.equals(businessId));
+    return query.build().find();
+  }
+
+  Future<String> nextInvoiceNumber(int businessId) async {
+    final invoices = await getInvoicesByBusinessId(businessId);
+    return InvoiceNumbering.nextNumber(invoices);
+  }
+
+  Future<bool> isInvoiceNumberAvailable({
+    required int businessId,
+    required String invoiceNumber,
+    int? excludingInvoiceId,
+  }) async {
+    final invoices = await getInvoicesByBusinessId(businessId);
+    return InvoiceNumbering.isAvailable(
+      invoices: invoices,
+      invoiceNumber: invoiceNumber,
+      excludingInvoiceId: excludingInvoiceId,
+    );
   }
 
   // Get invoices by client ID
@@ -211,6 +228,7 @@ class InvoiceLocalSource {
     DateTime? paidDate,
     int? businessId,
     int? clientId,
+    int? signatureId,
     double? subtotal,
     double? discountRate,
     double? discountAmount,
@@ -249,6 +267,7 @@ class InvoiceLocalSource {
       paidDate: paidDate,
       businessId: businessId,
       clientId: clientId,
+      signatureId: signatureId,
       subtotal: subtotal,
       discountRate: discountRate,
       discountAmount: discountAmount,

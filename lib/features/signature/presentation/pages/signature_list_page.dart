@@ -144,7 +144,7 @@ class _SignatureListPageState extends ConsumerState<SignatureListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Signature>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

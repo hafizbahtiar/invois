@@ -140,7 +140,7 @@ class _ClientListPageState extends ConsumerState<ClientListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Client>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

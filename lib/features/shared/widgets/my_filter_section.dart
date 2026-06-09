@@ -146,7 +146,7 @@ class MyFilterSection<T> extends ConsumerWidget {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     // Find the selected business name

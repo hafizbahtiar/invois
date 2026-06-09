@@ -135,7 +135,7 @@ extension SimpleDragListExtensions on SimpleDragList {
   static Widget Function(BuildContext, int) defaultSeparator(
     BuildContext context,
   ) {
-    return (_, __) => Divider(
+    return (_, _) => Divider(
       height: 1,
       indent: 16,
       endIndent: 16,

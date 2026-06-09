@@ -38,6 +38,7 @@ class InvoiceFormState {
     List<Tax>? taxes,
     List<Item>? items,
     Signature? signature,
+    bool clearSignature = false,
     bool? isLoading,
     String? error,
   }) {
@@ -48,7 +49,7 @@ class InvoiceFormState {
       terms: terms ?? this.terms,
       taxes: taxes ?? this.taxes,
       items: items ?? this.items,
-      signature: signature ?? this.signature,
+      signature: clearSignature ? null : signature ?? this.signature,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );

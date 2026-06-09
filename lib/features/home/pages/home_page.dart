@@ -7,6 +7,7 @@ import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/invoice/providers/invoice_notifier.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/presentation/widgets/invoice_overview.dart';
+import 'package:invois/features/invoice/presentation/widgets/invoice_status_chip.dart';
 import 'package:invois/features/invoice/providers/invoice_providers.dart';
 import 'package:invois/features/invoice/data/invoice_query.dart';
 import 'package:invois/features/shared/widgets/my_bottom_sheet.dart';
@@ -74,18 +75,21 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(invoiceQueryProvider.notifier).reset();
   }
 
-  void _onDeleteInvoice(invoice) async {
-    final state = ref.watch(invoiceFormProvider);
+  void _onDeleteInvoice(Invoice invoice) async {
     final result = await ref
         .read(invoiceFormProvider.notifier)
         .deleteInvoiceById(invoice.id!);
-    if (mounted) {
-      MySnackBar.show(
-        context,
-        message: state.error ?? 'Invoice deleted',
-        type: result ? MySnackbarType.success : MySnackbarType.failed,
-      );
-    }
+    if (!mounted) return;
+    // Read the error AFTER the operation so the message reflects the actual
+    // result, not a pre-delete snapshot.
+    final error = ref.read(invoiceFormProvider).error;
+    MySnackBar.show(
+      context,
+      message: result
+          ? 'Invoice deleted'
+          : (error ?? 'Failed to delete invoice'),
+      type: result ? MySnackbarType.success : MySnackbarType.failed,
+    );
   }
 
   //============================================
@@ -119,7 +123,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _showChangeStatusDialog({Invoice? invoice}) {
     InvoiceStatus? selectedStatus = invoice?.status != null
-        ? InvoiceStatus.values.byName(invoice!.status!)
+        ? InvoiceStatusExtension.fromName(invoice!.status)
         : null;
 
     MyBottomSheetHelper.show(
@@ -164,13 +168,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _getStatusColor(invoice!.status!),
+                        color: InvoiceStatusChip.colorForName(invoice!.status),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      InvoiceStatus.values.byName(invoice.status!).displayName,
+                      InvoiceStatusExtension.fromName(
+                        invoice.status,
+                      ).displayName,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
@@ -224,7 +230,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: _getStatusColor(status.name),
+                            color: InvoiceStatusChip.colorFor(status),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -288,19 +294,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (invoice.status != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getStatusColor(invoice.status!),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              InvoiceStatus.values.byName(invoice.status!).displayName,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-          ),
+          InvoiceStatusChip(statusName: invoice.status),
         PopupMenuButton(
           icon: const Icon(Icons.more_vert),
           itemBuilder: (context) => [
@@ -405,8 +399,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   //============================================
 
   Widget _buildBody(BuildContext context) {
-    final invoices =
-        ref.watch(invoiceListProvider).valueOrNull ?? const <Invoice>[];
+    final invoicesAsync = ref.watch(invoiceListProvider);
+    final invoices = invoicesAsync.value ?? const <Invoice>[];
+    // Only treat it as an error screen when there's nothing to show; a transient
+    // error while data is already on screen shouldn't blank the list.
+    final hasError = invoicesAsync.hasError && invoices.isEmpty;
     return SafeArea(
       bottom: false,
       child: RefreshIndicator.adaptive(
@@ -436,7 +433,18 @@ class _HomePageState extends ConsumerState<HomePage> {
             SliverToBoxAdapter(child: SizedBox(height: 32)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: invoices.isEmpty
+              sliver: hasError
+                  ? SliverToBoxAdapter(
+                      child: Center(
+                        child: MyNoMatchingState(
+                          icon: Icons.error_outline,
+                          title: 'Couldn\'t load invoices',
+                          buttonText: 'Retry',
+                          onPressed: () => ref.invalidate(invoiceListProvider),
+                        ),
+                      ),
+                    )
+                  : invoices.isEmpty
                   ? SliverToBoxAdapter(
                       child: Center(
                         child:
@@ -468,11 +476,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           trailing: _buildTrailing(invoice),
                           onTap: () {
                             Navigator.of(context).pushNamed(
-                              RoutesName.invoiceForm,
-                              arguments: {
-                                'type': FormType.view.name,
-                                'invoiceId': invoice.id,
-                              },
+                              RoutesName.invoiceDetail,
+                              arguments: {'invoiceId': invoice.id},
                             );
                           },
                         );
@@ -529,27 +534,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     InvoiceListFilterType.cancelled,
     InvoiceListFilterType.refunded,
   ];
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'draft':
-        return Colors.grey;
-      case 'sent':
-        return Colors.blue;
-      case 'viewed':
-        return Colors.orange;
-      case 'paid':
-        return Colors.green;
-      case 'overdue':
-        return Colors.red;
-      case 'cancelled':
-        return Colors.red.shade700;
-      case 'refunded':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
 
   String _filterLabel(InvoiceListFilterType filter) {
     return filter.displayName;

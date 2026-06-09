@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/features/setting/providers/settings_state.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
+import 'package:invois/features/shared/widgets/app_bottom_sheet.dart';
 import 'package:invois/features/shared/widgets/my_tile.dart';
 import '../../../shared/widgets/simple_header_section.dart';
 import '../../providers/settings_notifier.dart';
 import 'package:invois/core/utils/currency_utils.dart';
-import 'package:invois/features/shared/widgets/my_select_bottom_sheet.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -50,15 +49,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     subtitle: 'Customize app appearance',
                   ),
                   MyTile(
-                    icon: Icons.language,
+                    icon: Icons.brightness_6,
                     title: 'Theme Mode',
-                    subtitle: 'Enable dark mode',
-                    trailing: Switch.adaptive(
-                      value: state.themeMode == AppThemeMode.dark,
-                      onChanged: (value) => notifier.updateThemeMode(
-                        value ? AppThemeMode.dark : AppThemeMode.light,
-                      ),
-                    ),
+                    subtitle: state.themeMode.displayName,
+                    isRounded: true,
+                    onTap: () async {
+                      final selected =
+                          await AppDynamicBottomSheet.showRadio<AppThemeMode>(
+                            context: context,
+                            title: 'Theme Mode',
+                            items: AppThemeMode.values,
+                            value: state.themeMode,
+                            labelBuilder: (mode) => mode.displayName,
+                            onChanged: (mode) => Navigator.pop(context, mode),
+                          );
+                      if (selected != null && selected != state.themeMode) {
+                        notifier.updateThemeMode(selected);
+                      }
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -113,28 +121,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         Navigator.pushNamed(context, RoutesName.termList),
                   ),
                   MyTile(
-                    icon: Icons.language,
+                    icon: Icons.payments,
                     title: 'Default Currency',
                     subtitle:
                         '${CurrencyUtils.getName(state.currencyCode)} (${CurrencyUtils.getSymbol(state.currencyCode)})',
                     isRounded: true,
                     onTap: () async {
-                      final items = CurrencyUtils.currencies.entries.map((
-                        entry,
-                      ) {
-                        final info = entry.value;
-                        return SelectItem<String>(
-                          value: info.code,
-                          label: '${info.code} - ${info.name} (${info.symbol})',
-                        );
-                      }).toList();
-                      final selected = await MySelectBottomSheet.show<String>(
-                        context: context,
-                        title: 'Select Currency',
-                        items: items,
-                        initialSelectedValue: state.currencyCode,
-                        searchable: true,
-                      );
+                      final codes = CurrencyUtils.currencies.keys.toList();
+                      String labelFor(String code) {
+                        final info = CurrencyUtils.currencies[code]!;
+                        return '${info.code} - ${info.name} (${info.symbol})';
+                      }
+
+                      final selected =
+                          await AppDynamicBottomSheet.show<String>(
+                            context: context,
+                            title: 'Select Currency',
+                            items: codes,
+                            selectedValue: state.currencyCode,
+                            searchable: true,
+                            searchText: labelFor,
+                            searchHint: 'Search currency',
+                            itemBuilder: (context, code, selected) => Text(
+                              labelFor(code),
+                              style: TextStyle(
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            onItemSelected: (code) =>
+                                Navigator.pop(context, code),
+                          );
                       if (selected != null && selected != state.currencyCode) {
                         notifier.updateCurrency(selected);
                       }

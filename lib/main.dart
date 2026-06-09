@@ -5,8 +5,6 @@ import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/features/invoice/data/invoice_money_backfill.dart';
 import 'package:invois/features/setting/providers/settings_notifier.dart';
-import 'package:invois/features/setting/providers/settings_state.dart';
-import 'package:invois/features/splash/splash_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +29,8 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      // themeMode: settings.materialThemeMode,
-      themeMode: state.themeMode == AppThemeMode.dark
-          ? ThemeMode.dark
-          : ThemeMode.light,
+      // Honour System / Light / Dark (SettingsState exposes the mapping).
+      themeMode: state.materialThemeMode,
       locale: Locale(state.languageCode.code),
       localeResolutionCallback: (locale, supportedLocales) {
         // Check if the current device locale is supported
@@ -47,10 +43,10 @@ class MyApp extends ConsumerWidget {
         return supportedLocales.first;
       },
 
-      // Route configuration
+      // Route configuration — single source of truth. `generateRoute` resolves
+      // `initialRoute` (the splash) and every named push; no `home:` override.
       onGenerateRoute: generateRoute,
       initialRoute: RoutesName.splash,
-      home: const SplashPage(),
     );
   }
 }

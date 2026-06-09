@@ -132,7 +132,7 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     });
   }
 
-  void _onDeleteClient(client) async {
+  void _onDeleteClient(Client client) async {
     final state = ref.watch(clientFormProvider);
     final result = await ref
         .read(clientFormProvider.notifier)
@@ -279,7 +279,7 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     return Expanded(

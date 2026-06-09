@@ -127,7 +127,7 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
     });
   }
 
-  void _onDeleteBusiness(business) async {
+  void _onDeleteBusiness(Business business) async {
     final state = ref.watch(businessFormProvider);
     final result = await ref
         .read(businessFormProvider.notifier)

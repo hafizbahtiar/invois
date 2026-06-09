@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'signature_state.dart';
 import '../data/signature_model.dart';

@@ -143,7 +143,7 @@ class _TermListPageState extends ConsumerState<TermListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Term>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

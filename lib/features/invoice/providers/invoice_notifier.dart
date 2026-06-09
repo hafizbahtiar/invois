@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/money/money.dart';
 import 'package:invois/core/result/app_failure.dart';
@@ -8,13 +9,17 @@ import 'package:invois/features/business/data/business_repository.dart';
 import 'package:invois/features/client/providers/client_notifier.dart';
 import 'package:invois/features/client/data/client_repository.dart';
 import 'package:invois/features/item/item_model.dart';
+import 'package:invois/features/signature/data/signature_model.dart';
+import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
 import '../invoice_composer.dart';
 import 'invoice_state.dart';
 import '../data/invoice_model.dart';
+import '../data/invoice_numbering.dart';
 import '../data/invoice_repository.dart';
+import '../data/invoice_validation.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   final InvoiceRepository _repository;
@@ -47,11 +52,17 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     );
   }
 
-  void setBusiness(business) {
+  Future<void> setBusiness(dynamic business) async {
     state = state.copyWith(business: business);
+    final businessId = business?.id;
+    if (businessId != null && businessId > 0) {
+      await setDefaultSignatureForBusiness(businessId);
+    } else {
+      state = state.copyWith(clearSignature: true);
+    }
   }
 
-  void setClient(client) {
+  void setClient(dynamic client) {
     state = state.copyWith(client: client);
   }
 
@@ -75,6 +86,14 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
         state = state.copyWith(client: client);
       }
 
+      Signature? signature;
+      final signatureId = invoice.signatureId;
+      if (signatureId != null && signatureId > 0) {
+        signature = await _ref
+            .read(signatureRepositoryProvider)
+            .getSignatureById(signatureId);
+      }
+
       // Load items, taxes, and terms
       final items = invoice.items.toList();
       final taxes = invoice.taxes.toList();
@@ -85,6 +104,8 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
         items: items,
         taxes: taxes,
         terms: terms,
+        signature: signature,
+        clearSignature: signature == null,
       );
     } else {
       state = state.copyWith(invoice: invoice);
@@ -99,6 +120,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     state = state.copyWith(business: business);
     if (business != null) {
       await getDefaultClient(business.id!);
+      await setDefaultSignatureForBusiness(business.id!);
     }
   }
 
@@ -128,8 +150,21 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     }
   }
 
-  void setSignature(signature) {
+  void setSignature(Signature? signature) {
     state = state.copyWith(signature: signature);
+  }
+
+  void clearSignature() {
+    state = state.copyWith(clearSignature: true);
+  }
+
+  Future<void> setDefaultSignatureForBusiness(int businessId) async {
+    final signature = await _ref
+        .read(signatureRepositoryProvider)
+        .getDefaultActiveSignatureByBusinessId(businessId);
+    state = signature == null
+        ? state.copyWith(clearSignature: true)
+        : state.copyWith(signature: signature);
   }
 
   void resetItems() {
@@ -187,6 +222,15 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     return Money(calculateSubtotalCents()).toDouble();
   }
 
+  Future<String?> nextInvoiceNumberForBusiness(int businessId) async {
+    final result = await _repository.nextInvoiceNumber(businessId);
+    if (result is Ok<String>) return result.value;
+
+    final failure = (result as Err<String>).failure;
+    state = state.copyWith(error: failure.message);
+    return null;
+  }
+
   // Save the current invoice. List updates reactively (ADR-0003) — no refresh.
   Future<Result<Invoice>> onUpsert(Invoice invoice) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -208,6 +252,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     final updatedInvoice = invoice.copyWith(
       businessId: business.id,
       clientId: client.id,
+      signatureId: state.signature?.id,
       subtotal: Money(invoice.effectiveSubtotalCents).toDouble(),
       discountAmount: Money(invoice.effectiveDiscountAmountCents).toDouble(),
       taxAmount: Money(invoice.effectiveTaxAmountCents).toDouble(),
@@ -221,6 +266,15 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       paidAmountCents: invoice.effectivePaidAmountCents,
       balanceDueCents: invoice.effectiveBalanceDueCents,
     );
+
+    final validationFailure = await _validateForSave(updatedInvoice);
+    if (validationFailure != null) {
+      state = state.copyWith(
+        isLoading: false,
+        error: validationFailure.message,
+      );
+      return Err(validationFailure);
+    }
 
     // Save the invoice first
     final result = (updatedInvoice.id == null || updatedInvoice.id == 0)
@@ -284,6 +338,42 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       isLoading: false,
       error: result.failureOrNull?.message,
     );
+  }
+
+  Future<ValidationFailure?> _validateForSave(Invoice invoice) async {
+    final items = state.items ?? const <Item>[];
+    final validationMessage = InvoiceValidation.validateForSave(
+      invoice: invoice,
+      items: items,
+      hasBusiness: invoice.businessId != null && invoice.businessId! > 0,
+      hasClient: invoice.clientId != null && invoice.clientId! > 0,
+    );
+    if (validationMessage != null) {
+      return ValidationFailure(validationMessage);
+    }
+
+    final businessId = invoice.businessId;
+    if (businessId == null || businessId <= 0) {
+      return const ValidationFailure('Please select a business before saving.');
+    }
+
+    final numberResult = await _repository.isInvoiceNumberAvailable(
+      businessId: businessId,
+      invoiceNumber: InvoiceNumbering.fullNumber(invoice),
+      excludingInvoiceId: invoice.id,
+    );
+
+    if (numberResult is Err<bool>) {
+      return ValidationFailure(numberResult.failure.message);
+    }
+
+    if (!(numberResult as Ok<bool>).value) {
+      return const ValidationFailure(
+        'Invoice number already exists for this business.',
+      );
+    }
+
+    return null;
   }
 }
 

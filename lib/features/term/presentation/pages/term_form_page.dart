@@ -103,7 +103,7 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
     });
   }
 
-  void _onDeleteTerm(term) async {
+  void _onDeleteTerm(Term term) async {
     final state = ref.watch(termFormProvider);
     final result = await ref
         .read(termFormProvider.notifier)
@@ -236,7 +236,11 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
 
   Widget _buildForm(BuildContext context) {
     final state = ref.watch(termFormProvider);
-    final businesses = ref.watch(businessListProvider(const BusinessQuery(isActive: true))).valueOrNull ?? const [];
+    final businesses =
+        ref
+            .watch(businessListProvider(const BusinessQuery(isActive: true)))
+            .value ??
+        const [];
 
     return Expanded(
       child: ListView(
@@ -303,9 +307,7 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
                   label: 'Business',
                   isReadOnly: _isReadOnly,
                   onSelected: (value) => _onSelectBusiness(value),
-                  value:
-                      businesses.isNotEmpty &&
-                          state.term?.businessId != null
+                  value: businesses.isNotEmpty && state.term?.businessId != null
                       ? businesses
                             .firstWhere(
                               (business) =>

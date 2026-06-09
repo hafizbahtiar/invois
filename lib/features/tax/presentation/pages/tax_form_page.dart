@@ -114,7 +114,7 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
     });
   }
 
-  void _onDeleteTax(tax) async {
+  void _onDeleteTax(Tax tax) async {
     final state = ref.watch(taxFormProvider);
     final result = await ref
         .read(taxFormProvider.notifier)
@@ -251,7 +251,7 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     return Expanded(

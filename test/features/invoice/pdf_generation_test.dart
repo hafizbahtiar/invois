@@ -23,7 +23,9 @@ void main() {
   // A real 8x8 PNG encoded with the same `image` package the pdf package
   // decodes with, so the signature embeds reliably across hosts.
   final pngBytes = Uint8List.fromList(
-    img.encodePng(img.Image(width: 8, height: 8)..clear(img.ColorRgb8(0, 0, 0))),
+    img.encodePng(
+      img.Image(width: 8, height: 8)..clear(img.ColorRgb8(0, 0, 0)),
+    ),
   );
 
   Invoice buildInvoice(int itemCount) {
@@ -52,28 +54,49 @@ void main() {
     return invoice;
   }
 
-  test('generates a valid multi-page PDF for a 100-item signed invoice',
-      () async {
-    final bytes = await InvoiceGenerator.generateInvoice(
-      invoice: buildInvoice(100),
-      business: Business(name: 'Acme Sdn Bhd', streetAddress1: '1 Market St'),
-      client: Client(name: 'Globex', streetAddress1: '99 Industrial Rd'),
+  test(
+    'generates a valid multi-page PDF for a 100-item signed invoice',
+    () async {
+      final bytes = await InvoiceGenerator.generateInvoice(
+        invoice: buildInvoice(100),
+        business: Business(name: 'Acme Sdn Bhd', streetAddress1: '1 Market St'),
+        client: Client(name: 'Globex', streetAddress1: '99 Industrial Rd'),
+        signature: Signature(name: 'Owner', imageBytes: pngBytes),
+      );
+
+      // Valid PDF magic header and a non-trivial body.
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+      expect(bytes.length, greaterThan(2000));
+    },
+  );
+
+  test(
+    'generates a PDF for a single-item invoice without a signature',
+    () async {
+      final bytes = await InvoiceGenerator.generateInvoice(
+        invoice: buildInvoice(1),
+        business: Business(name: 'Acme Sdn Bhd'),
+        client: Client(name: 'Globex'),
+      );
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+    },
+  );
+
+  test('selected signature is embedded in generated PDF data', () async {
+    final signedBytes = await InvoiceGenerator.generateInvoice(
+      invoice: buildInvoice(1),
+      business: Business(name: 'Acme Sdn Bhd'),
+      client: Client(name: 'Globex'),
       signature: Signature(name: 'Owner', imageBytes: pngBytes),
     );
-
-    // Valid PDF magic header and a non-trivial body.
-    expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
-    expect(bytes.length, greaterThan(2000));
-  });
-
-  test('generates a PDF for a single-item invoice without a signature',
-      () async {
-    final bytes = await InvoiceGenerator.generateInvoice(
+    final unsignedBytes = await InvoiceGenerator.generateInvoice(
       invoice: buildInvoice(1),
       business: Business(name: 'Acme Sdn Bhd'),
       client: Client(name: 'Globex'),
     );
-    expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+
+    expect(String.fromCharCodes(signedBytes.sublist(0, 5)), '%PDF-');
+    expect(signedBytes.length, greaterThan(unsignedBytes.length));
   });
 
   test('throws when the invoice has no items', () async {

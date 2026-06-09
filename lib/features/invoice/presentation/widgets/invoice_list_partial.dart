@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/configs/routes/routes_name.dart';
-import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/features/shared/widgets/my_empty_state.dart';
 import 'package:invois/features/shared/widgets/my_filter_section.dart';
@@ -27,7 +26,7 @@ List<Widget> buildInvoiceListSlivers(
   required Widget Function(Invoice) buildTrailing,
 }) {
   final async = ref.watch(invoiceListProvider);
-  final invoices = async.valueOrNull ?? const <Invoice>[];
+  final invoices = async.value ?? const <Invoice>[];
   final isLoading = async.isLoading;
   final slivers = <Widget>[];
 
@@ -84,11 +83,8 @@ List<Widget> buildInvoiceListSlivers(
             trailing: buildTrailing(invoice),
             onTap: () {
               Navigator.of(context).pushNamed(
-                RoutesName.invoiceForm,
-                arguments: {
-                  'type': FormType.view.name,
-                  'invoiceId': invoice.id,
-                },
+                RoutesName.invoiceDetail,
+                arguments: {'invoiceId': invoice.id},
               );
             },
           );

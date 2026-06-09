@@ -8,6 +8,9 @@ import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:invois/features/signature/data/signature_model.dart';
+import 'package:invois/features/signature/data/signature_query.dart';
+import 'package:invois/features/signature/providers/signature_providers.dart';
 import 'package:invois/features/shared/widgets/form_section_header.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_date_picker_field.dart';
@@ -71,6 +74,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   final _itemQuantityController = TextEditingController();
 
   bool _isReadOnly = true;
+  bool _isInvoiceNumberManuallyEdited = false;
 
   // Dates
   DateTime? _issueDate;
@@ -109,7 +113,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       final state = ref.read(invoiceFormProvider);
       final settingState = ref.read(settingsProvider);
 
-      _invoicePrefixController.text = 'INV';
+      _invoicePrefixController.text = '';
       _selectedCurrency = settingState.currencyCode;
 
       _discountRateController.text = '0.0';
@@ -117,7 +121,6 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       _paidAmountController.text = '0.0';
 
       if (kDebugMode) {
-        _invoiceNumberController.text = '1';
         _invoiceReferenceController.text = 'REF';
         _invoiceNotesController.text = 'NOTES';
         _issueDate = DateTime.now();
@@ -170,8 +173,12 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
           );
         }
 
-        _onSelectBusiness(state.invoice!.businessId);
         _onSelectClient(state.invoice!.clientId);
+      } else {
+        final businessId = state.business?.id;
+        if (businessId != null && businessId > 0) {
+          await _suggestInvoiceNumberForBusiness(businessId);
+        }
       }
     });
   }
@@ -269,6 +276,26 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     });
   }
 
+  void _onInvoiceNumberChanged(String value) {
+    if (_isReadOnly) return;
+    _isInvoiceNumberManuallyEdited = true;
+  }
+
+  Future<void> _suggestInvoiceNumberForBusiness(int businessId) async {
+    if (_isReadOnly || _isInvoiceNumberManuallyEdited) return;
+    if (widget.invoiceId != null && widget.invoiceId! > 0) return;
+
+    final number = await ref
+        .read(invoiceFormProvider.notifier)
+        .nextInvoiceNumberForBusiness(businessId);
+    if (number == null || !mounted || _isInvoiceNumberManuallyEdited) return;
+
+    setState(() {
+      _invoicePrefixController.text = '';
+      _invoiceNumberController.text = number;
+    });
+  }
+
   void _onRecurringChanged(bool value) {
     if (_isReadOnly) return;
     setState(() {
@@ -346,7 +373,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     );
   }
 
-  void _onDeleteInvoice(invoice) async {
+  void _onDeleteInvoice(Invoice invoice) async {
     final state = ref.watch(invoiceFormProvider);
     final result = await ref
         .read(invoiceFormProvider.notifier)
@@ -410,6 +437,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       paidDate: _paidDate,
       businessId: state.business?.id,
       clientId: state.client?.id,
+      signatureId: state.signature?.id,
       subtotal: _moneyFromCents(subtotalCents).toDouble(),
       discountRate: discountRate,
       discountAmount: discountAmount.toDouble(),
@@ -453,22 +481,21 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final businesses =
         ref
             .read(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const <Business>[];
     final business = businesses.firstWhere(
       (business) => business.id == businessId,
       orElse: () => Business(name: ''),
     );
-    ref.read(invoiceFormProvider.notifier).setBusiness(business);
+    await ref.read(invoiceFormProvider.notifier).setBusiness(business);
+    await _suggestInvoiceNumberForBusiness(businessId);
   }
 
   Future<void> _onSelectClient(int? clientId) async {
     if (_isReadOnly) return;
     if (clientId == null) return;
     final clients =
-        ref
-            .read(clientListProvider(const ClientQuery(isActive: true)))
-            .valueOrNull ??
+        ref.read(clientListProvider(const ClientQuery(isActive: true))).value ??
         const <Client>[];
     final client = clients.firstWhere(
       (client) => client.id == clientId,
@@ -480,9 +507,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   void _onSelectTerms(List<dynamic> terms) {
     if (_isReadOnly) return;
     final activeTerms =
-        ref
-            .read(termListProvider(const TermQuery(isActive: true)))
-            .valueOrNull ??
+        ref.read(termListProvider(const TermQuery(isActive: true))).value ??
         const <Term>[];
     final selectedTerms = activeTerms
         .where((term) => terms.contains(term.id))
@@ -493,13 +518,33 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   void _onSelectTaxes(List<dynamic> taxes) {
     if (_isReadOnly) return;
     final activeTaxes =
-        ref.read(taxListProvider(const TaxQuery(isActive: true))).valueOrNull ??
+        ref.read(taxListProvider(const TaxQuery(isActive: true))).value ??
         const <Tax>[];
     final selectedTaxes = activeTaxes
         .where((tax) => taxes.contains(tax.id))
         .toList();
     ref.read(invoiceFormProvider.notifier).setTaxes(selectedTaxes);
     _refreshPricingCalculations();
+  }
+
+  void _onSelectSignature(int? signatureId) {
+    if (_isReadOnly) return;
+    if (signatureId == null) return;
+    final signatures =
+        ref
+            .read(signatureListProvider(const SignatureQuery(isActive: true)))
+            .value ??
+        const <Signature>[];
+    final signature = signatures.firstWhere(
+      (signature) => signature.id == signatureId,
+      orElse: () => Signature(name: ''),
+    );
+    ref.read(invoiceFormProvider.notifier).setSignature(signature);
+  }
+
+  void _onClearSignature() {
+    if (_isReadOnly) return;
+    ref.read(invoiceFormProvider.notifier).clearSignature();
   }
 
   void _showAddItemDialog({Item? existingItem}) {
@@ -604,6 +649,13 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                                       null) {
                                     return 'Invalid number';
                                   }
+                                  if (Money.tryParseDecimalString(
+                                        value,
+                                        currencyCode: _selectedCurrency,
+                                      )!.minorUnits <
+                                      0) {
+                                    return 'Must be 0 or more';
+                                  }
                                   return null;
                                 },
                               ),
@@ -620,6 +672,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                                   }
                                   if (int.tryParse(value) == null) {
                                     return 'Invalid number';
+                                  }
+                                  if (int.parse(value) <= 0) {
+                                    return 'Must be greater than 0';
                                   }
                                   return null;
                                 },
@@ -790,17 +845,22 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const <Business>[];
     final clients =
         ref
             .watch(clientListProvider(const ClientQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const <Client>[];
     final termState = ref.watch(
       termListProvider(const TermQuery(isActive: true)),
     );
     final taxState = ref.watch(taxListProvider(const TaxQuery(isActive: true)));
+    final signatures =
+        ref
+            .watch(signatureListProvider(const SignatureQuery(isActive: true)))
+            .value ??
+        const <Signature>[];
 
     return Expanded(
       child: ListView(
@@ -825,16 +885,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   children: [
                     Expanded(
                       child: MyTextField(
-                        isRequired: true,
                         isReadOnly: _isReadOnly,
                         controller: _invoicePrefixController,
                         label: 'Invoice Prefix',
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter invoice prefix';
-                          }
-                          return null;
-                        },
+                        onChanged: _onInvoiceNumberChanged,
                       ),
                     ),
                     Expanded(
@@ -843,8 +897,9 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                         isReadOnly: _isReadOnly,
                         controller: _invoiceNumberController,
                         label: 'Invoice Number',
+                        onChanged: _onInvoiceNumberChanged,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
+                          if (value == null || value.trim().isEmpty) {
                             return 'Please enter invoice number';
                           }
                           return null;
@@ -1062,6 +1117,35 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                 ),
                 const SizedBox(height: 16),
                 FormSectionHeader(
+                  title: 'Signature',
+                  subtitle: 'Attach an optional signature to this invoice',
+                  icon: Icons.draw,
+                  isReadOnly: _isReadOnly,
+                ),
+                MySelectorField<int?>(
+                  icon: Icons.draw,
+                  label: 'Signature',
+                  isReadOnly: _isReadOnly,
+                  selectedValue: state.signature?.id,
+                  value: state.signature?.name,
+                  hintText: state.signature?.name ?? 'No signature selected',
+                  onSelected: (value) => _onSelectSignature(value),
+                  onClear: _onClearSignature,
+                  selectItems: signatures
+                      .map(
+                        (signature) => SelectItem<int?>(
+                          label: [
+                            signature.name,
+                            if ((signature.title ?? '').trim().isNotEmpty)
+                              signature.title!,
+                          ].join(' · '),
+                          value: signature.id,
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                FormSectionHeader(
                   title: 'Taxes',
                   subtitle: 'Select applicable taxes',
                   icon: Icons.receipt_long,
@@ -1077,7 +1161,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Tax',
                   selectedValues: state.taxes?.map((tax) => tax.id).toList(),
                   onMultiSelected: (value) => _onSelectTaxes(value),
-                  multiSelectItems: (taxState.valueOrNull ?? const <Tax>[])
+                  multiSelectItems: (taxState.value ?? const <Tax>[])
                       .map(
                         (tax) => MultiSelectItem<int?>(
                           label: tax.name,
@@ -1142,6 +1226,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                     decimal: true,
                   ),
                   prefixIcon: Icons.payment,
+                  onChanged: (_) => _refreshPricingCalculations(),
                 ),
                 _buildPricingSummary(state),
                 const SizedBox(height: 16),
@@ -1161,7 +1246,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                       : 'Select Terms',
                   selectedValues: state.terms?.map((term) => term.id).toList(),
                   onMultiSelected: (value) => _onSelectTerms(value),
-                  multiSelectItems: (termState.valueOrNull ?? const <Term>[])
+                  multiSelectItems: (termState.value ?? const <Term>[])
                       .map(
                         (term) => MultiSelectItem<int?>(
                           label: term.name,

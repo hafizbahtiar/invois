@@ -156,7 +156,7 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     });
   }
 
-  void _onDeleteSignature(signature) async {
+  void _onDeleteSignature(signature_model.Signature signature) async {
     final state = ref.watch(signatureFormProvider);
     final result = await ref
         .read(signatureFormProvider.notifier)
@@ -323,7 +323,7 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     return Expanded(

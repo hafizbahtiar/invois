@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:invois/features/invoice/pdf/invoice_generator.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
+import 'package:invois/features/shared/widgets/my_snackbar.dart';
 
 import '../../providers/invoice_notifier.dart';
 
@@ -71,11 +72,10 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to print invoice: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        MySnackBar.show(
+          context,
+          message: 'Failed to print invoice: ${e.toString()}',
+          type: MySnackbarType.failed,
         );
       }
     }
@@ -94,11 +94,10 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share invoice: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        MySnackBar.show(
+          context,
+          message: 'Failed to share invoice: ${e.toString()}',
+          type: MySnackbarType.failed,
         );
       }
     }
@@ -117,20 +116,18 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved to $savedPath'),
-            backgroundColor: Colors.green,
-          ),
+        MySnackBar.show(
+          context,
+          message: 'Saved to $savedPath',
+          type: MySnackbarType.success,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save invoice: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        MySnackBar.show(
+          context,
+          message: 'Failed to save invoice: ${e.toString()}',
+          type: MySnackbarType.failed,
         );
       }
     }
@@ -254,10 +251,10 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, -2),
@@ -346,7 +343,7 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
   }
 
   bool _canShowPreview() {
-    final state = ref.watch(invoiceFormProvider);
+    final state = ref.read(invoiceFormProvider);
     return state.business != null && state.client != null;
   }
 
@@ -364,7 +361,7 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
             ),
             margin: const EdgeInsets.all(16),
@@ -384,13 +381,14 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
   }
 
   Widget _buildPageNavigationHeader() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -406,37 +404,27 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
               children: [
                 Text(
                   'Invoice Preview',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[800],
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Scroll to view all pages • Tap to zoom',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  'Scroll to view all pages',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
 
           // Quick actions
-          Row(
-            children: [
-              _buildQuickActionButton(
-                icon: Icons.zoom_in,
-                label: 'Zoom',
-                onPressed: () => _showZoomOptions(),
-              ),
-              const SizedBox(width: 8),
-              _buildQuickActionButton(
-                icon: Icons.fullscreen,
-                label: 'Fullscreen',
-                onPressed: () => _showFullscreenPreview(),
-              ),
-            ],
+          _buildQuickActionButton(
+            icon: Icons.fullscreen,
+            label: 'Fullscreen',
+            onPressed: () => _showFullscreenPreview(),
           ),
         ],
       ),
@@ -448,81 +436,28 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
     required String label,
     required VoidCallback onPressed,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.blueGrey[50],
+          color: scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blueGrey[200]!),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Colors.blueGrey[700]),
+            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.blueGrey[700],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showZoomOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Zoom Options', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildZoomButton('Fit Width', Icons.fit_screen),
-                _buildZoomButton('Fit Page', Icons.pages),
-                _buildZoomButton('100%', Icons.zoom_in),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildZoomButton(String label, IconData icon) {
-    return InkWell(
-      onTap: () => Navigator.pop(context),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.blueGrey[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blueGrey[200]!),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: Colors.blueGrey[700]),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.blueGrey[700],
+                color: scheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -541,8 +476,6 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
         builder: (context) => Scaffold(
           appBar: AppBar(
             title: Text('Invoice ${state.invoice?.invoiceNumber}'),
-            backgroundColor: Colors.blueGrey[800],
-            foregroundColor: Colors.white,
             actions: [
               IconButton(
                 icon: const Icon(Icons.print),

@@ -9,6 +9,7 @@ import 'package:invois/features/term/term.dart';
 
 import 'invoice_local_source.dart';
 import 'invoice_model.dart';
+import 'invoice_numbering.dart';
 import 'invoice_query.dart';
 
 /// DI: one local source bound to the app-wide [storeProvider].
@@ -53,6 +54,32 @@ class InvoiceRepository {
     return invoice;
   }
 
+  Future<Result<String>> nextInvoiceNumber(int businessId) async {
+    try {
+      return Ok(await _local.nextInvoiceNumber(businessId));
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
+  Future<Result<bool>> isInvoiceNumberAvailable({
+    required int businessId,
+    required String invoiceNumber,
+    int? excludingInvoiceId,
+  }) async {
+    try {
+      return Ok(
+        await _local.isInvoiceNumberAvailable(
+          businessId: businessId,
+          invoiceNumber: invoiceNumber,
+          excludingInvoiceId: excludingInvoiceId,
+        ),
+      );
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
   // ============================================================
   // Imperative — Result (S1)
   // ============================================================
@@ -72,6 +99,9 @@ class InvoiceRepository {
 
   Future<Result<Invoice>> create(Invoice invoice) async {
     try {
+      final validation = await _validateInvoiceNumber(invoice);
+      if (validation != null) return Err(validation);
+
       final now = DateTime.now();
       final r = await _local.insertInvoice(
         _withDualWrittenMoney(invoice).copyWith(createdAt: now, updatedAt: now),
@@ -87,6 +117,9 @@ class InvoiceRepository {
 
   Future<Result<Invoice>> update(Invoice invoice) async {
     try {
+      final validation = await _validateInvoiceNumber(invoice);
+      if (validation != null) return Err(validation);
+
       final r = await _local.updateInvoice(
         _withDualWrittenMoney(invoice).copyWith(updatedAt: DateTime.now()),
       );
@@ -158,5 +191,27 @@ class InvoiceRepository {
       costPriceCents: item.effectiveCostPriceCents,
       wholesalePriceCents: item.effectiveWholesalePriceCents,
     );
+  }
+
+  Future<AppFailure?> _validateInvoiceNumber(Invoice invoice) async {
+    final businessId = invoice.businessId;
+    if (businessId == null || businessId <= 0) return null;
+
+    final number = InvoiceNumbering.fullNumber(invoice);
+    if (number.trim().isEmpty) {
+      return const ValidationFailure('Invoice number is required.');
+    }
+
+    final isAvailable = await _local.isInvoiceNumberAvailable(
+      businessId: businessId,
+      invoiceNumber: number,
+      excludingInvoiceId: invoice.id,
+    );
+
+    return isAvailable
+        ? null
+        : const ValidationFailure(
+            'Invoice number already exists for this business.',
+          );
   }
 }

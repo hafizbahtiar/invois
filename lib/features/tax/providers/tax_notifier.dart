@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'tax_state.dart';
 import '../data/tax_model.dart';

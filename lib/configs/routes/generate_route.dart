@@ -3,8 +3,8 @@ import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_type.dart';
 import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
+import 'package:invois/features/invoice/presentation/pages/invoice_detail_page.dart';
 import 'package:invois/features/invoice/presentation/pages/invoice_form_page.dart';
-import 'package:invois/features/invoice/presentation/pages/invoice_list_page.dart';
 import 'package:invois/features/invoice/presentation/pages/invoice_preview_page.dart';
 import 'package:invois/features/signature/signature.dart';
 
@@ -225,12 +225,6 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     // MARK: - Invoice
     // ============================================
 
-    case RoutesName.invoiceList:
-      return MaterialPageRoute(
-        builder: (_) => const InvoiceListPage(),
-        settings: const RouteSettings(name: RoutesName.invoiceList),
-      );
-
     case RoutesName.invoiceForm:
       final type = argsParser.getString('type');
       final invoiceId = argsParser.getInt('invoiceId');
@@ -243,6 +237,14 @@ Route<dynamic> generateRoute(RouteSettings settings) {
           invoiceId: invoiceId,
         ),
         settings: const RouteSettings(name: RoutesName.invoiceForm),
+      );
+
+    case RoutesName.invoiceDetail:
+      final invoiceId = argsParser.getInt('invoiceId');
+
+      return MaterialPageRoute(
+        builder: (_) => InvoiceDetailPage(invoiceId: invoiceId!),
+        settings: const RouteSettings(name: RoutesName.invoiceDetail),
       );
 
     case RoutesName.invoicePreview:

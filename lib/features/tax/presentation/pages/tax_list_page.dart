@@ -144,7 +144,7 @@ class _TaxListPageState extends ConsumerState<TaxListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Tax>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

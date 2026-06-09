@@ -34,6 +34,9 @@ class SignatureRepository {
 
   Future<Signature?> getSignatureById(int id) => _local.getSignatureById(id);
 
+  Future<Signature?> getDefaultActiveSignatureByBusinessId(int? businessId) =>
+      _local.getDefaultActiveSignatureByBusinessId(businessId);
+
   Future<Result<Signature>> create(Signature signature) async {
     try {
       final r = await _local.insertSignature(signature);

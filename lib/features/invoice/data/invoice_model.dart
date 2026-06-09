@@ -28,6 +28,17 @@ extension InvoiceStatusExtension on InvoiceStatus {
         return 'Refunded';
     }
   }
+
+  /// Safely parse a stored status name. Null, empty, or unrecognised
+  /// (legacy/corrupt) values fall back to [InvoiceStatus.draft] instead of
+  /// throwing — `Enum.values.byName('')` would crash.
+  static InvoiceStatus fromName(String? name) {
+    if (name == null || name.isEmpty) return InvoiceStatus.draft;
+    for (final value in InvoiceStatus.values) {
+      if (value.name == name) return value;
+    }
+    return InvoiceStatus.draft;
+  }
 }
 
 /// Enum to define the payment status
@@ -45,6 +56,16 @@ extension PaymentStatusExtension on PaymentStatus {
       case PaymentStatus.refunded:
         return 'Refunded';
     }
+  }
+
+  /// Safely parse a stored payment-status name; unknown/null falls back to
+  /// [PaymentStatus.unpaid].
+  static PaymentStatus fromName(String? name) {
+    if (name == null || name.isEmpty) return PaymentStatus.unpaid;
+    for (final value in PaymentStatus.values) {
+      if (value.name == name) return value;
+    }
+    return PaymentStatus.unpaid;
   }
 }
 
@@ -65,6 +86,16 @@ extension InvoiceTypeExtension on InvoiceType {
       case InvoiceType.receipt:
         return 'Receipt';
     }
+  }
+
+  /// Safely parse a stored type name; unknown/null falls back to
+  /// [InvoiceType.invoice].
+  static InvoiceType fromName(String? name) {
+    if (name == null || name.isEmpty) return InvoiceType.invoice;
+    for (final value in InvoiceType.values) {
+      if (value.name == name) return value;
+    }
+    return InvoiceType.invoice;
   }
 }
 
@@ -125,6 +156,7 @@ class Invoice extends Equatable {
   // Relationships
   final int? businessId;
   final int? clientId;
+  final int? signatureId;
 
   // Pricing
   final double subtotal;
@@ -185,6 +217,7 @@ class Invoice extends Equatable {
     this.paidDate,
     this.businessId,
     this.clientId,
+    this.signatureId,
     this.subtotal = 0.0,
     this.discountRate = 0.0,
     this.discountAmount = 0.0,
@@ -224,6 +257,7 @@ class Invoice extends Equatable {
     paidDate,
     businessId,
     clientId,
+    signatureId,
     subtotal,
     discountRate,
     discountAmount,
@@ -262,6 +296,7 @@ class Invoice extends Equatable {
     DateTime? paidDate,
     int? businessId,
     int? clientId,
+    int? signatureId,
     double? subtotal,
     double? discountRate,
     double? discountAmount,
@@ -301,6 +336,7 @@ class Invoice extends Equatable {
       paidDate: paidDate ?? this.paidDate,
       businessId: businessId ?? this.businessId,
       clientId: clientId ?? this.clientId,
+      signatureId: signatureId ?? this.signatureId,
       subtotal: subtotal ?? this.subtotal,
       discountRate: discountRate ?? this.discountRate,
       discountAmount: discountAmount ?? this.discountAmount,
@@ -342,6 +378,7 @@ class Invoice extends Equatable {
       'paidDate': paidDate?.toIso8601String(),
       'businessId': businessId,
       'clientId': clientId,
+      'signatureId': signatureId,
       'subtotal': subtotal,
       'discountRate': discountRate,
       'discountAmount': discountAmount,
@@ -382,6 +419,9 @@ class Invoice extends Equatable {
       paidDate: SafeParse.dateTime(map['paidDate']),
       businessId: SafeParse.integer(map['businessId']),
       clientId: SafeParse.integer(map['clientId']),
+      signatureId: map.containsKey('signatureId') && map['signatureId'] != null
+          ? SafeParse.integer(map['signatureId'])
+          : null,
       subtotal: SafeParse.decimal(map['subtotal'], fallback: 0.0),
       discountRate: SafeParse.decimal(map['discountRate'], fallback: 0.0),
       discountAmount: SafeParse.decimal(map['discountAmount'], fallback: 0.0),
@@ -438,8 +478,9 @@ class Invoice extends Equatable {
 
   /// Check if invoice is overdue
   bool get isOverdue {
-    return InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.paid &&
-        InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.cancelled &&
+    final current = InvoiceStatusExtension.fromName(status);
+    return current != InvoiceStatus.paid &&
+        current != InvoiceStatus.cancelled &&
         dueDate.isBefore(DateTime.now());
   }
 
@@ -496,79 +537,42 @@ class Invoice extends Equatable {
   }
 
   /// Get invoice type display name
-  String get invoiceTypeDisplay {
-    switch (InvoiceType.values.byName(invoiceType ?? '')) {
-      case InvoiceType.invoice:
-        return 'Invoice';
-      case InvoiceType.estimate:
-        return 'Estimate';
-      case InvoiceType.creditNote:
-        return 'Credit Note';
-      case InvoiceType.debitNote:
-        return 'Debit Note';
-      case InvoiceType.receipt:
-        return 'Receipt';
-    }
-  }
+  String get invoiceTypeDisplay =>
+      InvoiceTypeExtension.fromName(invoiceType).displayName;
 
   /// Get status display name
-  String get statusDisplay {
-    switch (InvoiceStatus.values.byName(status ?? '')) {
-      case InvoiceStatus.draft:
-        return 'Draft';
-      case InvoiceStatus.sent:
-        return 'Sent';
-      case InvoiceStatus.viewed:
-        return 'Viewed';
-      case InvoiceStatus.paid:
-        return 'Paid';
-      case InvoiceStatus.overdue:
-        return 'Overdue';
-      case InvoiceStatus.cancelled:
-        return 'Cancelled';
-      case InvoiceStatus.refunded:
-        return 'Refunded';
-    }
-  }
+  String get statusDisplay =>
+      InvoiceStatusExtension.fromName(status).displayName;
 
   /// Get payment status display name
-  String get paymentStatusDisplay {
-    switch (PaymentStatus.values.byName(paymentStatus ?? '')) {
-      case PaymentStatus.unpaid:
-        return 'Unpaid';
-      case PaymentStatus.partiallyPaid:
-        return 'Partially Paid';
-      case PaymentStatus.paid:
-        return 'Paid';
-      case PaymentStatus.refunded:
-        return 'Refunded';
-    }
-  }
+  String get paymentStatusDisplay =>
+      PaymentStatusExtension.fromName(paymentStatus).displayName;
 
   /// Check if invoice can be edited
   bool get canEdit {
-    return InvoiceStatus.values.byName(status ?? '') == InvoiceStatus.draft;
+    return InvoiceStatusExtension.fromName(status) == InvoiceStatus.draft;
   }
 
   /// Check if invoice can be sent
   bool get canSend {
-    return InvoiceStatus.values.byName(status ?? '') == InvoiceStatus.draft &&
+    return InvoiceStatusExtension.fromName(status) == InvoiceStatus.draft &&
         items.isNotEmpty;
   }
 
   /// Check if invoice can be marked as paid
   bool get canMarkAsPaid {
-    return InvoiceStatus.values.byName(status ?? '') !=
-            InvoiceStatus.cancelled &&
-        InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.refunded &&
+    final current = InvoiceStatusExtension.fromName(status);
+    return current != InvoiceStatus.cancelled &&
+        current != InvoiceStatus.refunded &&
         !isFullyPaid;
   }
 
   /// Check if invoice can be cancelled
   bool get canCancel {
-    return InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.paid &&
-        InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.cancelled &&
-        InvoiceStatus.values.byName(status ?? '') != InvoiceStatus.refunded;
+    final current = InvoiceStatusExtension.fromName(status);
+    return current != InvoiceStatus.paid &&
+        current != InvoiceStatus.cancelled &&
+        current != InvoiceStatus.refunded;
   }
 
   /// Get payment percentage
