@@ -3,6 +3,7 @@ import 'package:invois/core/error/failure_mapper.dart';
 import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
+import 'package:invois/core/utils/string_utils.dart';
 
 import 'business_local_source.dart';
 import 'business_model.dart';
@@ -38,7 +39,7 @@ class BusinessRepository {
 
   Future<Result<Business>> create(Business business) async {
     try {
-      final r = await _local.insertBusiness(business);
+      final r = await _local.insertBusiness(_normalizeContact(business));
       final data = r.data;
       return (r.success && data != null)
           ? Ok(data)
@@ -50,7 +51,7 @@ class BusinessRepository {
 
   Future<Result<Business>> update(Business business) async {
     try {
-      final r = await _local.updateBusiness(business);
+      final r = await _local.updateBusiness(_normalizeContact(business));
       final data = r.data;
       return (r.success && data != null)
           ? Ok(data)
@@ -58,6 +59,21 @@ class BusinessRepository {
     } catch (e) {
       return Err(mapException(e));
     }
+  }
+
+  /// Trim contact fields and store blanks as null, so callers that bypass the
+  /// form can't persist empty/whitespace email/phone. (Contact fields are no
+  /// longer unique — Step 3C.)
+  Business _normalizeContact(Business business) {
+    final email = StringUtils.nullIfBlank(business.email);
+    final phone = StringUtils.nullIfBlank(business.phone);
+    if (email == business.email && phone == business.phone) return business;
+    return business.copyWith(
+      email: email,
+      phone: phone,
+      clearEmail: email == null,
+      clearPhone: phone == null,
+    );
   }
 
   Future<Result<void>> delete(int id) async {

@@ -11,10 +11,9 @@ class Business {
 
   final String? description;
 
-  @Unique()
+  // Contact fields, not identity fields: intentionally NOT unique (Step 3C).
   final String? phone;
 
-  @Unique()
   final String? email;
 
   final String? website;
@@ -71,13 +70,15 @@ class Business {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool clearPhone = false,
+    bool clearEmail = false,
   }) {
     return Business(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
+      phone: clearPhone ? null : (phone ?? this.phone),
+      email: clearEmail ? null : (email ?? this.email),
       website: website ?? this.website,
       streetAddress1: streetAddress1 ?? this.streetAddress1,
       streetAddress2: streetAddress2 ?? this.streetAddress2,

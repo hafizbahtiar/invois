@@ -12,7 +12,7 @@ class Client extends Equatable {
   final String name;
   final String? description;
 
-  @Unique()
+  // Contact field, not an identity field: intentionally NOT unique (Step 3C).
   final String? email;
 
   final String? phone;
@@ -102,13 +102,15 @@ class Client extends Equatable {
     int? businessId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool clearEmail = false,
+    bool clearPhone = false,
   }) {
     return Client(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
-      email: email ?? this.email,
-      phone: phone ?? this.phone,
+      email: clearEmail ? null : (email ?? this.email),
+      phone: clearPhone ? null : (phone ?? this.phone),
       company: company ?? this.company,
       website: website ?? this.website,
       streetAddress1: streetAddress1 ?? this.streetAddress1,

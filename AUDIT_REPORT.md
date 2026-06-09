@@ -258,6 +258,54 @@ Scope: **Signature only.** Business and Client uniqueness, invoice quantity/sche
 
 ---
 
+## Stage 3C — Completed (2026-06-09) — remove Business & Client global contact uniqueness (P1-004)
+
+Scope: **Business.email, Business.phone, Client.email** (uniqueness) + defensive contact normalisation. Signature untouched (already done in 3B); invoice quantity/schema, @Backlink/orphan, invoice/payment/PDF flows — all untouched.
+
+**Decision applied:** email/phone are contact fields, not identity → DB-level global `@Unique` removed on Business.email, Business.phone, Client.email. No per-business DB constraint added; no new app-level duplicate-blocking (none existed — confirmed no `getByEmail`/`isEmailAvailable`/uniqueness checks anywhere). `Business.name` **remains `@Unique`** (genuine identity field) — deliberately kept. Existing form validation unchanged.
+
+**Schema change made (via generator, not hand-edited)**
+- `business_model.dart`: removed `@Unique()` from `phone` and `email` (kept it on `name`).
+- `client_model.dart`: removed `@Unique()` from `email`.
+- Regenerated with `dart run build_runner build`. Verified flags: `Business.email`/`phone` `2080 → 0`; `Client.email` `2080 → 0`; `Business.name` stays `2080`; `Signature.*` stay `0` (from 3B).
+- Generated diff small/surgical: `objectbox-model.json` (unique flags removed, index UIDs retired) + `objectbox.g.dart` (flag/reader changes).
+
+**Why it's safe / non-destructive**
+- Dropping a unique index is not a data migration: rows untouched; ObjectBox stops maintaining the index and retires the index UIDs (not reused).
+- No field added/removed/retyped; no entity renamed; `Business.name` uniqueness preserved.
+- Generated files came from the generator.
+
+**Defensive normalisation (repository layer)**
+- `BusinessRepository` and `ClientRepository` `create`/`update` now run email/phone through `StringUtils.nullIfBlank` via a private `_normalizeContact`.
+- To set null through the hand-written `copyWith` (which uses `?? this`), added `clearEmail`/`clearPhone` optional flags to `Business.copyWith` and `Client.copyWith` — matching the codebase's existing `clear*` idiom (e.g. `clearSignature`). No field-list duplication, so no risk of dropping fields.
+
+**Files changed**
+- `lib/features/business/data/business_model.dart` — removed `@Unique` (email/phone); `clearEmail`/`clearPhone` in copyWith.
+- `lib/features/client/data/client_model.dart` — removed `@Unique` (email); `clearEmail`/`clearPhone` in copyWith.
+- `lib/features/business/data/business_repository.dart` — `_normalizeContact` + `StringUtils` import, applied in create/update.
+- `lib/features/client/data/client_repository.dart` — same.
+- `lib/core/database/objectbox-model.json`, `lib/core/database/objectbox.g.dart` — regenerated.
+- `test/features/business/business_unique_objectbox_test.dart` — **new** (objectbox-tagged).
+- `test/features/client/client_unique_objectbox_test.dart` — **new** (objectbox-tagged).
+
+**Tests added/updated**
+- ObjectBox-tagged Business: same email allowed; same phone allowed; **name stays unique** (guards scope); blank → null; whitespace trimmed.
+- ObjectBox-tagged Client: same email allowed; same email across businesses allowed; blank → null; whitespace trimmed.
+- No new pure tests — normalisation reuses `StringUtils.nullIfBlank` (already unit-tested in 3B).
+
+**Test result**
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **105 passed, 4 skipped** (the 4 skips are the objectbox-tagged suites: signature, invoice-repo, business, client).
+- ⚠️ ObjectBox-tagged tests **could not run here** (`libobjectbox.dylib` unavailable). They compile (verified by analyze). **Run on a machine with the native lib: `flutter test --tags objectbox --run-skipped`** — also confirms the regenerated model opens cleanly against existing data.
+
+**Is P1-004 fully closed?** Yes — Signature (3B) + Business + Client (3C) contact uniqueness removed and normalised; characterised by tagged tests (pending native-lib run). No global contact-uniqueness defect remains. `Business.name` uniqueness intentionally retained.
+
+**Remaining risks after 3C**
+- ObjectBox-tagged tests + regenerated-model-open unverified in this environment (need native lib).
+- All P1-003 (quantity/schema), P2-001/002 (orphans/@Backlink), and P2/P3 items remain untouched.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
