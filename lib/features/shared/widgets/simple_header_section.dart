@@ -66,8 +66,7 @@ class SimpleHeaderSection extends StatelessWidget {
 
     Widget header = Container(
       margin: margin ?? const EdgeInsets.only(top: 10, bottom: 1),
-      padding:
-          padding ?? const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+      padding: padding ?? const EdgeInsets.all(10),
       height: height,
       decoration: BoxDecoration(
         color: effectiveBackgroundColor,
@@ -224,7 +223,7 @@ class SimpleHeaderSection extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: effectiveAccentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 20, color: effectiveAccentColor),
           ),

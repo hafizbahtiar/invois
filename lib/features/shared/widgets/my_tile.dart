@@ -77,12 +77,12 @@ class MyTile extends StatelessWidget {
         leadingWidget = leading!;
       } else {
         leadingWidget = Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: effectiveColor.withAlpha(25),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: effectiveColor, size: 22),
+          child: Icon(icon, color: effectiveColor, size: 20),
         );
       }
 
@@ -130,7 +130,7 @@ class MyTile extends StatelessWidget {
           child: Opacity(
             opacity: isReadOnly ? 0.7 : 1.0,
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(10),
               child: Row(
                 children: [
                   if (isSelectable) ...[
@@ -145,7 +145,7 @@ class MyTile extends StatelessWidget {
                   ],
                   if (!isSelectable) ...[
                     buildLeading(),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                   ],
                   Expanded(
                     child: Column(

@@ -39,7 +39,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(36),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -71,7 +71,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     },
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
 
                   // Reset Section
                   SimpleHeaderSection(
@@ -135,26 +135,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         return '${info.code} - ${info.name} (${info.symbol})';
                       }
 
-                      final selected =
-                          await AppDynamicBottomSheet.show<String>(
-                            context: context,
-                            title: 'Select Currency',
-                            items: codes,
-                            selectedValue: state.currencyCode,
-                            searchable: true,
-                            searchText: labelFor,
-                            searchHint: 'Search currency',
-                            itemBuilder: (context, code, selected) => Text(
-                              labelFor(code),
-                              style: TextStyle(
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                            onItemSelected: (code) =>
-                                Navigator.pop(context, code),
-                          );
+                      final selected = await AppDynamicBottomSheet.show<String>(
+                        context: context,
+                        title: 'Select Currency',
+                        items: codes,
+                        selectedValue: state.currencyCode,
+                        searchable: true,
+                        searchText: labelFor,
+                        searchHint: 'Search currency',
+                        itemBuilder: (context, code, selected) => Text(
+                          labelFor(code),
+                          style: TextStyle(
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        onItemSelected: (code) => Navigator.pop(context, code),
+                      );
                       if (selected != null && selected != state.currencyCode) {
                         notifier.updateCurrency(selected);
                       }
@@ -163,7 +161,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
                   // Maintenance — debug builds only (not customer-facing).
                   if (kDebugMode) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
                     SimpleHeaderSection(
                       title: 'Maintenance',
                       variant: SimpleHeaderVariant.iconic,
