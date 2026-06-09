@@ -444,6 +444,25 @@ Audit + tests only — **no write/totals/form/PDF-totals/schema changes.** (Full
 
 ---
 
+## Stage 4C-4B — Completed (2026-06-09) — dual-write Invoice.lines on save
+
+First write-path change. On create/update the app **continues writing legacy `Invoice.items` exactly as before** and now **also writes/replaces `Invoice.lines`** from the same submitted items. **Totals, the stored snapshot, form UI, and PDF totals are unchanged.**
+
+- **Builder:** `InvoiceLineBuilder.fromItems` (pure) — mirrors the 4B backfill mapping (`quantityMilli` via `InvoiceLineMath`, effective `unitPriceCents`, tax→basis points, order, `sourceItemId` when persisted).
+- **Local source:** `replaceInvoiceLines(invoiceId, lines)` — deletes existing owned `InvoiceLine` rows (no orphans) then writes the fresh set with `invoice.target`. Idempotent.
+- **Repository:** `replaceInvoiceLines` passthrough.
+- **Notifier `onUpsert`:** after the legacy items loop, dual-writes lines via `replaceInvoiceLines(InvoiceLineBuilder.fromItems(state.items))` (built post-loop so `sourceItemId` reflects assigned ids).
+- **Effect:** new/edited invoices carry `Invoice.lines`; detail + PDF (already on the reader since 4C-2/4C-3) consume them — identical output for whole-quantity invoices. Legacy `items` retained; no `Item` rows deleted.
+- **Transaction note:** lines persist as one more sequential step alongside items/taxes/terms (existing non-transactional save pattern); `replaceInvoiceLines` batches via `removeMany`/`putMany`. Single-transaction save is future hardening.
+- **Files:** `invoice_line_builder.dart` (new); `invoice_local_source.dart`, `invoice_repository.dart`, `invoice_notifier.dart`; tests `invoice_line_builder_test.dart` (pure) + `invoice_line_dualwrite_objectbox_test.dart` (tagged); docs.
+- **Tests:** pure builder mapping/order/quantity/parity; tagged create-writes-both / edit-replaces (no dup/orphan) / empty-clears-lines-keeps-items / idempotent / stored-subtotal-unchanged.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 147 passed, 9 skipped (+4 pure; +1 tagged).
+- ⚠️ **ObjectBox-tagged tests still unrun here** (`libobjectbox.dylib`). Run `flutter test --tags objectbox --run-skipped` on a native-lib machine to validate the write/replace behaviour against a real store before relying on lines.
+- **Not done (as scoped):** totals/composer source of truth, form UI/decimal input, PDF totals untouched; no schema/generated changes; no orphan cleanup; `Invoice.items`/`Item`/`Item.invoiceId` retained.
+- **Next:** Stage 4C-4C — switch totals/composer to derive from `InvoiceLineReader` (guard qty ≤ 0), keeping the stored snapshot.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

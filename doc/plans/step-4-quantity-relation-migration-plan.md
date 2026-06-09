@@ -260,3 +260,14 @@ Matches the plan, with these concrete choices:
 
 ### Files likely to change next (4C-4B)
 `invoice_notifier.dart` (persist lines in `onUpsert`), `invoice_local_source.dart` (add line clear/add helpers), `invoice_repository.dart` (line write passthrough), tests (objectbox-tagged write/replace + parity). No schema/generated/PDF/form-UI changes in 4C-4B.
+
+## Step 4C-4B — Implementation Notes (dual-write lines on save)
+
+- **Builder:** `InvoiceLineBuilder.fromItems(items)` (`lib/features/invoice/invoice_line_builder.dart`) — pure, mirrors the 4B backfill mapping (qty via `InvoiceLineMath`, `unitPriceCents` effective, tax→bp, order, `sourceItemId` when item is persisted).
+- **Local source:** `replaceInvoiceLines(invoiceId, lines)` — deletes existing owned `InvoiceLine` rows (no orphans) then `putMany` the fresh set with `invoice.target` set. Idempotent.
+- **Repository:** `replaceInvoiceLines` passthrough.
+- **Notifier `onUpsert`:** after the legacy items loop, calls `replaceInvoiceLines(savedInvoice.id!, InvoiceLineBuilder.fromItems(state.items))` (built after the loop so `sourceItemId` reflects assigned ids). Totals/stored snapshot/taxes/terms unchanged.
+- **Effect:** new/edited invoices now also carry `Invoice.lines`; detail + PDF (already on the reader, 4C-2/4C-3) consume them — identical output for whole-quantity invoices (parity). Legacy `items` retained.
+- **Transaction note:** lines are written as one more sequential step alongside items/taxes/terms (the existing non-transactional save pattern). `replaceInvoiceLines` itself batches via `removeMany`/`putMany`. A single all-in-one transaction is a future hardening, not changed here.
+- **Tests:** pure `invoice_line_builder_test.dart`; objectbox-tagged `invoice_line_dualwrite_objectbox_test.dart` (create writes both; edit replaces—no dup/orphan; empty clears lines but keeps legacy items; idempotent; stored subtotal unchanged).
+- **Next:** 4C-4C — switch totals/composer to derive from `InvoiceLineReader` (guard qty ≤ 0), keeping the stored snapshot; then 4C-4D form decimal input.

@@ -7,6 +7,8 @@ import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
+import 'invoice_line_model.dart';
+
 import 'invoice_local_source.dart';
 import 'invoice_model.dart';
 import 'invoice_numbering.dart';
@@ -186,6 +188,12 @@ class InvoiceRepository {
       _local.addItemToInvoice(invoiceId, _withDualWrittenItem(item));
   Future<void> clearItemsFromInvoice(int invoiceId) =>
       _local.clearItemsFromInvoice(invoiceId);
+
+  // ---- Invoice lines (S4 dual-write) ----
+  /// Replace the invoice's [InvoiceLine] snapshots (Step 4C-4B). Legacy
+  /// `items` are unchanged.
+  Future<void> replaceInvoiceLines(int invoiceId, List<InvoiceLine> lines) =>
+      _local.replaceInvoiceLines(invoiceId, lines);
 
   // ---- Taxes ----
   Future<void> addTaxToInvoice(int invoiceId, Tax tax) =>

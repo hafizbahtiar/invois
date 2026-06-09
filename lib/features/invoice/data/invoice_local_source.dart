@@ -1,6 +1,7 @@
 import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
+import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/invoice_payment.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
@@ -488,6 +489,35 @@ class InvoiceLocalSource {
     if (invoice == null) return;
     invoice.clearItems();
     _invoiceBox.put(invoice);
+  }
+
+  // ================================
+  //    MARK: Invoice lines (S4 dual-write)
+  // ================================
+
+  /// Replace the invoice's [InvoiceLine] snapshots with [lines] (Step 4C-4B).
+  ///
+  /// Deletes the existing owned line rows (no orphans) and writes the fresh set
+  /// with their `invoice` relation set. Idempotent: re-running with the same
+  /// input yields the same rows/count/order. Legacy `Invoice.items` are left
+  /// untouched.
+  Future<void> replaceInvoiceLines(
+    int invoiceId,
+    List<InvoiceLine> lines,
+  ) async {
+    final invoice = _invoiceBox.get(invoiceId);
+    if (invoice == null) return;
+
+    final lineBox = _store.box<InvoiceLine>();
+    final existing = invoice.lines.toList();
+    if (existing.isNotEmpty) {
+      lineBox.removeMany([for (final l in existing) l.id!]);
+    }
+    if (lines.isEmpty) return;
+    for (final line in lines) {
+      line.invoice.target = invoice;
+    }
+    lineBox.putMany(lines);
   }
 
   // Expose invoice box for repository advanced queries

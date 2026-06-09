@@ -15,6 +15,7 @@ import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
 import '../invoice_composer.dart';
+import '../invoice_line_builder.dart';
 import 'invoice_state.dart';
 import '../data/invoice_model.dart';
 import '../data/invoice_numbering.dart';
@@ -295,6 +296,14 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
         await _repository.addItemToInvoice(savedInvoice.id!, item);
       }
     }
+
+    // Step 4C-4B: dual-write Invoice.lines mirroring the just-saved items
+    // (built after the items loop so sourceItemId reflects assigned ids).
+    // Replaces any prior lines; totals/stored snapshot are unchanged.
+    await _repository.replaceInvoiceLines(
+      savedInvoice.id!,
+      InvoiceLineBuilder.fromItems(state.items ?? const []),
+    );
 
     // Save taxes — always clear first so removals persist.
     await _repository.clearTaxesFromInvoice(savedInvoice.id!);
