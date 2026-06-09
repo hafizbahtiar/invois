@@ -282,3 +282,11 @@ Matches the plan, with these concrete choices:
 - **Parity:** for valid whole-quantity invoices, override-subtotal == legacy composer subtotal, so all downstream totals are byte-identical (tested).
 - **Tests:** `invoice_subtotal_source_test.dart` (subtotal source + override-vs-lines parity + decimal flow); existing `invoice_composer_test` still passes via the `lines` path.
 - **Next:** 4C-4D — form decimal-quantity input (writes fractional lines; subtotal already line-based).
+
+## Step 4C-4D-1 — Implementation Notes (decimal quantity parser/formatter)
+
+- Added `InvoiceQuantityInput` + `QuantityParseResult` (`lib/features/invoice/invoice_quantity_input.dart`) — pure, non-throwing.
+- **Parse rules:** dot decimal only (comma rejected); ≤ 3 decimal places (more rejected, not rounded); min 0.001 (`quantityMilli ≥ 1`), no max; trim whitespace; leading/trailing zeros OK; leading-dot `.5` allowed; reject empty/zero/`0.000`/negative/non-numeric/`.`/`..`/`1.`. Returns `QuantityParseResult.success(quantityMilli)` or `.failure(message)` with specific messages.
+- **Format:** delegates to `InvoiceLineMath.formatQuantity` (no duplication): `1000→"1"`, `1500→"1.5"`, `1→"0.001"`.
+- **No UI/state/write/totals/PDF/schema changes** — helper only.
+- Next: 4C-4D-2 — wire the parser/formatter into the form's item quantity field + form state (still behind the existing dual-write; quantity becomes decimal end to end).

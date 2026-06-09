@@ -503,6 +503,19 @@ State of the 4B→4C line migration before the first user-visible change (decima
 
 ---
 
+## Stage 4C-4D-1 — Completed (2026-06-09) — decimal quantity parser/formatter
+
+Pure helper only — **no UI/state/write/totals/PDF/schema changes.**
+
+- **Added:** `InvoiceQuantityInput` + `QuantityParseResult` (`lib/features/invoice/invoice_quantity_input.dart`), non-throwing.
+- **Parse rules:** dot decimal only (**comma rejected**), ≤ 3 decimals (more **rejected**, not rounded), min `0.001` (no max), trim whitespace, leading/trailing zeros OK, leading-dot `.5` allowed; **rejected:** empty, `0`, `0.000`, negative, non-numeric, `.`, `..`, `1.`. Returns `success(quantityMilli)` / `failure(message)` with specific messages.
+- **Format:** delegates to `InvoiceLineMath.formatQuantity` (`1000→"1"`, `1500→"1.5"`, `1→"0.001"`) — no duplicated logic.
+- **Files:** new `invoice_quantity_input.dart`; new `invoice_quantity_input_test.dart` (valid/invalid/messages/format/round-trip); docs.
+- **Verification:** `flutter analyze` → No issues found; `flutter test` → 183 passed, 9 skipped (+30).
+- **Next:** Stage 4C-4D-2 — wire the parser/formatter into the form's item quantity field + form state (decimal end to end), keeping the existing dual-write.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
