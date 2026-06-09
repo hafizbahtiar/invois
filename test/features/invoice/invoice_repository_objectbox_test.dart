@@ -8,6 +8,7 @@ import 'package:invois/features/invoice/data/invoice_local_source.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/data/invoice_query.dart';
 import 'package:invois/features/invoice/data/invoice_repository.dart';
+import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/signature/data/signature_local_source.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
@@ -121,6 +122,69 @@ void main() {
       final fetched = await repo.getCompleteInvoice(saved.id!);
 
       expect(fetched?.signatureId, isNull);
+    });
+  });
+
+  group('InvoiceRepository payment lifecycle (P1-002)', () {
+    test('markAsSent sets status=sent and a sentDate', () async {
+      final saved = (await repo.create(draft('INV-SENT')) as Ok<Invoice>).value;
+
+      final result = await repo.markAsSent(saved.id!);
+      expect(result, isA<Ok<void>>());
+
+      final fetched = await repo.getCompleteInvoice(saved.id!);
+      expect(fetched?.status, InvoiceStatus.sent.name);
+      expect(fetched?.sentDate, isNotNull);
+      // Payment state must be untouched by "mark as sent".
+      expect(fetched?.effectivePaidAmountCents, 0);
+    });
+
+    test('markAsPaid reconciles paid/balance/paymentStatus and status', () async {
+      // total = 10000 cents from the draft() helper.
+      final saved = (await repo.create(draft('INV-PAID')) as Ok<Invoice>).value;
+
+      final result = await repo.markAsPaid(saved.id!);
+      expect(result, isA<Ok<void>>());
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.status, InvoiceStatus.paid.name);
+      expect(fetched.paymentStatus, PaymentStatus.paid.name);
+      expect(fetched.effectivePaidAmountCents, 10000);
+      expect(fetched.effectiveBalanceDueCents, 0);
+      expect(fetched.isFullyPaid, isTrue);
+      // Legacy double dual-write stays consistent with the cents spine.
+      expect(fetched.paidAmount, 100.0);
+      expect(fetched.balanceDue, 0.0);
+      expect(fetched.paidDate, isNotNull);
+    });
+
+    test('markAsPaid with a partial amount -> partiallyPaid', () async {
+      final saved =
+          (await repo.create(draft('INV-PARTIAL')) as Ok<Invoice>).value;
+
+      await repo.markAsPaid(saved.id!, paidAmount: 40); // RM40 of RM100
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.paymentStatus, PaymentStatus.partiallyPaid.name);
+      expect(fetched.effectivePaidAmountCents, 4000);
+      expect(fetched.effectiveBalanceDueCents, 6000);
+      expect(fetched.isFullyPaid, isFalse);
+    });
+
+    test('markAsPaid preserves line items (no relation loss on update)', () async {
+      final saved =
+          (await repo.create(draft('INV-ITEMS')) as Ok<Invoice>).value;
+      await repo.addItemToInvoice(
+        saved.id!,
+        Item(name: 'Widget', unitPrice: 100, unitPriceCents: 10000),
+      );
+
+      await repo.markAsPaid(saved.id!);
+
+      final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+      expect(fetched.items.length, 1);
+      expect(fetched.items.first.name, 'Widget');
+      expect(fetched.status, InvoiceStatus.paid.name);
     });
   });
 

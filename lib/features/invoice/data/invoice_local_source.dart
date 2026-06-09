@@ -1,6 +1,7 @@
 import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
+import 'package:invois/features/invoice/invoice_payment.dart';
 import 'package:invois/features/item/item_model.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
@@ -321,29 +322,26 @@ class InvoiceLocalSource {
     );
   }
 
-  // Mark invoice as paid
+  // Mark invoice as paid (full by default; pass [paidAmount] for a partial
+  // payment). Reconciles paid/balance/paymentStatus via the pure
+  // [InvoicePayment] so the cents spine and legacy doubles stay consistent.
   Future<bool> markAsPaid(int id, {double? paidAmount}) async {
     final invoice = _invoiceBox.get(id);
     if (invoice == null) return false;
 
-    final newPaidAmountCents = paidAmount == null
-        ? invoice.effectiveTotalCents
-        : (paidAmount * 100).round();
-    final newBalanceDueCents = invoice.effectiveTotalCents - newPaidAmountCents;
-    final newPaidAmount = newPaidAmountCents / 100;
-    final newBalanceDue = newBalanceDueCents / 100;
-    final newPaymentStatus = newBalanceDueCents <= 0
-        ? PaymentStatus.paid
-        : PaymentStatus.partiallyPaid;
+    final outcome = InvoicePayment.pay(
+      totalCents: invoice.effectiveTotalCents,
+      paidAmountCents: paidAmount == null ? null : (paidAmount * 100).round(),
+    );
 
     return updateInvoiceFields(
       id,
       status: InvoiceStatus.paid.name,
-      paymentStatus: newPaymentStatus.name,
-      paidAmount: newPaidAmount,
-      balanceDue: newBalanceDue,
-      paidAmountCents: newPaidAmountCents,
-      balanceDueCents: newBalanceDueCents,
+      paymentStatus: outcome.paymentStatus.name,
+      paidAmount: outcome.paidAmountCents / 100,
+      balanceDue: outcome.balanceDueCents / 100,
+      paidAmountCents: outcome.paidAmountCents,
+      balanceDueCents: outcome.balanceDueCents,
       paidDate: DateTime.now(),
     );
   }

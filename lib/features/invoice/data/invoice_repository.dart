@@ -143,6 +143,31 @@ class InvoiceRepository {
     }
   }
 
+  /// Mark the invoice as sent (status + sentDate). Does not touch payment fields.
+  Future<Result<void>> markAsSent(int id) async {
+    try {
+      final ok = await _local.markAsSent(id);
+      return ok
+          ? const Ok(null)
+          : const Err(DatabaseFailure('Failed to mark invoice as sent'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
+  /// Mark the invoice as paid. Full payment by default; pass [paidAmount] for a
+  /// partial payment. Reconciles paid/balance/paymentStatus together.
+  Future<Result<void>> markAsPaid(int id, {double? paidAmount}) async {
+    try {
+      final ok = await _local.markAsPaid(id, paidAmount: paidAmount);
+      return ok
+          ? const Ok(null)
+          : const Err(DatabaseFailure('Failed to mark invoice as paid'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
   // ---- Items ----
   Future<void> addItemToInvoice(int invoiceId, Item item) =>
       _local.addItemToInvoice(invoiceId, _withDualWrittenItem(item));

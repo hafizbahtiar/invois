@@ -54,6 +54,51 @@ Low-risk, no-schema fixes. No ObjectBox schema or generated files touched; no de
 
 ---
 
+## Stage 2 — Completed (2026-06-09) — P1-002 Sent/Paid lifecycle
+
+Wired the previously-dead `markAsSent`/`markAsPaid` through repository → notifier → UI, and made the status path reconcile payment fields. No ObjectBox schema or generated files touched; no dependencies changed; P1-003/quantity and @Backlink/orphan work untouched.
+
+**Fixes completed**
+- **Single source of truth for payment math:** new pure, store-free `InvoicePayment` (`lib/features/invoice/invoice_payment.dart`) computes `paid/balance/paymentStatus` (full, partial, overpay, unpaid). `InvoiceLocalSource.markAsPaid` now delegates to it (no duplicated arithmetic).
+- **Status path reconciles "paid":** `InvoiceFormNotifier.updateInvoiceStatus` now routes `InvoiceStatus.paid` through `markAsPaid` instead of writing the status alone. This fixes the audit's core symptom — the home "Change Status" dialog can no longer produce a "Paid" invoice that still shows `balanceDue == total` / `paymentStatus == unpaid`.
+- **Mark as Sent:** `markAsSent` exposed on the repository and notifier (`markInvoiceAsSent`); sets `status=sent` + `sentDate`, leaves payment fields untouched.
+- **Mark as Paid (full):** `markAsPaid` exposed on the repository and notifier (`markInvoiceAsPaid`); sets `paidAmount=total`, `balanceDue=0`, `paymentStatus=paid`, `status=paid`, `paidDate`, with the legacy double dual-write kept consistent.
+- **Detail UI wired:** the two previously-`onPressed: null` buttons are live — "Mark as Sent" (enabled when `status==draft` and the invoice has items) and the former "Record Payment" relabelled to **"Mark as Paid"** (enabled via `Invoice.canMarkAsPaid`). Both use the existing snackbar style, surface errors from notifier state, and `ref.invalidate(invoiceDetailProvider(id))` after success.
+- **Reactivity:** list, dashboard overview, and home all read the `invoiceListProvider` stream, so they update automatically on the write; the one-shot detail `FutureProvider` is explicitly invalidated.
+- **Riverpod hygiene:** new UI callbacks use `ref.read` (not `ref.watch`).
+
+**Files changed**
+- `lib/features/invoice/invoice_payment.dart` — **new** pure helper.
+- `lib/features/invoice/data/invoice_local_source.dart` — `markAsPaid` delegates to `InvoicePayment`.
+- `lib/features/invoice/data/invoice_repository.dart` — added `markAsSent` / `markAsPaid` (`Result`).
+- `lib/features/invoice/providers/invoice_notifier.dart` — `updateInvoiceStatus` reconciles paid; added `markInvoiceAsSent` / `markInvoiceAsPaid`.
+- `lib/features/invoice/presentation/pages/invoice_detail_page.dart` — enabled + wired the two actions, with guards/snackbars/invalidate.
+- `test/features/invoice/invoice_payment_test.dart` — **new** (pure unit tests).
+- `test/features/invoice/invoice_repository_objectbox_test.dart` — new `payment lifecycle` group (markAsSent/markAsPaid/partial/**item-preservation**), objectbox-tagged.
+
+**Tests added**
+- 6 pure unit tests (`InvoicePayment`) — run in the default suite.
+- 5 ObjectBox integration tests (sent, full paid + dual-write, partial, item preservation) — **objectbox-tagged**.
+
+**Test result**
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **97 passed, 1 skipped** (was 91; +6).
+- ⚠️ The 5 new objectbox-tagged tests **could not be executed in this environment** — `libobjectbox.dylib` isn't available for host Dart-VM tests here (`flutter test --tags objectbox --run-skipped` fails to load the native lib). They compile cleanly (verified via `flutter analyze`) and should run in the team's objectbox CI. **Run `flutter test --tags objectbox --run-skipped` on a machine with the native lib to confirm.**
+
+**Is P1-002 fully fixed?**
+- **Mark as Sent:** ✅ fully wired.
+- **Mark as Paid (full):** ✅ fully wired; status/payment now always consistent.
+- **Home status→paid inconsistency:** ✅ fixed (reconciles).
+- **Partial payment (with amount entry):** ⚠️ *partial.* The data path supports it (`markAsPaid(paidAmount:)`, `InvoicePayment.pay`, partial test), but **no amount-input UI** was added (kept out of scope — "smallest safe version"). Exposed only as full payment in the UI.
+- **Mark as Unpaid / reversing a payment:** ❌ not implemented — the app had no such concept; left as future work. Consequently, reverting a *paid* invoice to a non-paid status via the home dialog still leaves `paymentStatus`/`paidAmount` as paid (forward consistency is fixed; reverse is future work).
+
+**Remaining risks after Stage 2**
+- Relation preservation on `markAsPaid`/`markAsSent` relies on the same `updateInvoiceFields` (`copyWith`+`put`) path the shipped `updateInvoiceStatus` already uses on item-bearing invoices; an objectbox-tagged test now asserts items survive, but it was not run here.
+- Partial-payment UI and Mark-as-Unpaid are future work.
+- All P1-003 (quantity/schema), P2-001/002 (orphans/@Backlink), P2-003/004/006/007 and P3 items remain.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue

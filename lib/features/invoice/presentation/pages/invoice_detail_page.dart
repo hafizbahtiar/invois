@@ -232,6 +232,10 @@ class _ActionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoice = data.invoice;
+    final status = InvoiceStatusExtension.fromName(invoice.status);
+    final canSend =
+        status == InvoiceStatus.draft && data.items.isNotEmpty;
+    final canMarkPaid = invoice.canMarkAsPaid;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,13 +272,13 @@ class _ActionSection extends ConsumerWidget {
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.payments),
-              label: const Text('Record Payment'),
-              onPressed: null,
+              label: const Text('Mark as Paid'),
+              onPressed: canMarkPaid ? () => _markPaid(context, ref) : null,
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.mark_email_read),
               label: const Text('Mark as Sent'),
-              onPressed: null,
+              onPressed: canSend ? () => _markSent(context, ref) : null,
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.delete),
@@ -288,6 +292,44 @@ class _ActionSection extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _markSent(BuildContext context, WidgetRef ref) async {
+    final id = data.invoice.id;
+    if (id == null || id <= 0) return;
+
+    final ok = await ref
+        .read(invoiceFormProvider.notifier)
+        .markInvoiceAsSent(id);
+    if (!context.mounted) return;
+
+    final error = ref.read(invoiceFormProvider).error;
+    MySnackBar.show(
+      context,
+      message: ok ? 'Invoice marked as sent' : (error ?? 'Failed to mark as sent'),
+      type: ok ? MySnackbarType.success : MySnackbarType.failed,
+    );
+    // Detail is a one-shot FutureProvider; refresh it so the new status shows.
+    // The list/dashboard update reactively via the invoice stream.
+    if (ok) ref.invalidate(invoiceDetailProvider(id));
+  }
+
+  Future<void> _markPaid(BuildContext context, WidgetRef ref) async {
+    final id = data.invoice.id;
+    if (id == null || id <= 0) return;
+
+    final ok = await ref
+        .read(invoiceFormProvider.notifier)
+        .markInvoiceAsPaid(id);
+    if (!context.mounted) return;
+
+    final error = ref.read(invoiceFormProvider).error;
+    MySnackBar.show(
+      context,
+      message: ok ? 'Invoice marked as paid' : (error ?? 'Failed to mark as paid'),
+      type: ok ? MySnackbarType.success : MySnackbarType.failed,
+    );
+    if (ok) ref.invalidate(invoiceDetailProvider(id));
   }
 
   Future<void> _sharePdf(BuildContext context) async {

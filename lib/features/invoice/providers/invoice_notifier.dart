@@ -332,12 +332,38 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     );
   }
 
+  /// Centralised status change. Selecting [InvoiceStatus.paid] reconciles the
+  /// payment fields (paid/balance/paymentStatus) instead of writing the status
+  /// alone — preventing a "Paid" invoice that still shows a balance due.
   Future<void> updateInvoiceStatus(int id, InvoiceStatus status) async {
-    final result = await _repository.updateStatus(id, status);
+    final result = status == InvoiceStatus.paid
+        ? await _repository.markAsPaid(id)
+        : await _repository.updateStatus(id, status);
     state = state.copyWith(
       isLoading: false,
       error: result.failureOrNull?.message,
     );
+  }
+
+  /// Mark the invoice as sent (status + sentDate; payment untouched).
+  Future<bool> markInvoiceAsSent(int id) async {
+    final result = await _repository.markAsSent(id);
+    state = state.copyWith(
+      isLoading: false,
+      error: result.failureOrNull?.message,
+    );
+    return result.isOk;
+  }
+
+  /// Mark the invoice as paid. Full payment by default; pass [paidAmount] for a
+  /// partial payment.
+  Future<bool> markInvoiceAsPaid(int id, {double? paidAmount}) async {
+    final result = await _repository.markAsPaid(id, paidAmount: paidAmount);
+    state = state.copyWith(
+      isLoading: false,
+      error: result.failureOrNull?.message,
+    );
+    return result.isOk;
   }
 
   Future<ValidationFailure?> _validateForSave(Invoice invoice) async {
