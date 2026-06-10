@@ -32,7 +32,7 @@
 		<string>_dartObservatory._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app needs access to the internet to sync data with the server.</string>
+	<string>Used to discover and print invoices to printers on your local network.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

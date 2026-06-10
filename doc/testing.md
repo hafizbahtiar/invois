@@ -42,16 +42,29 @@ tests are **skipped by default**.
 
 ### One-time host / CI setup
 
-Install the native lib once per machine (puts `libobjectbox.dylib` /
+Either install the native lib system-wide (puts `libobjectbox.dylib` /
 `.so` in `/usr/local/lib`):
 
 ```sh
 bash <(curl -s https://raw.githubusercontent.com/objectbox/objectbox-dart/main/install.sh)
 ```
 
-(See the ObjectBox Dart repo for the current `install.sh` URL and platform
-notes. On macOS you may need to allow the unsigned dylib in System Settings →
-Privacy & Security.)
+…or, without sudo, download it and drop the dylib in the **project root**
+(`dlopen` resolves it from the working directory; the file is git-ignored):
+
+```sh
+cd /tmp
+bash <(curl -s https://raw.githubusercontent.com/objectbox/objectbox-c/main/download.sh) --quiet 5.3.2
+cp /tmp/lib/libobjectbox.dylib <project-root>/libobjectbox.dylib
+```
+
+The C library version **must match** the `objectbox` Dart package's expected
+C API (5.3.2 for `objectbox: ^5.3.2`) — a mismatch causes silent memory bugs,
+not a clean error. On macOS you may need to allow the unsigned dylib in System
+Settings → Privacy & Security.
+
+> Verified 2026-06-11 on this machine: `flutter test --tags objectbox
+> --run-skipped` → **all tests passed** with the project-root dylib.
 
 ### Running them once the lib is installed
 
