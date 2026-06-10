@@ -5,15 +5,32 @@ import 'package:invois/configs/routes/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/features/invoice/data/invoice_money_backfill.dart';
 import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ObjectBoxDatabase.init();
-  final moneyBackfill = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
-  if (moneyBackfill.hasChanges) {
-    debugPrint('S3 money backfill completed: $moneyBackfill');
-  }
+  await _runMoneyBackfillOnce();
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// Run the S3 money backfill at most once per install (P2-004).
+///
+/// The backfill is idempotent but scans every invoice before `runApp`. After
+/// one complete pass nothing is left to convert — every write path dual-writes
+/// cents — so later launches skip the scan. (Restoring a pre-S3 database
+/// backup over an existing install would need this flag cleared; see
+/// doc/audits.)
+Future<void> _runMoneyBackfillOnce() async {
+  const doneFlag = 's3_money_backfill_done_v1';
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(doneFlag) ?? false) return;
+
+  final report = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
+  if (report.hasChanges) {
+    debugPrint('S3 money backfill completed: $report');
+  }
+  await prefs.setBool(doneFlag, true);
 }
 
 class MyApp extends ConsumerWidget {
