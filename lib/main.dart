@@ -1,21 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/generate_route.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/generate_route.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
-import 'package:invois/features/invoice/invoice_money_backfill.dart';
-import 'package:invois/features/setting/presentation/providers/settings_provider.dart';
-import 'package:invois/features/setting/presentation/providers/settings_state.dart';
-import 'package:invois/features/splash/splash_page.dart';
+import 'package:invois/features/invoice/data/invoice_money_backfill.dart';
+import 'package:invois/features/settings/providers/settings_notifier.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ObjectBoxDatabase.init();
-  final moneyBackfill = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
-  if (moneyBackfill.hasChanges) {
-    debugPrint('S3 money backfill completed: $moneyBackfill');
-  }
+  await _runMoneyBackfillOnce();
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// Run the legacy invoice money backfill at most once per install (P2-004).
+///
+/// The backfill is idempotent but scans every invoice before `runApp`. After
+/// one complete pass nothing is left to convert — every write path dual-writes
+/// cents — so later launches skip the scan. (Restoring a pre-migration database
+/// backup over an existing install would need this flag cleared; see
+/// doc/audits.)
+Future<void> _runMoneyBackfillOnce() async {
+  // Persisted key — keeps its historical name so existing installs stay gated.
+  const doneFlag = 's3_money_backfill_done_v1';
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(doneFlag) ?? false) return;
+
+  final report = LegacyInvoiceMoneyBackfill(ObjectBoxDatabase.instance).run();
+  if (report.hasChanges) {
+    debugPrint('Legacy invoice money backfill completed: $report');
+  }
+  await prefs.setBool(doneFlag, true);
 }
 
 class MyApp extends ConsumerWidget {
@@ -31,10 +47,8 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      // themeMode: settings.materialThemeMode,
-      themeMode: state.themeMode == AppThemeMode.dark
-          ? ThemeMode.dark
-          : ThemeMode.light,
+      // Honour System / Light / Dark (SettingsState exposes the mapping).
+      themeMode: state.materialThemeMode,
       locale: Locale(state.languageCode.code),
       localeResolutionCallback: (locale, supportedLocales) {
         // Check if the current device locale is supported
@@ -47,10 +61,10 @@ class MyApp extends ConsumerWidget {
         return supportedLocales.first;
       },
 
-      // Route configuration
+      // Route configuration — single source of truth. `generateRoute` resolves
+      // `initialRoute` (the splash) and every named push; no `home:` override.
       onGenerateRoute: generateRoute,
       initialRoute: RoutesName.splash,
-      home: const SplashPage(),
     );
   }
 }

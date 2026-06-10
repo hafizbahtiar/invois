@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/core/result/app_failure.dart';
-import 'package:invois/features/signature/signature_model.dart';
-import 'package:invois/features/signature/signature_service.dart';
+import 'package:invois/features/signature/data/signature_model.dart';
+import 'package:invois/features/signature/providers/signature_service.dart';
 import 'package:signature/signature.dart' show SignatureController;
 
 void main() {

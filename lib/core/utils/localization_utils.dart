@@ -1,5 +1,5 @@
 // import 'package:flutter/material.dart';
-// import '../../configs/l10n/generated/app_localizations.dart';
+// import '../l10n/generated/app_localizations.dart';
 
 // /// Utility class for handling dynamic feature names in localization
 // class LocalizationUtils {

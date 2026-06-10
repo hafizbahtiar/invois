@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
-import 'package:invois/features/shared/widgets/my_empty_state.dart';
-import 'package:invois/features/shared/widgets/my_filter_section.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/my_empty_state.dart';
+import 'package:invois/core/widgets/my_filter_section.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
-import 'package:invois/features/shared/widgets/simple_list.dart';
+import 'package:invois/core/widgets/simple_list.dart';
 
-import '../providers/client_list_provider.dart';
-import '../../client_model.dart';
-import '../../client_query_provider.dart';
+import '../../providers/client_providers.dart';
+import '../../data/client_model.dart';
+import '../../data/client_query.dart';
 
 class ClientListPage extends ConsumerStatefulWidget {
   const ClientListPage({super.key});
@@ -140,7 +140,7 @@ class _ClientListPageState extends ConsumerState<ClientListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Client>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

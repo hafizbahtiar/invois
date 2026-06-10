@@ -13,14 +13,15 @@ may be reordered by product priority.
 | S3 | [`s3-entities-and-money-plan.md`](s3-entities-and-money-plan.md) | Money safety: additive cents fields, backfill, cents reads/writes, rollback dual-write | ✅ Done (isolated smoke passed 2026-06-01) |
 | S4 | [`s4-signature-system-plan.md`](s4-signature-system-plan.md) | Store render-ready PNG; fix PDF embed at the source | ✅ Done (2026-06-01; `signatureData` kept, `image`-trim deferred) |
 | S5 | [`s5-pdf-engine-plan.md`](s5-pdf-engine-plan.md) | Offline bundled fonts + MultiPage pagination | ✅ Done at reduced scope (2026-06-01, branch `s5-pdf-engine`). DTO+isolate, pdf/ decomposition, caching **deferred** to a follow-up. |
-| S6 | [`s6-hardening-plan.md`](s6-hardening-plan.md) | Tests, settings→template, perf, analyzer-zero | ⬜ Planned |
+| S6 | [`s6-hardening-plan.md`](s6-hardening-plan.md) | Tests, settings→template, perf, analyzer-zero | ✅ Done (2026-06-01, branch `s6-hardening`). Analyzer 0; MUST-tier tests added; ObjectBox tests gated; search debounced. Full pagination + tile micro-opts deferred. |
 
 ## Current verification
 - S1/S2 verified against code on 2026-05-31.
-- `~/flutter/bin/flutter test` passes.
-- `~/flutter/bin/flutter analyze lib` reports 3 known S6 hardening infos only:
-  deprecated `value` in `home_page.dart` / `invoice_list_page.dart`, and
-  undeclared `skeletonizer` dependency in `my_list.dart`.
+- `~/flutter/bin/flutter test` passes (45 tests; ObjectBox-tagged repo tests
+  skipped by default — see [`../testing.md`](../testing.md)).
+- `~/flutter/bin/flutter analyze lib` reports **0 issues** as of S6
+  (2026-06-01). The deprecated `value` infos were already fixed in code; the
+  undeclared `skeletonizer` dependency is now declared.
 - Form notifiers intentionally remain `StateNotifier` after S2; reactive list
   providers + unified repositories + `Result` write boundaries are the completed
   S2 target.

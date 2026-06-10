@@ -1,0 +1,9 @@
+export 'presentation/pages/client_form_page.dart';
+export 'providers/client_notifier.dart';
+export 'providers/client_state.dart';
+export 'presentation/pages/client_list_page.dart';
+export 'providers/client_providers.dart';
+export 'data/client_local_source.dart';
+export 'data/client_model.dart';
+export 'data/client_query.dart';
+export 'data/client_repository.dart';

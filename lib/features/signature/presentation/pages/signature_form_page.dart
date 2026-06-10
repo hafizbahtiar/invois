@@ -5,18 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/utils/string_utils.dart';
-import 'package:invois/features/business/business_module.dart';
-import 'package:invois/features/shared/widgets/form_section_header.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/features/business/business.dart';
+import 'package:invois/core/widgets/form_section_header.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_selector_field.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 import 'package:signature/signature.dart' as signature_lib;
 
-import '../../signature_model.dart' as signature_model;
-import '../../signature_service.dart';
-import '../providers/signature_form_provider.dart';
+import '../../data/signature_model.dart' as signature_model;
+import '../../providers/signature_service.dart';
+import '../../providers/signature_notifier.dart';
+import '../../providers/signature_providers.dart';
 
 class SignatureFormPage extends ConsumerStatefulWidget {
   final FormType type;
@@ -156,12 +157,17 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     });
   }
 
-  void _onDeleteSignature(signature) async {
+  void _onDeleteSignature(signature_model.Signature signature) async {
     final state = ref.watch(signatureFormProvider);
     final result = await ref
         .read(signatureFormProvider.notifier)
         .deleteSignature(signature.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(signatureListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -224,7 +230,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     );
 
     final result = await notifier.onUpsert(signature);
-    if (result == true && mounted) Navigator.pop(context);
+    // Covers create/update plus set-default / activate-deactivate (all go
+    // through onUpsert), refreshing the list badges/status.
+    if (result == true && mounted) {
+      ref.invalidate(signatureListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -323,7 +334,7 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     return Expanded(

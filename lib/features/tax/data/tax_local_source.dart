@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../tax_model.dart';
-import '../tax_query_provider.dart';
+import 'tax_model.dart';
+import 'tax_query.dart';
 
 class TaxLocalSource {
   final Store _store;

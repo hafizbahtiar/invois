@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/invoice/invoice_model.dart';
-import 'package:invois/features/invoice/invoice_query_provider.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
+import 'package:invois/features/invoice/data/invoice_query.dart';
 
 void main() {
   group('InvoiceQuery value semantics', () {
@@ -14,8 +14,10 @@ void main() {
 
     test('copyWith overrides only the given field', () {
       const q = InvoiceQuery(search: 'a', status: InvoiceStatus.draft);
-      expect(q.copyWith(search: 'b'),
-          const InvoiceQuery(search: 'b', status: InvoiceStatus.draft));
+      expect(
+        q.copyWith(search: 'b'),
+        const InvoiceQuery(search: 'b', status: InvoiceStatus.draft),
+      );
     });
   });
 

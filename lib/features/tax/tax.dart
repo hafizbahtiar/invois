@@ -1,0 +1,9 @@
+export 'presentation/pages/tax_form_page.dart';
+export 'providers/tax_notifier.dart';
+export 'providers/tax_state.dart';
+export 'presentation/pages/tax_list_page.dart';
+export 'providers/tax_providers.dart';
+export 'data/tax_local_source.dart';
+export 'data/tax_model.dart';
+export 'data/tax_query.dart';
+export 'data/tax_repository.dart';

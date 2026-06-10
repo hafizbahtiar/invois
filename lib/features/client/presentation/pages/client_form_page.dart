@@ -3,16 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/utils/string_utils.dart';
-import 'package:invois/features/business/business_module.dart';
-import 'package:invois/features/shared/widgets/form_section_header.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/features/business/business.dart';
+import 'package:invois/core/widgets/form_section_header.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_selector_field.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 
-import '../providers/client_form_provider.dart';
-import '../../client_model.dart';
+import '../../providers/client_notifier.dart';
+import '../../providers/client_providers.dart';
+import '../../data/client_model.dart';
 
 class ClientFormPage extends ConsumerStatefulWidget {
   final FormType type;
@@ -132,12 +133,17 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     });
   }
 
-  void _onDeleteClient(client) async {
+  void _onDeleteClient(Client client) async {
     final state = ref.watch(clientFormProvider);
     final result = await ref
         .read(clientFormProvider.notifier)
         .deleteClientById(client.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(clientListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -180,7 +186,10 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     );
 
     final result = await notifier.onUpsert(client);
-    if (result == true && mounted) Navigator.pop(context);
+    if (result == true && mounted) {
+      ref.invalidate(clientListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -279,7 +288,7 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
     final businesses =
         ref
             .watch(businessListProvider(const BusinessQuery(isActive: true)))
-            .valueOrNull ??
+            .value ??
         const [];
 
     return Expanded(

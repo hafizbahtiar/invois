@@ -45,3 +45,5 @@ app.*.map.json
 /android/app/release
 
 /apk
+# ObjectBox native C library for host (Dart VM) tests — see doc/testing.md
+/libobjectbox.dylib

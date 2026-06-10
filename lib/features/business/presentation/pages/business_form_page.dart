@@ -3,14 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/utils/string_utils.dart';
-import 'package:invois/features/shared/widgets/form_section_header.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/form_section_header.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 
-import '../providers/business_form_provider.dart';
-import '../../business_model.dart';
+import '../../providers/business_notifier.dart';
+import '../../providers/business_providers.dart';
+import '../../data/business_model.dart';
 
 class BusinessFormPage extends ConsumerStatefulWidget {
   final FormType type;
@@ -127,12 +128,17 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
     });
   }
 
-  void _onDeleteBusiness(business) async {
+  void _onDeleteBusiness(Business business) async {
     final state = ref.watch(businessFormProvider);
     final result = await ref
         .read(businessFormProvider.notifier)
         .deleteBusiness(business.id!);
-    if (result && mounted) Navigator.pop(context);
+    // Defense-in-depth: refresh the reactive list family after a successful
+    // mutation so the list is fresh even if the ObjectBox watch is delayed.
+    if (result && mounted) {
+      ref.invalidate(businessListProvider);
+      Navigator.pop(context);
+    }
     if (mounted) {
       MySnackBar.show(
         context,
@@ -167,7 +173,10 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
     final notifier = ref.read(businessFormProvider.notifier);
     final result = await notifier.onUpsert(business);
 
-    if (result == true && mounted) Navigator.pop(context);
+    if (result == true && mounted) {
+      ref.invalidate(businessListProvider);
+      Navigator.pop(context);
+    }
 
     if (mounted) {
       final state = ref.read(businessFormProvider);

@@ -1,0 +1,393 @@
+# Step 4 Quantity & Relation Migration Plan
+
+> **Status:** Planning only (Step 4A). No app code, no ObjectBox schema, no
+> generated files changed. This document specifies the staged work for 4B–4E.
+> Branch base: `7be8c38`.
+
+## Current State
+
+**How an invoice stores line items today**
+- `Invoice` has a **standalone `ToMany<Item> items`** relation (objectbox-model.json: `Invoice.relations = [items, taxes, terms]`). This is the relation the app actually reads/writes.
+- `Item` *also* declares a **`ToOne<Invoice>` (`invoiceId`)** relation property — but **no app code ever sets it**, and there is no `@Backlink` tying it to `Invoice.items`. So there are **two independent relations** between the same pair of entities; one is used, one is dead.
+- Line items are **not** shared catalog rows: the form constructs a fresh `Item` per line. There is **no Item catalog UI/route** (only business/client/tax/term/signature lists exist), so every `Item` row is effectively invoice-owned line data — but typed as the catalog entity `Item`.
+
+**Where quantity is stored**
+- In **`Item.stockQuantity` (int?)** — an inventory field repurposed as the invoice line quantity. Read as `item.stockQuantity ?? 1` in the composer, form, detail, and PDF.
+- There is **no** dedicated quantity field and **no `sortOrder`** (the unused `Invoice.sortedItems` getter sorts by name).
+
+**Save/update flow** (`InvoiceFormNotifier.onUpsert` → `InvoiceRepository` → `InvoiceLocalSource`)
+1. Invoice scalar fields are saved (`create`/`update`).
+2. `clearItemsFromInvoice(id)` → loads invoice, `invoice.items.clear()`, `put` (clears relation **links** only).
+3. For each `state.items`: `addItemToInvoice(id, item)` → loads invoice, `invoice.items.add(item)`, `put`.
+   - Items with an existing `id` are reused; items with `id == 0/null` create **new `Item` rows**.
+
+**Why orphan `Item` rows accumulate**
+- `clearItemsFromInvoice` removes the *relation links*, not the `Item` rows. A line removed during an edit is dropped from `state.items` and never re-added, so its `Item` row **remains in the box with no relation** → orphan. Over repeated edits these accumulate. (The unused `Item.invoiceId` ToOne means even a backlink-based cleanup wouldn't currently find them.)
+
+**Which files create/update/delete these rows**
+- Create/update/clear: `invoice_local_source.dart` (`addItemToInvoice`, `clearItemsFromInvoice`), driven by `invoice_notifier.dart` (`onUpsert`, `addItem`/`updateItem`/`removeItem`).
+- Construct line `Item`: `invoice_form_page.dart` (`_showAddItemDialog`, sets `stockQuantity: quantity`).
+
+**Which paths read invoice line items**
+- Totals: `invoice_notifier.calculateSubtotalCents` + `invoice_composer.dart` (`ComposerLine.quantity = item.stockQuantity ?? 1`).
+- Form summary: `invoice_form_page.dart` (`_buildPricingSummary`, `_buildItemsList`).
+- Detail: `invoice_detail_page.dart` (`_LineItemsSection`, `item.stockQuantity ?? 1`).
+- PDF: `invoice_generator.dart` (`_buildItemsTable`, `item.stockQuantity ?? 1`).
+
+**Old data shape that must remain readable**
+- `Item` rows linked via `Invoice.items` with: `stockQuantity` (int line qty), `unitPriceCents` (int, S3) and/or legacy `unitPrice` (double), `name`, `description`, `currency`, optional `unit`. All money read via `effective*Cents` (cents ?? fromDouble(double)).
+
+## Confirmed Problems
+
+1. **P1-003 quantity overload:** line quantity stored in `Item.stockQuantity`; **integer-only** (no decimals for hours/kg); semantically conflated with inventory.
+2. **P2 orphan accumulation:** removed line rows are never deleted (`clear` drops links only).
+3. **Dual/fragile relation:** `Invoice.items` (ToMany, used) + `Item.invoiceId` (ToOne, dead, no `@Backlink`).
+4. **Relation preservation hazard:** scalar updates go through `copyWith` (fresh empty `ToMany`); the app re-adds items separately. Works today but is brittle (any field update that `put`s without re-adding could drop links).
+
+## Business Rules
+
+- **Decimal quantity** is required if the app serves hours/kg/partial-unit billing (the `ItemUnit` enum already includes hour/kg/gram/liter/meter…), so quantity must support fractions.
+- **Do not mutate inventory** stock on invoicing. Inventory (`trackInventory`, `minStockLevel`, etc.) is not a shipped feature; line quantity must be a separate concept.
+- **Snapshot at invoice time:** a line should capture name/description/unit/unit price/tax as they were when invoiced. (Today this is *accidentally* true because each line is its own `Item` row, but it isn't guaranteed by design.)
+- **Catalog edits must not change historical invoices** (totals/PDF). A future Item catalog must not retro-edit past invoices.
+
+## Recommended Target Design
+
+**Adopt Option A — a dedicated `InvoiceLine` entity** that is explicitly invoice-owned, with decimal quantity and snapshot fields.
+
+Proposed `InvoiceLine` fields:
+- `int? id` (`@Id`)
+- `ToOne<Invoice> invoice` with **`@Backlink()` on `Invoice.lines`** (single, canonical relation)
+- `int? sourceItemId` (nullable; provenance only if an Item catalog is added later — never used to recompute)
+- `String name`
+- `String? description`
+- `int unitPriceCents` (minor units — consistent with the S3 money spine)
+- `int quantityMilli` (see Quantity Representation; `1.000 == 1000`)
+- `String? unit` (snapshot of unit/customUnit display)
+- `int? taxRateBasisPoints` or a small tax snapshot (`taxName`, `rateBasisPoints`) — snapshot, not a live `Tax` reference, so tax edits don't change history (addresses P2-003 too)
+- `int sortOrder`
+- `String? currency`
+- `DateTime? createdAt` / `updatedAt`
+
+Rationale: conventional, queryable, ObjectBox-native; cleanly separates catalog (`Item`, if ever built) from invoice line; one backlinked relation (kills the dual relation); explicit ownership enables safe cascade delete (kills orphans); real `quantityMilli` field (kills the overload).
+
+## Options Considered
+
+**Option A — dedicated `InvoiceLine` entity (RECOMMENDED).**
+- Pros: clean separation; single `@Backlink` relation; decimal quantity; snapshot correctness; future line-level reporting; orphans solved by ownership+cascade.
+- Cons: new entity + backfill from existing `Item`-based lines; most code touch points; ObjectBox model bump.
+
+**Option B — keep `Item` relation, add `lineQuantityMilli` to `Item`.**
+- Pros: smallest change; decimal quantity quickly.
+- Cons: leaves `Item` overloaded as catalog+line; **does not fix orphans or the dual relation**; still needs separate orphan-cleanup + `@Backlink` work; technical debt persists. Worse long-term.
+
+**Option C — embed serialized line snapshots inside `Invoice` (e.g. JSON string column).**
+- Pros: eliminates the entire relation machinery (no ToMany, no orphans, no relation-preservation hazard); invoices become self-contained + snapshot-correct by construction; decimal quantity trivial.
+- Cons: lines no longer queryable; manual (de)serialization + a stable schema/version; bigger conceptual shift; all readers (PDF/detail/form/composer) move from `invoice.items` to parsed lines.
+- When preferable: if we want to *delete* the relation problem class entirely and never query lines independently. Strong runner-up; not chosen to keep the relational model and line-level extensibility.
+
+**Recommendation for Invois: Option A.** If the team prefers minimum machinery over queryability, Option C is the fallback.
+
+## Quantity Representation
+
+**Use `int quantityMilli` (thousandths): `1.000 == 1000`, 0.001 precision.**
+- Rejected: `double` (rounding/precision risk near money math); `Decimal` package (new dependency — out of scope, overkill); string-backed decimal (parse overhead). `int` milli matches the codebase's existing integer-minor-unit philosophy (`Money`/cents).
+
+**Line total (cents), exact integer math:**
+```
+product = unitPriceCents * quantityMilli      // cents × milli
+lineTotalCents = (product + (product < 0 ? -500 : 500)) ~/ 1000   // half-up rounding
+```
+- Round once, at the line. Subtotal = Σ line totals (then discount/tax via the existing `InvoiceComposer`). Keep all rounding in one pure helper so UI/PDF/persistence agree.
+- 64-bit `int` is ample on mobile (native); guard only matters for absurd values.
+
+**Display:** `quantityMilli / 1000` formatted with trailing zeros trimmed (e.g. `1000 → "1"`, `2500 → "2.5"`, `1250 → "1.25"`).
+
+**Migrate old values:** `quantityMilli = (stockQuantity ?? 1) * 1000`.
+
+## ObjectBox Schema Plan
+
+- **4B (additive only):** add `InvoiceLine` entity + `ToMany<InvoiceLine> lines` on `Invoice` with `@Backlink()`. **Keep** `Invoice.items`, `Item`, and `Item.stockQuantity` intact and readable. Regenerate **only** via `dart run build_runner build` (never hand-edit `objectbox.g.dart` / `objectbox-model.json`).
+- **4E (cleanup):** once `InvoiceLine` fully owns lines, retire `Invoice.items` (and the dead `Item.invoiceId` ToOne / `Item` entity if unused). Removing relations/entities **retires** their UIDs in the model (generator-managed) — non-destructive to remaining data; UIDs must never be hand-reused.
+
+## Migration / Backfill Plan
+
+- **Stage 4B — additive schema + backfill.** Add `InvoiceLine` + backlink. Backfill: for each `Invoice`, if it has `items` but no `lines`, create one `InvoiceLine` per `Item` (`name`, `description`, `unitPriceCents = item.effectiveUnitPriceCents`, `quantityMilli = (stockQuantity ?? 1) * 1000`, `unit`, `currency`, `sortOrder = index`). **Idempotent:** guard on "invoice already has lines" (or a stored migration-version marker, mirroring `S3MoneyBackfill`). No deletion. Old fields stay authoritative this stage.
+- **Stage 4C — switch reads/writes.** Form builds/edits `InvoiceLine` (decimal qty input); `InvoiceComposer` line total uses `quantityMilli`; detail + PDF read `lines`; totals use `lines`. Update tests. `Invoice.items` no longer written.
+- **Stage 4D — orphan cleanup.** Delete `Item` rows that are not referenced by any `Invoice.items` relation (legacy orphans). **Guard:** only delete rows provably unreferenced; never touch a future catalog. Run once, idempotent, inside a transaction with a counted report (like `S3MoneyBackfillReport`).
+- **Stage 4E — relation cleanup.** Remove `Invoice.items` ToMany and the dead `Item.invoiceId` ToOne (and `Item` if fully unused), regenerate, verify model opens.
+
+## Read/Write Switch Plan
+
+- **Single pure helper** (extend `InvoiceComposer` or add `InvoiceLineMath`) computes `lineTotalCents(unitPriceCents, quantityMilli)`; everyone calls it.
+- Order of switch (4C): composer/helper → notifier persistence → form (input + summary) → detail → PDF → tests. Keep a temporary compatibility reader (`lines` if present else map from `items`) until 4D so old invoices still render during rollout.
+
+## Orphan Cleanup Plan
+
+- Definition of a safe-to-delete orphan: an `Item` row whose id appears in **no** `Invoice.items` relation set (and, post-4C, in no `InvoiceLine`).
+- Compute the referenced-id set from all invoices first; delete only `Item` rows not in it. Never delete by heuristic on fields. Transactional, with a `{scanned, deleted}` report and a dry-run/log first.
+- Do **not** run 4D until 4C is verified, so we don't delete rows still needed by the old path.
+
+## Testing Plan
+
+(Add before/with each stage; ObjectBox-tagged where a store is needed — `flutter test --tags objectbox --run-skipped`.)
+- Old invoice with `stockQuantity` still reads/totals correctly (pre- and post-backfill).
+- New invoice with decimal quantity (e.g. 2.5) computes the correct line total + subtotal/tax/total.
+- Editing an invoice (add/remove/change line) creates **no** orphan `Item`/`InvoiceLine` rows.
+- PDF shows correct decimal quantity and line totals; PDF total == stored total.
+- Catalog/source edit does not change an old invoice's line snapshot.
+- Backfill is idempotent (second run updates 0).
+- Deleting an invoice deletes only its own lines (cascade), not shared/other data.
+- Deleting a (future) catalog item does not corrupt existing invoice lines.
+- ObjectBox migration/open test: store opens against pre-migration data; backfill runs clean.
+- Large invoice (e.g. 200 lines) totals + PDF pagination remain correct/performant.
+- Pure unit tests: `lineTotalCents` rounding (half-up, boundaries, negative), quantity display formatting, `quantityMilli` from legacy `stockQuantity`.
+
+## Manual QA Checklist
+
+- Create invoice with whole + decimal quantities; verify summary, detail, PDF, share/print.
+- Edit existing (pre-migration) invoice; verify quantities preserved, totals unchanged, no duplicate lines.
+- Remove a line, save, reopen; verify it's gone and no stray rows (DB inspection).
+- Old invoices created before 4B render identically after backfill.
+- Light/dark + small screen; large invoice pagination.
+- App cold start runs backfill once; second start no-ops.
+
+## Risks and Rollback
+
+- **Data loss:** mitigated by additive-only 4B, idempotent non-destructive backfill, and deferring all deletion to 4D after 4C is verified.
+- **Old-invoice compatibility:** keep `items`/`stockQuantity` readable through 4C; compatibility reader until 4D.
+- **ObjectBox UID risk:** only the generator mutates `objectbox-model.json`/`objectbox.g.dart`; never hand-edit or reuse retired UIDs.
+- **Generated-file risk:** regenerate via build_runner; review the (small) flag/relation diffs; commit generated files only as produced.
+- **Backfill idempotency:** guard on existing `lines` / version marker; transactional with a report.
+- **Duplicate item rows / PDF total mismatch:** centralize `lineTotalCents`; assert PDF total == stored total in tests.
+- **Relation preservation:** the `@Backlink` + explicit line persistence removes the `copyWith`-drops-relations hazard for lines.
+- **Rollback:** each stage is independently revertable; until 4D/4E the old data path remains intact, so 4B/4C can be rolled back without data loss. 4D/4E are one-way (deletions) — gate behind a verified backup + the tagged-test run on native lib.
+
+## Recommended Implementation Order
+
+1. **4B** — additive `InvoiceLine` entity + `@Backlink`, idempotent backfill, regenerate, tagged tests. (Approval gate; needs native-lib test run.)
+2. **4C** — switch reads/writes (helper → notifier → form → detail → PDF) + tests.
+3. **4D** — orphan cleanup migration (guarded, transactional, reported).
+4. **4E** — retire `Invoice.items` / dead `Item.invoiceId` (+ `Item` if unused), regenerate, model-open test.
+
+Each stage: separate commit, `flutter analyze` + `flutter test` + (where relevant) `flutter test --tags objectbox --run-skipped` on a native-lib machine, audit-report update, pause for approval before the next.
+
+## Files Likely To Change
+
+- New: `lib/features/invoice/data/invoice_line_model.dart`; `lib/features/invoice/invoice_line_math.dart` (or extend `invoice_composer.dart`); `lib/features/invoice/data/invoice_line_backfill.dart`.
+- Schema/generated: `lib/features/invoice/data/invoice_model.dart` (add `lines` backlink), `lib/core/database/objectbox-model.json`, `lib/core/database/objectbox.g.dart` (regenerated).
+- Wiring: `invoice_notifier.dart`, `invoice_state.dart`, `invoice_local_source.dart`, `invoice_repository.dart`, `invoice_composer.dart`.
+- UI/PDF: `invoice_form_page.dart` (decimal qty input), `invoice_detail_page.dart`, `invoice/pdf/invoice_generator.dart`.
+- Startup: `main.dart` (run line backfill alongside `S3MoneyBackfill`).
+- Tests: `invoice_composer_test.dart` / new `invoice_line_math_test.dart`, `invoice_repository_objectbox_test.dart`, `pdf_generation_test.dart`, new backfill test.
+- `Item`: only retired/trimmed in 4E (not in 4B/4C).
+
+## Step 4B — Implementation Notes (as built)
+
+Matches the plan, with these concrete choices:
+- Entity `InvoiceLine` created at `lib/features/invoice/data/invoice_line_model.dart` with the recommended fields. Tax captured as `taxRateBasisPoints` (snapshot of `Item.taxRate`); invoice-level taxes remain on `Invoice.taxes` (unchanged).
+- Relation: `@Backlink() ToMany<InvoiceLine> lines` on `Invoice` (backlink of `InvoiceLine.invoice`). `Invoice.items` retained.
+- Helper `InvoiceLineMath` (`lib/features/invoice/invoice_line_math.dart`): `quantityMilliFromLegacy`, `lineTotalCents` (integer half-up: `(unitPriceCents*quantityMilli ± 500) ~/ 1000`), `formatQuantity`.
+- Backfill `InvoiceLineBackfill` (`lib/features/invoice/data/invoice_line_backfill.dart`) + report; wired into `main()` after `S3MoneyBackfill`. Idempotent (skips invoices that already have `lines` or have no `items`).
+- Generated files regenerated via `dart run build_runner build` only.
+- Not done in 4B (as planned): no read/write switch, no decimal-qty UI, no orphan deletion, `Invoice.items`/`Item`/`Item.invoiceId` all retained.
+
+## Step 4C-1 — Implementation Notes (read adapter)
+
+- Added `InvoiceLineView` + `InvoiceLineReader` (`lib/features/invoice/invoice_line_view.dart`) — a pure, source-agnostic read view.
+- Fallback rule: `InvoiceLineReader.resolve(lines, items)` prefers `lines` (sorted by `sortOrder`); else maps legacy `items` in relation order (`sortOrder = index`). `fromInvoice(invoice)` is a thin wrapper over the `lines`/`items` ToMany for future consumers.
+- Legacy quantity + line totals reuse `InvoiceLineMath` (no duplicated rounding). The Item→view mapping mirrors the 4B backfill exactly.
+- Pure-testable: `resolve` takes plain lists, so unit tests need no native store.
+- **No consumers switched** — form/detail/PDF/composer/notifier untouched. Writes unchanged.
+- Next: 4C-2 — switch a first read consumer (totals/composer or detail) to `InvoiceLineReader`, behind the same fallback, with tests.
+
+## Step 4C-2 — Implementation Notes (detail display switched)
+
+- `invoice_detail_page.dart` `_LineItemsSection` now renders `InvoiceLineReader.fromInvoice(invoice)` → `InvoiceLineView` (name / `displayQuantity` × unit price / `lineTotalCents`) instead of mapping raw `Item` rows.
+- Behaviour preserved for legacy invoices (fallback to `items`; whole-quantity display + totals identical); backfilled invoices render from `lines`; both-present uses lines; empty unchanged.
+- Scope held: totals/composer, PDF, form, and the write path are untouched; `data.items` still backs the `_ActionSection` "Mark as Sent" guard.
+- Added objectbox-tagged `invoice_line_reader_objectbox_test.dart` exercising `fromInvoice` against a real store (legacy fallback, backfilled-prefers-lines, empty).
+- Next: 4C-3 — switch the next consumer (composer/totals or PDF) behind the same fallback.
+
+## Step 4C-3 — Implementation Notes (PDF item table switched)
+
+- `invoice_generator.dart`: `generateInvoice` resolves `InvoiceLineReader.fromInvoice(invoice)` once; the empty-guard now checks the resolved views; `_buildItemsTable` takes `List<InvoiceLineView>` and renders `name` / `description` / `displayQuantity` (decimal-aware) / `unitPriceCents` / `lineTotalCents`. Removed the now-unused `item_model` import.
+- **Totals untouched:** `_buildTotalsSection` still uses the stored `invoice.effective*Cents` snapshot and `invoice.taxes`. No mismatch risk: for legacy invoices the per-row totals are identical (whole qty); for backfilled invoices Σ line totals == stored subtotal because the backfill copied unitPrice/qty faithfully.
+- Fallback preserved (legacy items / new lines / both→lines / empty→throws as before). Decimal quantity now displays in the PDF (e.g. 2.5).
+- Tests: added a default-suite PDF test generating from in-memory `InvoiceLine` rows with decimal qty (and a legacy item present to prove lines win); existing item-based PDF tests still pass via fallback.
+- Next: 4C-4 — switch totals/composer to derive from `InvoiceLineReader` (the source-of-truth change), or the form decimal-quantity input.
+
+## Step 4C-4A — Totals/Composer Parity Audit (audit + tests only)
+
+### Current calculation flow
+- **Subtotal:** `InvoiceComposer.subtotalCents` = Σ(`unitPriceCents × quantity`), `quantity = item.stockQuantity ?? 1`. Driven by `invoice_form_page._onSubmit` (over `state.items`) and `invoice_notifier.calculateSubtotalCents`.
+- **Discount:** composer — explicit `discountAmountCents` wins, else `subtotal × rate%`.
+- **Tax:** `composer.taxOnTaxable` — each invoice-level `Tax` rate (from `invoice.taxes`) applied to `(subtotal − discount)`, per-rate half-up rounded, summed. Stored `taxAmountCents` is the save-time snapshot.
+- **Total / balance:** `total = subtotal − discount + tax`; `balance = total − paid`. Paid/balance reconciled by `InvoicePayment` on status change (Steps 2/2B).
+- **Persistence:** `_onSubmit` sets the cents fields on `Invoice`; `repository._withDualWrittenMoney` dual-writes the legacy doubles from cents.
+- **Reads:** PDF totals + detail + dashboard/overview read the stored `invoice.effective*Cents` snapshot. PDF per-tax rows recompute from **live** `invoice.taxes` rates.
+
+### Parity matrix — composer subtotal vs Σ `InvoiceLineView.lineTotalCents`
+| Case | Composer | Σ line totals | Parity |
+|------|----------|---------------|--------|
+| qty 1 | = | = | ✅ exact |
+| qty 2 | = | = | ✅ exact |
+| multiple lines | = | = | ✅ exact |
+| null qty → 1 | = | = | ✅ exact |
+| large values | = | = | ✅ exact (int64, no double) |
+| zero unit price | 0 | 0 | ✅ |
+| **qty ≤ 0 (invalid)** | `0` (`?? 1` keeps 0) | `1 × price` (adapter maps ≤0→1) | ⚠️ **differs** |
+| decimal qty | n/a (int only) | per-line half-up | new capability |
+
+### Answers
+- **Σ `lineTotalCents` == current subtotal for legacy whole-qty invoices?** **Yes, exact.** Algebraically `(unitPriceCents × qty×1000 + 500) ~/ 1000 = unitPriceCents × qty` (the product is an exact multiple of 1000). Confirmed by `invoice_line_parity_test.dart`.
+- **Only divergence:** a stored `stockQuantity ≤ 0`. `InvoiceValidation` already rejects qty ≤ 0 at save, so this shouldn't exist in real data — but a defensive backfill/migration check is warranted before totals switch.
+- **Taxes derived from:** `invoice.taxes` (live shared `Tax` rows) for the PDF per-tax breakdown; stored `taxAmountCents` snapshot for totals. The per-line `taxRateBasisPoints` captured in 4B is **not** consumed.
+- **Known mismatch:** PDF per-tax rows vs stored total **if a `Tax` rate is edited after invoicing** (audit P2-003). Pre-existing and **independent of lines** (tax is invoice-level, not per-line); not addressed by 4C.
+- **Can totals switch now?** Technically safe for current (whole-qty) data given exact parity — but **writes should switch first** so `lines` are authoritative before any decimal input exists, and to avoid a window where the stored snapshot (from `items`) could diverge from line-derived display.
+
+### Recommendation — order (Option A variant: writes first)
+1. **4C-4B — dual-write on save:** in `onUpsert`, in addition to legacy `items`, create/replace `Invoice.lines` from the same data (`quantityMilli = stockQuantity × 1000` for now). Keep computing/storing totals from the composer (unchanged). Replace lines on edit (clear+add) to avoid stale rows. Parity preserved (lines mirror items).
+2. **4C-4C — totals from lines:** switch composer/subtotal to derive from `InvoiceLineReader`, keeping the stored snapshot; guard the qty ≤ 0 edge. Verify with parity tests.
+3. **4C-4D — form decimal-quantity input:** now safe (writes lines, totals derive from lines).
+4. Then **4D** orphan cleanup, **4E** retire legacy `items`/`Item.invoiceId`.
+
+### Risks
+- qty ≤ 0 divergence (mitigated by validation; add a guard/normalisation in 4C-4B/C).
+- Edit must **replace** lines (not append) to avoid duplicates/stale snapshots.
+- Tax remains invoice-level live (P2-003 separate).
+- ObjectBox-tagged suites still unrun (native lib) — run before 4C-4B touches writes.
+
+### Files likely to change next (4C-4B)
+`invoice_notifier.dart` (persist lines in `onUpsert`), `invoice_local_source.dart` (add line clear/add helpers), `invoice_repository.dart` (line write passthrough), tests (objectbox-tagged write/replace + parity). No schema/generated/PDF/form-UI changes in 4C-4B.
+
+## Step 4C-4B — Implementation Notes (dual-write lines on save)
+
+- **Builder:** `InvoiceLineBuilder.fromItems(items)` (`lib/features/invoice/invoice_line_builder.dart`) — pure, mirrors the 4B backfill mapping (qty via `InvoiceLineMath`, `unitPriceCents` effective, tax→bp, order, `sourceItemId` when item is persisted).
+- **Local source:** `replaceInvoiceLines(invoiceId, lines)` — deletes existing owned `InvoiceLine` rows (no orphans) then `putMany` the fresh set with `invoice.target` set. Idempotent.
+- **Repository:** `replaceInvoiceLines` passthrough.
+- **Notifier `onUpsert`:** after the legacy items loop, calls `replaceInvoiceLines(savedInvoice.id!, InvoiceLineBuilder.fromItems(state.items))` (built after the loop so `sourceItemId` reflects assigned ids). Totals/stored snapshot/taxes/terms unchanged.
+- **Effect:** new/edited invoices now also carry `Invoice.lines`; detail + PDF (already on the reader, 4C-2/4C-3) consume them — identical output for whole-quantity invoices (parity). Legacy `items` retained.
+- **Transaction note:** lines are written as one more sequential step alongside items/taxes/terms (the existing non-transactional save pattern). `replaceInvoiceLines` itself batches via `removeMany`/`putMany`. A single all-in-one transaction is a future hardening, not changed here.
+- **Tests:** pure `invoice_line_builder_test.dart`; objectbox-tagged `invoice_line_dualwrite_objectbox_test.dart` (create writes both; edit replaces—no dup/orphan; empty clears lines but keeps legacy items; idempotent; stored subtotal unchanged).
+- **Next:** 4C-4C — switch totals/composer to derive from `InvoiceLineReader` (guard qty ≤ 0), keeping the stored snapshot; then 4C-4D form decimal input.
+
+## Step 4C-4C — Implementation Notes (subtotal from lines)
+
+- **Subtotal source switched** to `InvoiceLineReader.subtotalCents(lines, items)` (Σ `InvoiceLineView.lineTotalCents`, lines-preferred / items-fallback). Discount/tax/total/balance still flow through `InvoiceComposer`.
+- `InvoiceComposer.compose` gained `subtotalCentsOverride` (and `lines` is now optional, default `const []`); when the override is present it's used, else subtotal is computed from `lines` as before (back-compat for existing composer tests).
+- `invoice_notifier.calculateSubtotalCents` and the form `_onSubmit` now feed the line-derived subtotal; the form's live pricing summary + tax base use the same value.
+- **qty ≤ 0 guard:** the adapter maps invalid legacy qty (≤0/null) to one unit, so subtotal can't go to 0 from a corrupt row; documented + tested. (Validation still blocks qty ≤ 0 at save.)
+- **Unchanged:** stored `effective*Cents` snapshot remains the persisted source for PDF/detail/dashboard totals; tax/discount/payment logic; form UI (no decimal input yet); PDF totals rendering.
+- **Parity:** for valid whole-quantity invoices, override-subtotal == legacy composer subtotal, so all downstream totals are byte-identical (tested).
+- **Tests:** `invoice_subtotal_source_test.dart` (subtotal source + override-vs-lines parity + decimal flow); existing `invoice_composer_test` still passes via the `lines` path.
+- **Next:** 4C-4D — form decimal-quantity input (writes fractional lines; subtotal already line-based).
+
+## Step 4C-4D-1 — Implementation Notes (decimal quantity parser/formatter)
+
+- Added `InvoiceQuantityInput` + `QuantityParseResult` (`lib/features/invoice/invoice_quantity_input.dart`) — pure, non-throwing.
+- **Parse rules:** dot decimal only (comma rejected); ≤ 3 decimal places (more rejected, not rounded); min 0.001 (`quantityMilli ≥ 1`), no max; trim whitespace; leading/trailing zeros OK; leading-dot `.5` allowed; reject empty/zero/`0.000`/negative/non-numeric/`.`/`..`/`1.`. Returns `QuantityParseResult.success(quantityMilli)` or `.failure(message)` with specific messages.
+- **Format:** delegates to `InvoiceLineMath.formatQuantity` (no duplication): `1000→"1"`, `1500→"1.5"`, `1→"0.001"`.
+- **No UI/state/write/totals/PDF/schema changes** — helper only.
+- Next: 4C-4D-2 — wire the parser/formatter into the form's item quantity field + form state (still behind the existing dual-write; quantity becomes decimal end to end).
+
+## Step 4C-4D-2A — Implementation Notes (form state carries quantityMilli)
+
+- Added `InvoiceFormLine` (`lib/features/invoice/invoice_form_line.dart`) — pairs a form `Item` with `quantityMilli`; `legacyQuantity` getter (truncates to whole for the current integer UI); `fromItem`/`fromLine` factories; static `resolve(items, lines)` (prefers `Invoice.lines` paired by `sortOrder` when count matches, else legacy items).
+- `InvoiceFormState` gained an additive `List<InvoiceFormLine>? lines` (default `const []`), kept in sync by the notifier: `resetItems`/`addItem`/`updateItem`/`removeItem` mirror `items`; `getInvoiceById` populates via `InvoiceFormLine.resolve(invoice.items, invoice.lines)`.
+- **No consumption yet:** UI reads `state.items`, `_onSubmit` writes from `state.items`, subtotal still resolves from `state.items`. `state.lines` is purely the precise-quantity carrier. No visible behaviour change; same integer input/validation/save/totals.
+- **Compatibility rule:** for the integer UI/write path, `legacyQuantity = quantityMilli ~/ 1000` (documented truncation). New/edited items derive `quantityMilli` from `stockQuantity × 1000`; only loaded-from-lines invoices carry a potentially-fractional value (none exist pre-UI), preserved without loss.
+- Tests: pure `invoice_form_line_test.dart` (fromItem mapping, legacyQuantity, resolve lines-win/fallback/empty, non-whole held without loss).
+- Next: 4C-4D-2B — wire the decimal field + parser/formatter into the form UI and make the write path persist `quantityMilli` on the line.
+
+## Step 4C-4D-2C — Implementation Notes (totals/write consume state.lines)
+
+> Order swapped per decision: persistence/totals first (2C), decimal UI second (2B-next).
+
+- **Subtotal** (`notifier.calculateSubtotalCents`) now = `InvoiceFormLine.subtotalCents(state.lines)` (Σ `lineTotalCents(unitPrice, quantityMilli)`); the form `_onSubmit` feeds this via `subtotalCentsOverride`. Discount/tax/total/balance still flow through `InvoiceComposer`.
+- **Persistence** (`onUpsert`) now builds `Invoice.lines` via `InvoiceLineBuilder.fromFormLines(state.lines)` — preserves `quantityMilli` exactly. `fromItems` retained (delegates to `fromFormLines` via `InvoiceFormLine.fromItem`) for the legacy/backfill path + tests.
+- **Authoritative source = `InvoiceFormLine.quantityMilli`.** Legacy `Item.stockQuantity` is still written via the legacy items path (integer from the current UI) but no longer drives totals or line persistence.
+- **Legacy compatibility rule:** `legacyQuantity = quantityMilli ~/ 1000` (truncation, documented). While the UI is integer, `quantityMilli` is always whole so line-based == item-based (parity; no visible change). When the decimal UI lands, it will set `quantityMilli` authoritatively and set `Item.stockQuantity = legacyQuantity` purely for compat (never feeding totals/persistence).
+- **No visible behaviour change:** UI still integer; whole-quantity invoices save and total exactly as before.
+- Tests: `InvoiceFormLine.subtotalCents` (whole/non-whole/multiple/empty/uses-quantityMilli-not-stockQuantity); `InvoiceLineBuilder.fromFormLines` (preserves exact quantityMilli, order, fields); tagged persistence test (1500 survives save; reader sees 1.5×).
+- **Decimal UI is now safe to implement** (2B-next): totals + persistence already read `quantityMilli`.
+
+## Step 4C-4D-2B — Implementation Notes (decimal quantity UI, end-to-end)
+
+- **Item dialog:** quantity field is decimal (`TextInputType.numberWithOptions(decimal: true)`), validated by `InvoiceQuantityInput.parse` (user-friendly errors); prefilled via `InvoiceQuantityInput.format(quantityMilli)`.
+- **Add/update:** parse → `quantityMilli`; `notifier.addItem/updateItem(item, quantityMilli:)` store it on the `InvoiceFormLine`; `Item.stockQuantity = InvoiceFormLine.legacyQuantityFor(quantityMilli)` (floor, **clamped ≥ 1**) for legacy compat only.
+- **Display:** form item list + pricing summary now iterate `state.lines`, showing `InvoiceQuantityInput.format(quantityMilli)` and `line.lineTotalCents`. Live subtotal/discount/tax/total already line-based (2C).
+- **Edit existing:** prefill quantity from `Invoice.lines` (via 2A load + `InvoiceFormLine.resolve`, lines-win); a 1.5 line shows "1.5".
+- **Save/reopen:** persists `quantityMilli` exactly (2C `fromFormLines`); reopen prefills the decimal; detail + PDF show it (4C-2/4C-3).
+- **Compat rule:** `legacyQuantityFor = max(1, floor(quantity))` — a `0.25` line stores `stockQuantity 1` so the legacy `InvoiceValidation` (qty ≤ 0 check) still passes; never drives totals/lines.
+- Tests: model (`legacyQuantityFor` clamp, `lineTotalCents`) + parser→line→subtotal pipeline (pure); existing tagged persistence/reader tests cover round-trip.
+- **Remaining:** run objectbox-tagged suites on a native-lib machine; **4D** orphan cleanup; **4E** retire legacy `Invoice.items`/`Item`/`Item.invoiceId`. (The add-item sheet is still the legacy `DraggableScrollableSheet` — cosmetic, audit P2-007, out of scope here.)
+
+## Stage 4D — Implementation Notes (orphan legacy Item cleanup)
+
+- **Ownership confirmed safe:** `Item` is invoice-owned only — no catalog route/list/repository, no standalone `Item` creation, `Item.invoiceId` never set, only `box<Item>()` use is the read-only money backfill. So an Item referenced by no `Invoice.items` is a true orphan.
+- **Service:** `OrphanItemCleanup` (`data/invoice_item_orphan_cleanup.dart`) with `run({required bool dryRun})` → `OrphanItemCleanupReport(scannedItems, referencedItems, orphanItems, deletedItems, skippedItems, warnings)`.
+- **Safety rule:** an Item is preserved if it appears in any `Invoice.items` relation **or** is named by any `InvoiceLine.sourceItemId` (provenance guard); everything else is deleted. Delete runs in a write transaction via `removeMany`. **Delete-capable** (not dry-run-only) because ownership is unambiguous.
+- **No automatic startup run** — `main.dart` unchanged; the cleanup is explicit/tested only, so no silent data deletion.
+- Tests: pure report getters; tagged (no-orphan→0, dry-run reports but keeps, delete removes, referenced preserved, multi-invoice preserved, idempotent, sourceItemId-guard preserves).
+- **Next:** 4E — retire legacy `Invoice.items` / `Item` / `Item.invoiceId` once everything reads/writes lines and a one-time orphan cleanup has run in production.
+
+## Step 4D-2 — Implementation Notes (guarded cleanup entry point)
+
+- Added `LegacyItemCleanupPage` (`lib/features/setting/presentation/pages/legacy_item_cleanup_page.dart`): **Dry Run** (`OrphanItemCleanup.run(dryRun: true)`) and **Delete Orphans** (`dryRun: false`). Delete is enabled only after a dry-run that found orphans, and behind a confirmation dialog ("This will permanently delete orphan legacy invoice item rows. It will not delete invoices or invoice lines."). Errors are caught → snackbar, no crash.
+- **Entry point:** a Settings → **Maintenance** section, gated behind `kDebugMode` (not customer-facing). Pushed via `MaterialPageRoute` (no named route added).
+- Store accessed via `storeProvider`. **No automatic/startup run.**
+- Pure formatter helpers `cleanupHeadline` / `cleanupReportRows` (testable without widgets).
+- Tests: `legacy_item_cleanup_format_test.dart` (headline + rows for zero / non-zero / deleted). Action-wiring (dry-run/confirm/delete) is debug-only + manual QA; full widget test needs the native store so it's deferred.
+- **Next:** 4E legacy retirement (unchanged).
+
+## Stage 4E-1 — Implementation Notes (stop legacy item writes)
+
+- **Write path:** `InvoiceFormNotifier.onUpsert` no longer calls `clearItemsFromInvoice` or `addItemToInvoice`. Normal invoice create/update persists submitted lines only through `replaceInvoiceLines(... InvoiceLineBuilder.fromFormLines(state.lines))`.
+- **No new legacy rows:** new invoice saves should create `InvoiceLine` rows and zero `Item` rows. Edit saves replace line snapshots without creating new legacy `Item` rows.
+- **Old data retained:** pre-existing `Invoice.items` links and `Item` rows are left untouched; this avoids data deletion and keeps the Stage 4D cleanup tool meaningful.
+- **Edit/reopen:** `InvoiceFormLine.resolve` now treats `Invoice.lines` as authoritative whenever present. For line-only invoices, it synthesizes temporary Item-shaped form carriers from `InvoiceLine` snapshots; negative temporary ids prevent form-row collisions without becoming `sourceItemId`.
+- **Fallback:** `InvoiceLineReader` still falls back to legacy `Invoice.items` when an old invoice has no lines.
+- **Schema:** no ObjectBox schema changes, no generated-file regeneration, no `Item`/`Invoice.items`/`Item.invoiceId` removal.
+- **Tests:** pure resolver/builder tests cover line-only form carriers and temporary ids; objectbox-tagged line persistence tests assert no new legacy `Item` rows and old legacy rows untouched.
+- **Next:** run objectbox-tagged tests on a native-lib machine and manual QA before any legacy read fallback or schema removal.
+
+## Stage 4E-2 — Implementation Notes (production line-only reads)
+
+- **Production reader:** `InvoiceLineReader.fromInvoiceLinesOnly` / `resolveLinesOnly` read only `Invoice.lines`; missing lines return an empty list.
+- **Fallback retained:** `InvoiceLineReader.fromInvoice` / `resolve(lines, items)` still perform lines-preferred legacy fallback, but are now migration/recovery helpers rather than production UI/PDF paths.
+- **Detail:** line item display and "Mark as Sent" availability read `Invoice.lines` only.
+- **PDF:** item table generation reads `Invoice.lines` only. Legacy-only invoices rely on the startup backfill before production PDF generation.
+- **Form edit load:** edit state is rebuilt from `Invoice.lines` only; legacy-only invoices show no editable lines instead of falling back.
+- **Repository/provider:** complete invoice loading eagerly touches `lines` instead of `items`; detail data no longer includes `List<Item>`.
+- **Still retained:** `InvoiceLineBackfill`, `OrphanItemCleanup`, legacy relation helpers, `Item`, `Invoice.items`, and `Item.invoiceId`.
+- **Schema:** no ObjectBox schema changes, no generated-file regeneration, no data deletion.
+- **Next:** native-lib objectbox tagged tests + manual QA, then schema retirement planning with a pre-4E store-open fixture.
+
+## Stage 4E-3 — Implementation Notes (isolate legacy migration code)
+
+- Legacy fallback reader APIs were renamed as migration/recovery-only:
+  `resolveWithLegacyFallback`, `fromInvoiceWithLegacyFallback`, and
+  `subtotalCentsWithLegacyFallback`.
+- Production code stayed on line-only readers and an architecture guard blocked
+  production calls to the fallback helpers.
+- `InvoiceLineBackfill`, `OrphanItemCleanup`, relation helpers, `Item`, and
+  `Invoice.items` remained temporarily for the final schema-retirement stage.
+
+## Stage 4E-4 — Implementation Notes (retire legacy Item schema)
+
+- `Invoice.items`, the `Item` entity/model, `Item.invoiceId`, and
+  `Item.stockQuantity` were removed from the app model.
+- ObjectBox generated files were regenerated by build_runner; the generator
+  removed the `Invoice.items` relation and `Item` entity from the model.
+- The form now uses plain `InvoiceFormLine` draft fields instead of an
+  ObjectBox `Item` carrier. `quantityMilli` remains the authoritative quantity.
+- Legacy migration/recovery tooling was retired:
+  `InvoiceLineBackfill`, `OrphanItemCleanup`, the debug legacy cleanup screen,
+  legacy item relation helpers, fallback reader APIs, and obsolete tests.
+- Remaining line model note: `InvoiceLine.sourceItemId` is historical nullable
+  provenance only; it is not an entity relation and is not used to recompute
+  invoice behavior.
+- Release gate remains: verify an external backup/export path and run
+  ObjectBox-tagged migration/open tests on a machine with `libobjectbox.dylib`,
+  including a pre-4E store fixture.

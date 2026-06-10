@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/core/constants/list_type.dart';
-import 'package:invois/features/shared/widgets/my_empty_state.dart';
-import 'package:invois/features/shared/widgets/my_filter_section.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/my_empty_state.dart';
+import 'package:invois/core/widgets/my_filter_section.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
-import 'package:invois/features/shared/widgets/simple_list.dart';
-import '../../term_model.dart';
+import 'package:invois/core/widgets/simple_list.dart';
+import '../../data/term_model.dart';
 
-import '../providers/term_list_provider.dart';
-import '../../term_query_provider.dart';
+import '../../providers/term_providers.dart';
+import '../../data/term_query.dart';
 
 class TermListPage extends ConsumerStatefulWidget {
   final ListType listType;
@@ -143,7 +143,7 @@ class _TermListPageState extends ConsumerState<TermListPage> {
         _buildBusinessListHeader(context),
         Expanded(
           child: SimpleList<Term>(
-            items: async.valueOrNull ?? const [],
+            items: async.value ?? const [],
             isLoading: async.isLoading,
             errorMessage: async.hasError
                 ? (async.error is AppFailure

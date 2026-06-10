@@ -2,8 +2,8 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
-import '../signature_model.dart';
-import '../signature_query_provider.dart';
+import 'signature_model.dart';
+import 'signature_query.dart';
 
 class SignatureLocalSource {
   final Store _store;
@@ -207,6 +207,20 @@ class SignatureLocalSource {
               : Signature_.businessId.equals(businessId)),
     );
     return queryBuilder.build().find();
+  }
+
+  Future<Signature?> getDefaultActiveSignatureByBusinessId(
+    int? businessId,
+  ) async {
+    final queryBuilder = _signatureBox.query(
+      Signature_.isActive.equals(true) &
+          Signature_.isDefault.equals(true) &
+          ((businessId == null)
+              ? Signature_.businessId.isNull()
+              : Signature_.businessId.equals(businessId)),
+    );
+    final result = queryBuilder.build().findFirst();
+    return result;
   }
 
   // Count total signatures
