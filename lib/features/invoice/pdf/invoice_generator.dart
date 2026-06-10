@@ -16,6 +16,7 @@ import 'package:invois/features/business/data/business_model.dart';
 import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/invoice_line_view.dart';
+import 'package:invois/features/invoice/pdf/invoice_tax_breakdown.dart';
 import 'package:invois/features/invoice/pdf/pdf_fonts.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 
@@ -97,7 +98,7 @@ class InvoiceGenerator {
       pw.MultiPage(
         pageFormat: pageFormat,
         margin: const pw.EdgeInsets.all(40),
-        footer: (context) => _buildFooter(context, smallStyle),
+        footer: (context) => _buildFooter(context, smallStyle, fontBold),
         build: (context) => [
           _buildHeaderSection(
             invoice: invoice,
@@ -535,18 +536,17 @@ class InvoiceGenerator {
                   bodyBoldStyle,
                   isDiscount: true,
                 ),
-              ...invoice.taxes.map((tax) {
-                final taxableAmountCents =
-                    invoice.effectiveSubtotalCents -
-                    invoice.effectiveDiscountAmountCents;
-                return _buildTotalRow(
-                  '${tax.name} (${tax.rate.toStringAsFixed(2)}%)',
-                  (taxableAmountCents * tax.rate / 100).round(),
+              // Tax rows always sum to the stored tax snapshot, even if a tax
+              // was edited or deleted after this invoice was saved (P2-003).
+              ...InvoiceTaxBreakdown.fromInvoice(invoice).map(
+                (row) => _buildTotalRow(
+                  row.label,
+                  row.amountCents,
                   currency,
                   bodyStyle,
                   bodyBoldStyle,
-                );
-              }),
+                ),
+              ),
               pw.Divider(color: PdfColors.grey400, thickness: 1),
               _buildTotalRow(
                 'Total',
@@ -668,7 +668,11 @@ class InvoiceGenerator {
     );
   }
 
-  static pw.Widget _buildFooter(pw.Context context, pw.TextStyle smallStyle) {
+  static pw.Widget _buildFooter(
+    pw.Context context,
+    pw.TextStyle smallStyle,
+    pw.Font fontBold,
+  ) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 12),
       child: pw.Column(
@@ -696,10 +700,12 @@ class InvoiceGenerator {
                 ),
                 child: pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',
+                  // Bundled bold font, not built-in Helvetica — keeps the PDF
+                  // fully offline and consistent with the rest of the document.
                   style: smallStyle.copyWith(
                     color: PdfColors.white,
                     fontSize: 9,
-                    font: pw.Font.helveticaBold(),
+                    font: fontBold,
                   ),
                 ),
               ),
