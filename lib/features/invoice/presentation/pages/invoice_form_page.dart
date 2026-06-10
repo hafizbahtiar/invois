@@ -27,6 +27,7 @@ import '../../invoice_quantity_input.dart';
 import '../../providers/invoice_notifier.dart';
 import '../../providers/invoice_state.dart';
 import '../../data/invoice_model.dart';
+import '../widgets/invoice_line_sheet.dart';
 
 class InvoiceFormPage extends ConsumerStatefulWidget {
   final FormType type;
@@ -67,12 +68,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   final _recurringIntervalController = TextEditingController();
   DateTime? _recurringEndDate;
 
-  // Item
-  final _itemFormKey = GlobalKey<FormState>();
-  final _itemNameController = TextEditingController();
-  final _itemDescriptionController = TextEditingController();
-  final _itemPriceController = TextEditingController();
-  final _itemQuantityController = TextEditingController();
+  // Item (the add/edit fields live inside InvoiceLineSheet)
   int _nextTemporaryLineId = -1;
 
   bool _isReadOnly = true;
@@ -177,10 +173,6 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     _invoiceNumberController.dispose();
     _invoiceReferenceController.dispose();
     _invoiceNotesController.dispose();
-    _itemNameController.dispose();
-    _itemDescriptionController.dispose();
-    _itemPriceController.dispose();
-    _itemQuantityController.dispose();
     _discountRateController.dispose();
     _discountAmountController.dispose();
     _paidAmountController.dispose();
@@ -267,17 +259,30 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     _isInvoiceNumberManuallyEdited = true;
   }
 
+  /// Changing the prefix re-scopes the suggested number (INV-… vs QUO-…); it
+  /// is not a manual edit of the number itself.
+  void _onInvoicePrefixChanged(String value) {
+    if (_isReadOnly) return;
+    final businessId = ref.read(invoiceFormProvider).business?.id;
+    if (businessId != null && businessId > 0) {
+      _suggestInvoiceNumberForBusiness(businessId);
+    }
+  }
+
   Future<void> _suggestInvoiceNumberForBusiness(int businessId) async {
     if (_isReadOnly || _isInvoiceNumberManuallyEdited) return;
+    // Never regenerate the number of an existing invoice.
     if (widget.invoiceId != null && widget.invoiceId! > 0) return;
 
+    final prefix = _invoicePrefixController.text;
     final number = await ref
         .read(invoiceFormProvider.notifier)
-        .nextInvoiceNumberForBusiness(businessId);
+        .nextInvoiceNumberForBusiness(businessId, prefix: prefix);
     if (number == null || !mounted || _isInvoiceNumberManuallyEdited) return;
+    // The prefix changed again while we awaited — a newer call owns the field.
+    if (_invoicePrefixController.text != prefix) return;
 
     setState(() {
-      _invoicePrefixController.text = '';
       _invoiceNumberController.text = number;
     });
   }
@@ -568,218 +573,26 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     ref.read(invoiceFormProvider.notifier).clearSignature();
   }
 
-  void _showAddItemDialog({InvoiceFormLine? existingLine}) {
+  Future<void> _showAddItemDialog({InvoiceFormLine? existingLine}) async {
     if (_isReadOnly) return;
-    // Clear previous values or set to existing line values
-    if (existingLine != null) {
-      _itemNameController.text = existingLine.name;
-      _itemDescriptionController.text = existingLine.description ?? '';
-      _itemPriceController.text = Money(
-        existingLine.unitPriceCents,
-        currencyCode: _selectedCurrency,
-      ).toDouble().toStringAsFixed(2);
-      // Prefill the precise quantity (e.g. "1.5") from the form line.
-      _itemQuantityController.text = InvoiceQuantityInput.format(
-        existingLine.quantityMilli,
-      );
-    } else {
-      _itemNameController.clear();
-      _itemDescriptionController.clear();
-      _itemPriceController.clear();
-      _itemQuantityController.text = '1';
-    }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.48,
-        minChildSize: 0.45,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2.5),
-                  ),
-                ),
-              ),
-              // Title
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  existingLine != null ? 'Edit Item' : 'Add Item',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              // Form
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Form(
-                    key: _itemFormKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        MyTextField(
-                          controller: _itemNameController,
-                          label: 'Name',
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter item name';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        MyTextField(
-                          controller: _itemDescriptionController,
-                          label: 'Description',
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: MyTextField(
-                                controller: _itemPriceController,
-                                label: 'Price',
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (Money.tryParseDecimalString(
-                                        value,
-                                        currencyCode: _selectedCurrency,
-                                      ) ==
-                                      null) {
-                                    return 'Invalid number';
-                                  }
-                                  if (Money.tryParseDecimalString(
-                                        value,
-                                        currencyCode: _selectedCurrency,
-                                      )!.minorUnits <
-                                      0) {
-                                    return 'Must be 0 or more';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: MyTextField(
-                                controller: _itemQuantityController,
-                                label: 'Quantity',
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                validator: (value) {
-                                  final result = InvoiceQuantityInput.parse(
-                                    value ?? '',
-                                  );
-                                  return result.isValid ? null : result.error;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Action buttons
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                  top: 16,
-                ),
-                child: Row(
-                  spacing: 8,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel'),
-                    ),
-                    if (existingLine != null)
-                      TextButton(
-                        onPressed: () => _removeLineFromSheet(existingLine),
-                        child: Text('Remove'),
-                      ),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_itemFormKey.currentState!.validate()) {
-                          final price = _parseMoney(_itemPriceController.text);
-                          final parsed = InvoiceQuantityInput.parse(
-                            _itemQuantityController.text,
-                          );
-                          // Validator already blocks invalid input; defensive.
-                          if (!parsed.isValid) return;
-                          final quantityMilli = parsed.quantityMilli!;
-
-                          final line = InvoiceFormLine(
-                            id: existingLine?.id ?? _nextTemporaryLineId--,
-                            name: _itemNameController.text,
-                            description: _itemDescriptionController.text,
-                            unitPriceCents: price.minorUnits,
-                            currency: _selectedCurrency,
-                            quantityMilli: quantityMilli,
-                            taxRateBasisPoints:
-                                existingLine?.taxRateBasisPoints,
-                            sortOrder: existingLine?.sortOrder ?? 0,
-                            sourceItemId: existingLine?.sourceItemId,
-                          );
-
-                          final notifier = ref.read(
-                            invoiceFormProvider.notifier,
-                          );
-                          if (existingLine != null) {
-                            notifier.updateLine(line);
-                          } else {
-                            notifier.addLine(line);
-                          }
-
-                          _refreshPricingCalculations();
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Text(existingLine != null ? 'Update' : 'Add'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final result = await InvoiceLineSheet.show(
+      context,
+      existingLine: existingLine,
+      currencyCode: _selectedCurrency,
+      temporaryLineId: _nextTemporaryLineId,
     );
-  }
+    if (!mounted || result == null) return;
 
-  /// Remove a line from inside the add/edit item bottom sheet (closes it).
-  void _removeLineFromSheet(InvoiceFormLine line) {
-    Navigator.pop(context);
-    ref.read(invoiceFormProvider.notifier).removeLine(line);
+    final notifier = ref.read(invoiceFormProvider.notifier);
+    if (result.removed) {
+      if (existingLine != null) notifier.removeLine(existingLine);
+    } else if (existingLine != null) {
+      notifier.updateLine(result.line!);
+    } else {
+      notifier.addLine(result.line!);
+      _nextTemporaryLineId--;
+    }
     _refreshPricingCalculations();
   }
 
@@ -946,7 +759,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                         isReadOnly: _isReadOnly,
                         controller: _invoicePrefixController,
                         label: 'Invoice Prefix',
-                        onChanged: _onInvoiceNumberChanged,
+                        onChanged: _onInvoicePrefixChanged,
                       ),
                     ),
                     Expanded(

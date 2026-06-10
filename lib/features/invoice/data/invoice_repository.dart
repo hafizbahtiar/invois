@@ -55,9 +55,12 @@ class InvoiceRepository {
     return invoice;
   }
 
-  Future<Result<String>> nextInvoiceNumber(int businessId) async {
+  Future<Result<String>> nextInvoiceNumber(
+    int businessId, {
+    String prefix = '',
+  }) async {
     try {
-      return Ok(await _local.nextInvoiceNumber(businessId));
+      return Ok(await _local.nextInvoiceNumber(businessId, prefix: prefix));
     } catch (e) {
       return Err(mapException(e));
     }

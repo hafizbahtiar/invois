@@ -121,9 +121,19 @@ class InvoiceLocalSource {
     return query.build().find();
   }
 
-  Future<String> nextInvoiceNumber(int businessId) async {
+  /// Suggest the next number for the form's *number field*, scoped to the
+  /// business and the form's prefix-field text.
+  ///
+  /// With a non-empty [prefix] the suggestion is the sequence part only
+  /// (the form composes `fullNumber = prefix + number`). With an empty
+  /// [prefix] the legacy default applies: a full `INV-XXXX` suggestion
+  /// carried in the number field itself.
+  Future<String> nextInvoiceNumber(int businessId, {String prefix = ''}) async {
     final invoices = await getInvoicesByBusinessId(businessId);
-    return InvoiceNumbering.nextNumber(invoices);
+    if (prefix.trim().isEmpty) {
+      return InvoiceNumbering.nextNumber(invoices);
+    }
+    return InvoiceNumbering.nextSequence(invoices, prefix: prefix);
   }
 
   Future<bool> isInvoiceNumberAvailable({

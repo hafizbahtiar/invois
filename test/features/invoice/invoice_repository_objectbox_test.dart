@@ -311,6 +311,40 @@ void main() {
       expect(result.valueOrNull, 'INV-0003');
     });
 
+    test('prefix scopes count independently within a business', () async {
+      await repo.create(draft('INV-0001', businessId: 1));
+      await repo.create(draft('INV-0002', businessId: 1));
+      await repo.create(draft('QUO-0005', businessId: 1));
+
+      // Non-empty prefix returns the sequence part only (the form composes
+      // fullNumber = prefix + number).
+      expect(
+        (await repo.nextInvoiceNumber(1, prefix: 'INV-')).valueOrNull,
+        '0003',
+      );
+      expect(
+        (await repo.nextInvoiceNumber(1, prefix: 'QUO-')).valueOrNull,
+        '0006',
+      );
+      expect(
+        (await repo.nextInvoiceNumber(1, prefix: 'EST-')).valueOrNull,
+        '0001',
+      );
+    });
+
+    test('prefix scopes are independent across businesses', () async {
+      await repo.create(draft('QUO-0009', businessId: 1));
+
+      expect(
+        (await repo.nextInvoiceNumber(2, prefix: 'QUO-')).valueOrNull,
+        '0001',
+      );
+      expect(
+        (await repo.nextInvoiceNumber(1, prefix: 'QUO-')).valueOrNull,
+        '0010',
+      );
+    });
+
     test('duplicate number for same business is rejected', () async {
       await repo.create(draft('INV-0001', businessId: 1));
 

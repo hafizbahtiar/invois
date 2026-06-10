@@ -202,8 +202,14 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     return Money(calculateSubtotalCents()).toDouble();
   }
 
-  Future<String?> nextInvoiceNumberForBusiness(int businessId) async {
-    final result = await _repository.nextInvoiceNumber(businessId);
+  Future<String?> nextInvoiceNumberForBusiness(
+    int businessId, {
+    String prefix = '',
+  }) async {
+    final result = await _repository.nextInvoiceNumber(
+      businessId,
+      prefix: prefix,
+    );
     if (result is Ok<String>) return result.value;
 
     final failure = (result as Err<String>).failure;
