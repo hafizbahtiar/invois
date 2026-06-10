@@ -5,359 +5,218 @@ import 'package:invois/features/invoice/pdf/invoice_generator.dart';
 import 'package:invois/features/shared/widgets/my_action_button.dart';
 import 'package:invois/features/shared/widgets/my_snackbar.dart';
 
-import '../../providers/invoice_notifier.dart';
+import '../../providers/invoice_providers.dart';
 
-/// A page to preview and interact with a generated invoice
-class InvoicePreviewPage extends ConsumerStatefulWidget {
+/// A page to preview and interact with a generated invoice.
+///
+/// Reads through its own autoDispose [invoiceDetailProvider] family (P2-006):
+/// loading a preview no longer mutates the shared invoice form state, and the
+/// data is released when the page is popped.
+class InvoicePreviewPage extends ConsumerWidget {
   final int invoiceId;
 
   const InvoicePreviewPage({super.key, required this.invoiceId});
 
   @override
-  ConsumerState<InvoicePreviewPage> createState() => _InvoicePreviewPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(invoiceDetailProvider(invoiceId));
+    final data = detail.value;
+    final canPreview =
+        data != null && data.business != null && data.client != null;
 
-class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  //============================================
-  // MARK: - Actions
-  //============================================
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final notifier = ref.read(invoiceFormProvider.notifier);
-      await notifier.getInvoiceById(widget.invoiceId);
-
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to load invoice data: ${e.toString()}';
-      });
-    }
-  }
-
-  Future<void> _printInvoice() async {
-    final state = ref.read(invoiceFormProvider);
-    if (!_canShowPreview()) return;
-
-    try {
-      await InvoiceGenerator.printInvoice(
-        invoice: state.invoice!,
-        business: state.business!,
-        client: state.client!,
-        signature: state.signature,
-      );
-    } catch (e) {
-      if (mounted) {
-        MySnackBar.show(
-          context,
-          message: 'Failed to print invoice: ${e.toString()}',
-          type: MySnackbarType.failed,
-        );
-      }
-    }
-  }
-
-  Future<void> _shareInvoice() async {
-    final state = ref.read(invoiceFormProvider);
-    if (!_canShowPreview()) return;
-
-    try {
-      await InvoiceGenerator.shareInvoice(
-        invoice: state.invoice!,
-        business: state.business!,
-        client: state.client!,
-        signature: state.signature,
-      );
-    } catch (e) {
-      if (mounted) {
-        MySnackBar.show(
-          context,
-          message: 'Failed to share invoice: ${e.toString()}',
-          type: MySnackbarType.failed,
-        );
-      }
-    }
-  }
-
-  Future<void> _saveInvoice() async {
-    final state = ref.read(invoiceFormProvider);
-    if (!_canShowPreview()) return;
-
-    try {
-      final savedPath = await InvoiceGenerator.saveInvoice(
-        invoice: state.invoice!,
-        business: state.business!,
-        client: state.client!,
-        signature: state.signature,
-      );
-
-      if (mounted) {
-        MySnackBar.show(
-          context,
-          message: 'Saved to $savedPath',
-          type: MySnackbarType.success,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        MySnackBar.show(
-          context,
-          message: 'Failed to save invoice: ${e.toString()}',
-          type: MySnackbarType.failed,
-        );
-      }
-    }
-  }
-
-  //============================================
-  // MARK: - AppBar
-  //============================================
-
-  PreferredSizeWidget _buildAppBar() {
-    final state = ref.watch(invoiceFormProvider);
-    return AppBar(
-      forceMaterialTransparency: true,
-      title: Text('Invoice ${state.invoice?.invoiceNumber}'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.print),
-          tooltip: 'Print Invoice',
-          onPressed: _canShowPreview() ? _printInvoice : null,
+    return Scaffold(
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        title: Text('Invoice ${data?.invoice.invoiceNumber ?? ''}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'Print Invoice',
+            onPressed: canPreview ? () => _printInvoice(context, data) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share Invoice',
+            onPressed: canPreview ? () => _shareInvoice(context, data) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.save_alt),
+            tooltip: 'Save Invoice',
+            onPressed: canPreview ? () => _saveInvoice(context, data) : null,
+          ),
+        ],
+      ),
+      body: detail.when(
+        loading: () => const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading invoice data...'),
+            ],
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.share),
-          tooltip: 'Share Invoice',
-          onPressed: _canShowPreview() ? _shareInvoice : null,
+        error: (error, _) => _PreviewMessage(
+          icon: Icons.error_outline,
+          iconColor: Colors.red,
+          title: 'Failed to load invoice data',
+          buttonLabel: 'Try Again',
+          buttonIcon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(invoiceDetailProvider(invoiceId)),
         ),
-        IconButton(
-          icon: const Icon(Icons.save_alt),
-          tooltip: 'Save Invoice',
-          onPressed: _canShowPreview() ? _saveInvoice : null,
-        ),
-      ],
+        data: (data) {
+          if (data.business == null || data.client == null) {
+            return _PreviewMessage(
+              icon: Icons.warning_amber,
+              iconColor: Colors.orange,
+              title: 'Missing data to generate invoice',
+              subtitle: 'Please ensure business and client are set.',
+              buttonLabel: 'Go Back',
+              buttonIcon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            );
+          }
+          return _PreviewBody(data: data);
+        },
+      ),
+      bottomNavigationBar: canPreview
+          ? _BottomActionBar(data: data)
+          : const SizedBox.shrink(),
     );
   }
+}
 
-  //============================================
-  // MARK: - Body
-  //============================================
-
-  Widget _buildBody() {
-    final state = ref.watch(invoiceFormProvider);
-
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading invoice data...'),
-          ],
-        ),
+Future<void> _printInvoice(BuildContext context, InvoiceDetailData data) async {
+  try {
+    await InvoiceGenerator.printInvoice(
+      invoice: data.invoice,
+      business: data.business!,
+      client: data.client!,
+      signature: data.signature,
+    );
+  } catch (e) {
+    if (context.mounted) {
+      MySnackBar.show(
+        context,
+        message: 'Failed to print invoice: $e',
+        type: MySnackbarType.failed,
       );
     }
+  }
+}
 
-    if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            MyActionButton(
-              cancelLabel: '',
-              saveLabel: 'Try Again',
-              showCancel: false,
-              saveIcon: const Icon(Icons.refresh),
-              saveOnPressed: _loadData,
-            ),
-          ],
-        ),
+Future<void> _shareInvoice(BuildContext context, InvoiceDetailData data) async {
+  try {
+    await InvoiceGenerator.shareInvoice(
+      invoice: data.invoice,
+      business: data.business!,
+      client: data.client!,
+      signature: data.signature,
+    );
+  } catch (e) {
+    if (context.mounted) {
+      MySnackBar.show(
+        context,
+        message: 'Failed to share invoice: $e',
+        type: MySnackbarType.failed,
       );
     }
+  }
+}
 
-    if (!_canShowPreview()) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.warning_amber, size: 60, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text(
-              'Missing data to generate invoice',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
+Future<void> _saveInvoice(BuildContext context, InvoiceDetailData data) async {
+  try {
+    final savedPath = await InvoiceGenerator.saveInvoice(
+      invoice: data.invoice,
+      business: data.business!,
+      client: data.client!,
+      signature: data.signature,
+    );
+    if (context.mounted) {
+      MySnackBar.show(
+        context,
+        message: 'Saved to $savedPath',
+        type: MySnackbarType.success,
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      MySnackBar.show(
+        context,
+        message: 'Failed to save invoice: $e',
+        type: MySnackbarType.failed,
+      );
+    }
+  }
+}
+
+class _PreviewMessage extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final String buttonLabel;
+  final Icon buttonIcon;
+  final VoidCallback onPressed;
+
+  const _PreviewMessage({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    required this.buttonLabel,
+    required this.buttonIcon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 60, color: iconColor),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Please ensure business, client, and signature are set.',
+              subtitle!,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            MyActionButton(
-              cancelLabel: '',
-              saveLabel: 'Go Back',
-              showCancel: false,
-              saveIcon: const Icon(Icons.arrow_back),
-              saveOnPressed: () => Navigator.pop(context),
-            ),
           ],
-        ),
-      );
-    }
-
-    // Show the enhanced PDF preview with better navigation
-    return _buildEnhancedPreview(state);
-  }
-
-  Widget _buildBottomBar() {
-    if (_isLoading || _errorMessage != null || !_canShowPreview()) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, -2),
+          const SizedBox(height: 24),
+          MyActionButton(
+            cancelLabel: '',
+            saveLabel: buttonLabel,
+            showCancel: false,
+            saveIcon: buttonIcon,
+            saveOnPressed: onPressed,
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // Print button
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.print,
-                  label: 'Print',
-                  onPressed: _printInvoice,
-                  color: Colors.blue[600],
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Share button
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.share,
-                  label: 'Share',
-                  onPressed: _shareInvoice,
-                  color: Colors.green[600],
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Save button
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.save_alt,
-                  label: 'Save',
-                  onPressed: _saveInvoice,
-                  color: Colors.orange[600],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
+}
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color? color,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: color?.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color ?? Colors.grey[300]!),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _PreviewBody extends StatelessWidget {
+  final InvoiceDetailData data;
 
-  bool _canShowPreview() {
-    final state = ref.read(invoiceFormProvider);
-    return state.business != null && state.client != null;
-  }
+  const _PreviewBody({required this.data});
 
-  //============================================
-  // MARK: - Enhanced Preview
-  //============================================
-
-  Widget _buildEnhancedPreview(dynamic state) {
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        // Page navigation header
-        _buildPageNavigationHeader(),
-
-        // PDF preview with enhanced scrolling
+        _PageNavigationHeader(data: data),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -368,10 +227,10 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: InvoiceGenerator.previewInvoice(
-                invoice: state.invoice!,
-                business: state.business!,
-                client: state.client!,
-                signature: state.signature,
+                invoice: data.invoice,
+                business: data.business!,
+                client: data.client!,
+                signature: data.signature,
               ),
             ),
           ),
@@ -379,8 +238,15 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       ],
     );
   }
+}
 
-  Widget _buildPageNavigationHeader() {
+class _PageNavigationHeader extends StatelessWidget {
+  final InvoiceDetailData data;
+
+  const _PageNavigationHeader({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -397,7 +263,6 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       ),
       child: Row(
         children: [
-          // Page info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,23 +284,59 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
               ],
             ),
           ),
-
-          // Quick actions
-          _buildQuickActionButton(
+          _QuickActionButton(
             icon: Icons.fullscreen,
             label: 'Fullscreen',
-            onPressed: () => _showFullscreenPreview(),
+            onPressed: () => _showFullscreenPreview(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
+  void _showFullscreenPreview(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text('Invoice ${data.invoice.invoiceNumber}'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.print),
+                onPressed: () => _printInvoice(context, data),
+              ),
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () => _shareInvoice(context, data),
+              ),
+            ],
+          ),
+          body: InvoiceGenerator.previewInvoice(
+            invoice: data.invoice,
+            business: data.business!,
+            client: data.client!,
+            signature: data.signature,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onPressed,
@@ -465,49 +366,110 @@ class _InvoicePreviewPageState extends ConsumerState<InvoicePreviewPage> {
       ),
     );
   }
+}
 
-  void _showFullscreenPreview() {
-    final state = ref.read(invoiceFormProvider);
-    if (!_canShowPreview()) return;
+class _BottomActionBar extends StatelessWidget {
+  final InvoiceDetailData data;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text('Invoice ${state.invoice?.invoiceNumber}'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.print),
-                onPressed: _printInvoice,
+  const _BottomActionBar({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.print,
+                  label: 'Print',
+                  onPressed: () => _printInvoice(context, data),
+                  color: Colors.blue[600],
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: _shareInvoice,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.share,
+                  label: 'Share',
+                  onPressed: () => _shareInvoice(context, data),
+                  color: Colors.green[600],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.save_alt,
+                  label: 'Save',
+                  onPressed: () => _saveInvoice(context, data),
+                  color: Colors.orange[600],
+                ),
               ),
             ],
-          ),
-          body: InvoiceGenerator.previewInvoice(
-            invoice: state.invoice!,
-            business: state.business!,
-            client: state.client!,
-            signature: state.signature,
           ),
         ),
       ),
     );
   }
+}
 
-  //============================================
-  // MARK: - Build
-  //============================================
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color? color;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomBar(),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: color?.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color ?? Colors.grey[300]!),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
