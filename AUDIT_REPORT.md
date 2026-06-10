@@ -796,6 +796,40 @@ Scope: final legacy invoice item schema retirement. `InvoiceLine` is now the onl
 
 ---
 
+## Stage 5 — Completed (2026-06-11) — full re-audit, remaining P2/P3 closure, first native tagged-test run
+
+Full follow-up audit after Stage 4E-4. Details, rationale, QA checklist, and
+commit map: **`doc/audits/invois-full-audit-fix-summary.md`**. Highlights:
+
+- **objectbox-tagged suite executed for the first time** (native
+  `libobjectbox.dylib` 5.3.2 on the host) — **49/49 pass**, retiring the
+  standing release blocker from Stages 2–4E. Setup documented in
+  `doc/testing.md`; the dylib is git-ignored.
+- **New P1 fixed:** invoice deletion orphaned `InvoiceLine` rows (delete path
+  missed the cleanup the edit path has) — now transactional, tagged-tested.
+- **New P1 fixed:** long-pressing a form line item popped the entire form page;
+  list removal now confirms and never pops a route.
+- **Residual P1-002 path closed:** form saves reconcile status⟺payment via new
+  pure `InvoicePayment.forManualSave`; the Payment Status dropdown is now a
+  derived display.
+- **P2-003 closed:** PDF tax rows now come from pure `InvoiceTaxBreakdown` and
+  always sum to the stored snapshot (aggregate fallback on edited/deleted tax).
+- **P2-004 closed:** startup money backfill gated by a one-time prefs flag.
+- **P2-006 closed:** preview page rewritten on `invoiceDetailProvider`.
+- **P3 closed:** route id guards (P3-005), line-removal confirmation (P3-003),
+  discount summary refresh (P3-004), dead data-layer code incl. the
+  unreconciled `updateStatus` (P3-001 remainder), stale delete-error snackbar,
+  undisposed controllers, `kDebugMode` autofill leftover, PDF footer Helvetica,
+  misleading iOS local-network privacy string.
+- **Deliberately not fixed:** at-rest encryption (ObjectBox edition), Android
+  release signing (needs user keystore), `InvoiceFormState.copyWith` error
+  sentinel (current overwrite semantics are load-bearing — see summary doc),
+  numbering prefix-awareness (product decision), `signature` 6.x major.
+- **Verification:** analyze clean · 171 default tests pass (+11) ·
+  49 tagged tests pass · format clean. No ObjectBox schema changes this stage.
+
+---
+
 ## Severity Legend
 
 - **P0 Critical**: data loss, app crash, broken core invoice flow, security/privacy issue
