@@ -50,6 +50,61 @@ void main() {
     });
   });
 
+  group('InvoicePayment.forManualSave (form save reconciliation)', () {
+    test('status paid forces full payment even if typed amount is less', () {
+      final o = InvoicePayment.forManualSave(
+        status: InvoiceStatus.paid,
+        totalCents: 10000,
+        enteredPaidCents: 0,
+      );
+      expect(o.paidAmountCents, 10000);
+      expect(o.balanceDueCents, 0);
+      expect(o.paymentStatus, PaymentStatus.paid);
+    });
+
+    test('non-paid status with zero typed amount -> unpaid', () {
+      final o = InvoicePayment.forManualSave(
+        status: InvoiceStatus.sent,
+        totalCents: 10000,
+        enteredPaidCents: 0,
+      );
+      expect(o.paidAmountCents, 0);
+      expect(o.balanceDueCents, 10000);
+      expect(o.paymentStatus, PaymentStatus.unpaid);
+    });
+
+    test('non-paid status with partial typed amount -> partiallyPaid', () {
+      final o = InvoicePayment.forManualSave(
+        status: InvoiceStatus.sent,
+        totalCents: 10000,
+        enteredPaidCents: 2500,
+      );
+      expect(o.paidAmountCents, 2500);
+      expect(o.balanceDueCents, 7500);
+      expect(o.paymentStatus, PaymentStatus.partiallyPaid);
+    });
+
+    test('non-paid status with full typed amount -> paymentStatus paid', () {
+      final o = InvoicePayment.forManualSave(
+        status: InvoiceStatus.sent,
+        totalCents: 10000,
+        enteredPaidCents: 10000,
+      );
+      expect(o.balanceDueCents, 0);
+      expect(o.paymentStatus, PaymentStatus.paid);
+    });
+
+    test('negative typed amount is treated as unpaid', () {
+      final o = InvoicePayment.forManualSave(
+        status: InvoiceStatus.draft,
+        totalCents: 10000,
+        enteredPaidCents: -500,
+      );
+      expect(o.paidAmountCents, 0);
+      expect(o.paymentStatus, PaymentStatus.unpaid);
+    });
+  });
+
   group('InvoicePayment.forStatus (Step 2B invariant)', () {
     test('paid status -> fully paid fields', () {
       final o = InvoicePayment.forStatus(InvoiceStatus.paid, totalCents: 10000);
@@ -68,7 +123,11 @@ void main() {
           reason: 'status=$status must map to unpaid',
         );
         expect(o.paidAmountCents, 0, reason: 'status=$status -> paid 0');
-        expect(o.balanceDueCents, 10000, reason: 'status=$status -> balance=total');
+        expect(
+          o.balanceDueCents,
+          10000,
+          reason: 'status=$status -> balance=total',
+        );
       }
     });
   });

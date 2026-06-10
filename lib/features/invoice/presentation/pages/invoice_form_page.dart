@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/constants/form_type.dart';
@@ -23,6 +22,7 @@ import 'package:invois/features/term/term.dart';
 
 import '../../invoice_composer.dart';
 import '../../invoice_form_line.dart';
+import '../../invoice_payment.dart';
 import '../../invoice_quantity_input.dart';
 import '../../providers/invoice_notifier.dart';
 import '../../providers/invoice_state.dart';
@@ -122,15 +122,6 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       _discountAmountController.text = '0.0';
       _paidAmountController.text = '0.0';
 
-      if (kDebugMode) {
-        _invoiceReferenceController.text = 'REF';
-        _invoiceNotesController.text = 'NOTES';
-        _issueDate = DateTime.now();
-        _dueDate = DateTime.now();
-        _sentDate = DateTime.now();
-        _paidDate = DateTime.now();
-      }
-
       if (state.invoice != null &&
           state.invoice!.id! > 0 &&
           widget.invoiceId != null) {
@@ -182,6 +173,10 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
   @override
   void dispose() {
+    _invoicePrefixController.dispose();
+    _invoiceNumberController.dispose();
+    _invoiceReferenceController.dispose();
+    _invoiceNotesController.dispose();
     _itemNameController.dispose();
     _itemDescriptionController.dispose();
     _itemPriceController.dispose();
@@ -256,13 +251,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     if (_isReadOnly) return;
     setState(() {
       _selectedStatus = status;
-    });
-  }
-
-  void _onPaymentStatusChanged(PaymentStatus status) {
-    if (_isReadOnly) return;
-    setState(() {
-      _selectedPaymentStatus = status;
+      _selectedPaymentStatus = _derivedPaymentStatus();
     });
   }
 
@@ -335,6 +324,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     _discountAmountController.text = discountAmount.toDouble().toStringAsFixed(
       2,
     );
+    _refreshPricingCalculations();
   }
 
   void _onDiscountAmountChanged(String value) {
@@ -347,12 +337,35 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
         ? (amount.minorUnits / subtotalCents) * 100
         : 0.0;
     _discountRateController.text = discountRate.toStringAsFixed(2);
+    _refreshPricingCalculations();
   }
 
   void _refreshPricingCalculations() {
     if (_isReadOnly) return;
-    // Trigger a rebuild to update pricing summary
-    setState(() {});
+    // Rebuild the pricing summary and keep the derived payment status in sync.
+    setState(() {
+      _selectedPaymentStatus = _derivedPaymentStatus();
+    });
+  }
+
+  /// Payment status is derived from amounts + status (never hand-picked), so
+  /// the form cannot save contradictory status/payment combinations.
+  PaymentStatus _derivedPaymentStatus() {
+    final subtotalCents = ref
+        .read(invoiceFormProvider.notifier)
+        .calculateSubtotalCents();
+    final discountAmount = _parseMoney(_discountAmountController.text);
+    final taxAmountCents = _calculateTaxAmountCents(
+      ref.read(invoiceFormProvider),
+    );
+    final totalCents =
+        subtotalCents - discountAmount.minorUnits + taxAmountCents;
+    final paidAmount = _parseMoney(_paidAmountController.text);
+    return InvoicePayment.forManualSave(
+      status: _selectedStatus,
+      totalCents: totalCents,
+      enteredPaidCents: paidAmount.minorUnits,
+    ).paymentStatus;
   }
 
   int _calculateTaxAmountCents(InvoiceFormState state) {
@@ -371,18 +384,21 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
   }
 
   void _onDeleteInvoice(Invoice invoice) async {
-    final state = ref.read(invoiceFormProvider);
     final result = await ref
         .read(invoiceFormProvider.notifier)
         .deleteInvoiceById(invoice.id!);
-    if (result && mounted) Navigator.pop(context);
-    if (mounted) {
-      MySnackBar.show(
-        context,
-        message: state.error ?? 'Invoice deleted',
-        type: result ? MySnackbarType.success : MySnackbarType.failed,
-      );
-    }
+    if (!mounted) return;
+    // Read the error *after* the delete so the snackbar reflects this
+    // operation, not a stale failure from an earlier action.
+    final error = ref.read(invoiceFormProvider).error;
+    if (result) Navigator.pop(context);
+    MySnackBar.show(
+      context,
+      message: result
+          ? 'Invoice deleted'
+          : (error ?? 'Failed to delete invoice'),
+      type: result ? MySnackbarType.success : MySnackbarType.failed,
+    );
   }
 
   void _onSubmit() async {
@@ -412,7 +428,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final subtotalCents = totals.subtotalCents;
     final taxAmountCents = totals.taxAmountCents;
     final totalCents = totals.totalCents;
-    final balanceDueCents = totals.balanceDueCents;
+
+    // Keep status and payment fields consistent (`status == paid` always means
+    // fully paid) — the form is a status-writing entry point too, so it must
+    // honour the same invariant as the status dialog and detail actions.
+    final payment = InvoicePayment.forManualSave(
+      status: _selectedStatus,
+      totalCents: totalCents,
+      enteredPaidCents: paidAmount.minorUnits,
+    );
 
     final invoice = Invoice(
       id: (widget.invoiceId != null && widget.invoiceId! > 0)
@@ -424,12 +448,14 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       notes: _invoiceNotesController.text,
       invoiceType: _selectedInvoiceType.name,
       status: _selectedStatus.name,
-      paymentStatus: _selectedPaymentStatus.name,
+      paymentStatus: payment.paymentStatus.name,
       issueDate: _issueDate ?? DateTime.now(),
       dueDate: _dueDate ?? DateTime.now(),
       sentDate: _sentDate,
       viewedDate: _viewedDate,
-      paidDate: _paidDate,
+      paidDate:
+          _paidDate ??
+          (payment.paymentStatus == PaymentStatus.paid ? DateTime.now() : null),
       businessId: state.business?.id,
       clientId: state.client?.id,
       signatureId: state.signature?.id,
@@ -438,15 +464,15 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
       discountAmount: discountAmount.toDouble(),
       taxAmount: _moneyFromCents(taxAmountCents).toDouble(),
       total: _moneyFromCents(totalCents).toDouble(),
-      paidAmount: paidAmount.toDouble(),
-      balanceDue: _moneyFromCents(balanceDueCents).toDouble(),
+      paidAmount: _moneyFromCents(payment.paidAmountCents).toDouble(),
+      balanceDue: _moneyFromCents(payment.balanceDueCents).toDouble(),
       currency: _selectedCurrency,
       subtotalCents: subtotalCents,
       discountAmountCents: discountAmount.minorUnits,
       taxAmountCents: taxAmountCents,
       totalCents: totalCents,
-      paidAmountCents: paidAmount.minorUnits,
-      balanceDueCents: balanceDueCents,
+      paidAmountCents: payment.paidAmountCents,
+      balanceDueCents: payment.balanceDueCents,
       isRecurring: _isRecurring,
       recurringFrequency: _isRecurring
           ? _selectedRecurringFrequency.name
@@ -698,7 +724,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                     ),
                     if (existingLine != null)
                       TextButton(
-                        onPressed: () => _removeLine(existingLine),
+                        onPressed: () => _removeLineFromSheet(existingLine),
                         child: Text('Remove'),
                       ),
                     ElevatedButton(
@@ -750,10 +776,41 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     );
   }
 
-  void _removeLine(InvoiceFormLine line) {
+  /// Remove a line from inside the add/edit item bottom sheet (closes it).
+  void _removeLineFromSheet(InvoiceFormLine line) {
     Navigator.pop(context);
     ref.read(invoiceFormProvider.notifier).removeLine(line);
     _refreshPricingCalculations();
+  }
+
+  /// Remove a line from the items list (long-press) — confirm first, and never
+  /// pop a route: there is no sheet open in this path.
+  void _confirmRemoveLine(InvoiceFormLine line) {
+    if (_isReadOnly) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog.adaptive(
+        title: const Text('Remove Item'),
+        content: Text('Remove "${line.name}" from this invoice?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              ref.read(invoiceFormProvider.notifier).removeLine(line);
+              _refreshPricingCalculations();
+            },
+            child: Text(
+              'Remove',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   //============================================
@@ -997,10 +1054,13 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                             value != null ? _onStatusChanged(value) : null,
                       ),
                     ),
+                    // Payment status is derived from the paid amount and
+                    // status (see _derivedPaymentStatus) — display only.
                     Expanded(
                       child: MyDropdownMenu<PaymentStatus>(
+                        key: ValueKey(_selectedPaymentStatus),
                         label: 'Payment Status',
-                        isReadOnly: _isReadOnly,
+                        isReadOnly: true,
                         initialSelection: _selectedPaymentStatus,
                         entries: PaymentStatus.values
                             .map(
@@ -1010,9 +1070,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                               ),
                             )
                             .toList(),
-                        onSelected: (value) => value != null
-                            ? _onPaymentStatusChanged(value)
-                            : null,
+                        onSelected: (_) {},
                       ),
                     ),
                   ],
@@ -1334,7 +1392,14 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     final paidAmount = _parseMoney(_paidAmountController.text);
     final totalCents =
         subtotalCents - discountAmount.minorUnits + taxAmountCents;
-    final balanceDueCents = totalCents - paidAmount.minorUnits;
+    // Mirror exactly what _onSubmit will persist (status==paid forces full
+    // payment), so the preview never disagrees with the saved invoice.
+    final payment = InvoicePayment.forManualSave(
+      status: _selectedStatus,
+      totalCents: totalCents,
+      enteredPaidCents: paidAmount.minorUnits,
+    );
+    final balanceDueCents = payment.balanceDueCents;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1446,7 +1511,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Paid:'),
-              Text(_formatMoneyCents(paidAmount.minorUnits)),
+              Text(_formatMoneyCents(payment.paidAmountCents)),
             ],
           ),
           Row(
@@ -1510,7 +1575,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 onTap: () => _showAddItemDialog(existingLine: line),
-                onLongPress: () => _removeLine(line),
+                onLongPress: () => _confirmRemoveLine(line),
               );
             },
           ),

@@ -64,4 +64,20 @@ class InvoicePayment {
         ? pay(totalCents: totalCents)
         : unpaid(totalCents: totalCents);
   }
+
+  /// Reconcile a manually edited form save, where the user controls both the
+  /// [status] dropdown and the paid-amount field. The invariant
+  /// `status == paid ⟺ fully paid` always wins over the typed amount:
+  ///   - status paid           -> full payment regardless of the typed amount
+  ///   - typed amount <= 0     -> unpaid
+  ///   - typed amount > 0      -> partial/full payment derived from the amount
+  static PaymentOutcome forManualSave({
+    required InvoiceStatus status,
+    required int totalCents,
+    required int enteredPaidCents,
+  }) {
+    if (status == InvoiceStatus.paid) return pay(totalCents: totalCents);
+    if (enteredPaidCents <= 0) return unpaid(totalCents: totalCents);
+    return pay(totalCents: totalCents, paidAmountCents: enteredPaidCents);
+  }
 }
