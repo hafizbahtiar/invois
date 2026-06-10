@@ -25,11 +25,6 @@ class InvoiceLocalSource {
     _invoiceBox = _store.box<Invoice>();
   }
 
-  // Get all invoices
-  Future<List<Invoice>> getInvoices() async {
-    return _invoiceBox.getAll();
-  }
-
   /// Reactive, filtered invoice stream (ADR-0003).
   ///
   /// Emits immediately and again on every matching write. Search runs in-query
@@ -102,59 +97,22 @@ class InvoiceLocalSource {
     }
   }
 
-  // Delete invoice
+  // Delete invoice and its owned InvoiceLine rows (no orphans). The lines
+  // belong exclusively to the invoice, so they must go with it.
   Future<bool> deleteInvoiceById(int id) async {
-    return _invoiceBox.remove(id);
-  }
+    return _store.runInTransaction(TxMode.write, () {
+      final invoice = _invoiceBox.get(id);
+      if (invoice == null) return false;
 
-  // Delete multiple invoices
-  Future<int> deleteInvoices(List<int> ids) async {
-    int deletedCount = 0;
-    for (int id in ids) {
-      if (_invoiceBox.remove(id)) {
-        deletedCount++;
+      final lineIds = [
+        for (final line in invoice.lines)
+          if (line.id != null) line.id!,
+      ];
+      if (lineIds.isNotEmpty) {
+        _store.box<InvoiceLine>().removeMany(lineIds);
       }
-    }
-    return deletedCount;
-  }
-
-  // Search invoices by invoice number
-  Future<List<Invoice>> searchInvoicesByNumber(String query) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices
-        .where(
-          (invoice) =>
-              invoice.invoiceNumber.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
-  }
-
-  // Search invoices (combined search)
-  Future<List<Invoice>> searchInvoices(
-    String query, {
-    InvoiceStatus? status,
-    PaymentStatus? paymentStatus,
-    InvoiceType? invoiceType,
-  }) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices.where((invoice) {
-      bool matchesQuery =
-          invoice.invoiceNumber.toLowerCase().contains(query.toLowerCase()) ||
-          (invoice.reference?.toLowerCase().contains(query.toLowerCase()) ??
-              false) ||
-          (invoice.notes?.toLowerCase().contains(query.toLowerCase()) ?? false);
-
-      if (status != null && invoice.status != status.name) return false;
-      if (paymentStatus != null &&
-          invoice.paymentStatus != paymentStatus.name) {
-        return false;
-      }
-      if (invoiceType != null && invoice.invoiceType != invoiceType.name) {
-        return false;
-      }
-
-      return matchesQuery;
-    }).toList();
+      return _invoiceBox.remove(id);
+    });
   }
 
   // Get invoices by business ID
@@ -179,37 +137,6 @@ class InvoiceLocalSource {
       invoiceNumber: invoiceNumber,
       excludingInvoiceId: excludingInvoiceId,
     );
-  }
-
-  // Get invoices by client ID
-  Future<List<Invoice>> getInvoicesByClientId(int clientId) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices
-        .where((invoice) => invoice.clientId == clientId)
-        .toList();
-  }
-
-  // Get invoices by status
-  Future<List<Invoice>> getInvoicesByStatus(InvoiceStatus status) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices
-        .where((invoice) => invoice.status == status.name)
-        .toList();
-  }
-
-  // Get invoices by payment status
-  Future<List<Invoice>> getInvoicesByPaymentStatus(
-    PaymentStatus paymentStatus,
-  ) async {
-    final allInvoices = _invoiceBox.getAll();
-    return allInvoices
-        .where((invoice) => invoice.paymentStatus == paymentStatus.name)
-        .toList();
-  }
-
-  // Count total invoices
-  Future<int> countInvoices() async {
-    return _invoiceBox.count();
   }
 
   // Update invoice fields
@@ -294,16 +221,6 @@ class InvoiceLocalSource {
     return result > 0;
   }
 
-  // Update invoice status
-  Future<bool> updateInvoiceStatus(int id, InvoiceStatus status) async {
-    return updateInvoiceFields(id, status: status.name);
-  }
-
-  // Update payment status
-  Future<bool> updatePaymentStatus(int id, PaymentStatus paymentStatus) async {
-    return updateInvoiceFields(id, paymentStatus: paymentStatus.name);
-  }
-
   // Set [status] and reconcile the payment fields so status and payment never
   // diverge (paid => fully paid, any other status => unpaid). Used by
   // markAsSent / markAsUnpaid; markAsPaid stays separate as it supports a
@@ -349,15 +266,6 @@ class InvoiceLocalSource {
     return _applyStatusReconcilingPayment(id, status);
   }
 
-  // Mark invoice as viewed
-  Future<bool> markAsViewed(int id) async {
-    return updateInvoiceFields(
-      id,
-      status: InvoiceStatus.viewed.name,
-      viewedDate: DateTime.now(),
-    );
-  }
-
   // Mark invoice as paid (full by default; pass [paidAmount] for a partial
   // payment). Reconciles paid/balance/paymentStatus via the pure
   // [InvoicePayment] so the cents spine and legacy doubles stay consistent.
@@ -379,33 +287,6 @@ class InvoiceLocalSource {
       paidAmountCents: outcome.paidAmountCents,
       balanceDueCents: outcome.balanceDueCents,
       paidDate: DateTime.now(),
-    );
-  }
-
-  // Update invoice amounts
-  Future<bool> updateInvoiceAmounts(
-    int id, {
-    double? subtotal,
-    double? discountRate,
-    double? discountAmount,
-    double? taxAmount,
-    double? total,
-    int? subtotalCents,
-    int? discountAmountCents,
-    int? taxAmountCents,
-    int? totalCents,
-  }) async {
-    return updateInvoiceFields(
-      id,
-      subtotal: subtotal,
-      discountRate: discountRate,
-      discountAmount: discountAmount,
-      taxAmount: taxAmount,
-      total: total,
-      subtotalCents: subtotalCents,
-      discountAmountCents: discountAmountCents,
-      taxAmountCents: taxAmountCents,
-      totalCents: totalCents,
     );
   }
 

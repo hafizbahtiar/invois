@@ -29,7 +29,7 @@ final invoiceRepositoryProvider = Provider<InvoiceRepository>(
 /// Boundary contract:
 /// - Reactive reads return a [Stream] that throws [AppFailure] on error
 ///   (surfaced as `AsyncError` by `StreamProvider`).
-/// - `create`/`update`/`updateStatus`/`delete` return [Result].
+/// - `create`/`update`/`markAs*`/`delete` return [Result].
 /// - Relation helpers (taxes/terms/lines) are fire-and-forget mutations.
 class InvoiceRepository {
   final InvoiceLocalSource _local;
@@ -128,17 +128,6 @@ class InvoiceRepository {
       return (r.success && data != null)
           ? Ok(data)
           : Err(DatabaseFailure(r.message ?? 'Failed to update invoice'));
-    } catch (e) {
-      return Err(mapException(e));
-    }
-  }
-
-  Future<Result<void>> updateStatus(int id, InvoiceStatus status) async {
-    try {
-      final ok = await _local.updateInvoiceStatus(id, status);
-      return ok
-          ? const Ok(null)
-          : const Err(DatabaseFailure('Failed to update invoice status'));
     } catch (e) {
       return Err(mapException(e));
     }

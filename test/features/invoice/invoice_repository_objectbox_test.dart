@@ -88,14 +88,44 @@ void main() {
       expect(await repo.getCompleteInvoice(saved.id!), isNull);
     });
 
-    test('updateStatus changes only the status', () async {
-      final saved = (await repo.create(draft('INV-005')) as Ok<Invoice>).value;
-      final result = await repo.updateStatus(saved.id!, InvoiceStatus.paid);
-      expect(result, isA<Ok<void>>());
-      expect(
-        (await repo.getCompleteInvoice(saved.id!))?.status,
-        InvoiceStatus.paid.name,
-      );
+    test(
+      'delete removes the invoice\'s InvoiceLine rows (no orphans)',
+      () async {
+        final saved =
+            (await repo.create(draft('INV-005')) as Ok<Invoice>).value;
+        await repo.replaceInvoiceLines(saved.id!, [
+          InvoiceLine(name: 'A', unitPriceCents: 5000, quantityMilli: 1000),
+          InvoiceLine(name: 'B', unitPriceCents: 5000, quantityMilli: 2000),
+        ]);
+        final lineBox = store.box<InvoiceLine>();
+        expect(lineBox.count(), 2);
+
+        final result = await repo.delete(saved.id!);
+        expect(result, isA<Ok<void>>());
+        expect(await repo.getCompleteInvoice(saved.id!), isNull);
+        expect(
+          lineBox.count(),
+          0,
+          reason: 'owned lines must die with the invoice',
+        );
+      },
+    );
+
+    test('delete only removes the deleted invoice\'s lines', () async {
+      final keep = (await repo.create(draft('INV-KEEP')) as Ok<Invoice>).value;
+      final gone = (await repo.create(draft('INV-GONE')) as Ok<Invoice>).value;
+      await repo.replaceInvoiceLines(keep.id!, [
+        InvoiceLine(name: 'Keep', unitPriceCents: 1000, quantityMilli: 1000),
+      ]);
+      await repo.replaceInvoiceLines(gone.id!, [
+        InvoiceLine(name: 'Gone', unitPriceCents: 2000, quantityMilli: 1000),
+      ]);
+
+      await repo.delete(gone.id!);
+
+      final lines = store.box<InvoiceLine>().getAll();
+      expect(lines, hasLength(1));
+      expect(lines.single.name, 'Keep');
     });
 
     test('create persists nullable signatureId when selected', () async {
