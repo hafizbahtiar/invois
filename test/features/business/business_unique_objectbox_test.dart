@@ -54,7 +54,10 @@ void main() {
     });
 
     test('business name stays unique (identity rule unchanged)', () async {
-      expect(await repo.create(Business(name: 'Dup Name')), isA<Ok<Business>>());
+      expect(
+        await repo.create(Business(name: 'Dup Name')),
+        isA<Ok<Business>>(),
+      );
       expect(
         await repo.create(Business(name: 'Dup Name')),
         isA<Err<Business>>(),

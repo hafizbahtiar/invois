@@ -20,7 +20,8 @@ void main() {
   setUp(() {
     store = Store(
       getObjectBoxModel(),
-      directory: 'memory:client-unique-${DateTime.now().microsecondsSinceEpoch}',
+      directory:
+          'memory:client-unique-${DateTime.now().microsecondsSinceEpoch}',
     );
     repo = ClientRepository(ClientLocalSource.withDependencies(store: store));
   });

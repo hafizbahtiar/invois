@@ -62,8 +62,8 @@ void main() {
         );
       });
 
-      final screenHeight = tester.view.physicalSize.height /
-          tester.view.devicePixelRatio;
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
       final sheetHeight = tester.getSize(find.byType(AppBottomSheet)).height;
       // A 3-item sheet should be well under the 95% cap.
       expect(sheetHeight, lessThan(screenHeight * 0.6));

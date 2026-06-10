@@ -225,7 +225,9 @@ class _ActionButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           padding: padding,
           shape: shape,
-          backgroundColor: action.isDestructive ? theme.colorScheme.error : null,
+          backgroundColor: action.isDestructive
+              ? theme.colorScheme.error
+              : null,
           foregroundColor: action.isDestructive
               ? theme.colorScheme.onError
               : null,
@@ -392,10 +394,7 @@ abstract final class AppDynamicBottomSheet {
       sheet: AppBottomSheet(
         title: title,
         // Secondary on the left, primary (emphasised) on the right.
-        actions: [
-          ?secondaryAction,
-          ?primaryAction,
-        ],
+        actions: [?secondaryAction, ?primaryAction],
         body: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: Column(
@@ -403,7 +402,11 @@ abstract final class AppDynamicBottomSheet {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  icon,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 12),
               ],
               if (description != null)
@@ -445,10 +448,7 @@ abstract final class AppDynamicBottomSheet {
         title: title,
         showCloseButton: showCloseButton,
         actions: actions,
-        body: SingleChildScrollView(
-          padding: contentPadding,
-          child: child,
-        ),
+        body: SingleChildScrollView(padding: contentPadding, child: child),
       ),
     );
   }
@@ -459,7 +459,8 @@ abstract final class AppDynamicBottomSheet {
 class _ListBottomSheet<T> extends StatefulWidget {
   final String? title;
   final List<T> items;
-  final Widget Function(BuildContext context, T item, bool selected) itemBuilder;
+  final Widget Function(BuildContext context, T item, bool selected)
+  itemBuilder;
   final ValueChanged<T> onItemSelected;
   final T? selectedValue;
   final bool searchable;
@@ -518,10 +519,9 @@ class _ListBottomSheetState<T> extends State<_ListBottomSheet<T>> {
           ? widget.items
           : widget.items
                 .where(
-                  (item) =>
-                      (widget.searchText?.call(item) ?? '')
-                          .toLowerCase()
-                          .contains(q),
+                  (item) => (widget.searchText?.call(item) ?? '')
+                      .toLowerCase()
+                      .contains(q),
                 )
                 .toList();
     });
@@ -602,7 +602,8 @@ class _ListBottomSheetState<T> extends State<_ListBottomSheet<T>> {
 
     if (_filtered.isEmpty) {
       return _StatePlaceholder(
-        child: widget.emptyPlaceholder ??
+        child:
+            widget.emptyPlaceholder ??
             const _MessageState(
               icon: Icons.search_off,
               title: 'No results',
@@ -637,7 +638,10 @@ class _ListBottomSheetState<T> extends State<_ListBottomSheet<T>> {
               borderRadius: BorderRadius.circular(8),
               onTap: disabled ? null : () => _handleTap(item),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: widget.itemBuilder(context, item, selected),
               ),
             ),

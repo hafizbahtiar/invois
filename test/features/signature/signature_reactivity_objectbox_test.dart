@@ -22,7 +22,8 @@ void main() {
   setUp(() {
     store = Store(
       getObjectBoxModel(),
-      directory: 'memory:sig-reactivity-${DateTime.now().microsecondsSinceEpoch}',
+      directory:
+          'memory:sig-reactivity-${DateTime.now().microsecondsSinceEpoch}',
     );
     repo = SignatureRepository(
       SignatureLocalSource.withDependencies(store: store),
@@ -33,7 +34,9 @@ void main() {
 
   test('watchSignatures emits after create, update, and delete', () async {
     final emissions = <List<Signature>>[];
-    final sub = repo.watchSignatures(const SignatureQuery()).listen(emissions.add);
+    final sub = repo
+        .watchSignatures(const SignatureQuery())
+        .listen(emissions.add);
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     final created =
@@ -55,29 +58,33 @@ void main() {
     await sub.cancel();
   });
 
-  test('watchSignatures reflects set-default (only one default remains)', () async {
-    final emissions = <List<Signature>>[];
-    final sub = repo
-        .watchSignatures(const SignatureQuery())
-        .listen(emissions.add);
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+  test(
+    'watchSignatures reflects set-default (only one default remains)',
+    () async {
+      final emissions = <List<Signature>>[];
+      final sub = repo
+          .watchSignatures(const SignatureQuery())
+          .listen(emissions.add);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    final a =
-        (await repo.create(Signature(name: 'A', isDefault: true)) as Ok<Signature>)
-            .value;
-    final b =
-        (await repo.create(Signature(name: 'B')) as Ok<Signature>).value;
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+      final a =
+          (await repo.create(Signature(name: 'A', isDefault: true))
+                  as Ok<Signature>)
+              .value;
+      final b =
+          (await repo.create(Signature(name: 'B')) as Ok<Signature>).value;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    // Promote B to default; local source unsets A's default.
-    await repo.update(b.copyWith(isDefault: true));
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Promote B to default; local source unsets A's default.
+      await repo.update(b.copyWith(isDefault: true));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    final defaults = emissions.last.where((s) => s.isDefault).toList();
-    expect(defaults.length, 1);
-    expect(defaults.single.id, b.id);
-    expect(emissions.last.firstWhere((s) => s.id == a.id).isDefault, isFalse);
+      final defaults = emissions.last.where((s) => s.isDefault).toList();
+      expect(defaults.length, 1);
+      expect(defaults.single.id, b.id);
+      expect(emissions.last.firstWhere((s) => s.id == a.id).isDefault, isFalse);
 
-    await sub.cancel();
-  });
+      await sub.cancel();
+    },
+  );
 }

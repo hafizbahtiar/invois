@@ -64,9 +64,18 @@ void main() {
 
   group('format', () {
     test('1000 -> "1"', () => expect(InvoiceQuantityInput.format(1000), '1'));
-    test('1500 -> "1.5"', () => expect(InvoiceQuantityInput.format(1500), '1.5'));
-    test('1250 -> "1.25"', () => expect(InvoiceQuantityInput.format(1250), '1.25'));
-    test('250 -> "0.25"', () => expect(InvoiceQuantityInput.format(250), '0.25'));
+    test(
+      '1500 -> "1.5"',
+      () => expect(InvoiceQuantityInput.format(1500), '1.5'),
+    );
+    test(
+      '1250 -> "1.25"',
+      () => expect(InvoiceQuantityInput.format(1250), '1.25'),
+    );
+    test(
+      '250 -> "0.25"',
+      () => expect(InvoiceQuantityInput.format(250), '0.25'),
+    );
     test('1 -> "0.001"', () => expect(InvoiceQuantityInput.format(1), '0.001'));
   });
 

@@ -34,28 +34,42 @@ void main() {
 
   group('Signature contact fields are not unique (Step 3B)', () {
     test('two signatures with null email AND null phone are allowed', () async {
-      expect(await repo.create(Signature(name: 'Owner A')), isA<Ok<Signature>>());
-      expect(await repo.create(Signature(name: 'Owner B')), isA<Ok<Signature>>());
+      expect(
+        await repo.create(Signature(name: 'Owner A')),
+        isA<Ok<Signature>>(),
+      );
+      expect(
+        await repo.create(Signature(name: 'Owner B')),
+        isA<Ok<Signature>>(),
+      );
     });
 
     test('same email within the same business is allowed', () async {
       expect(
-        await repo.create(Signature(name: 'A', email: 'x@x.com', businessId: 1)),
+        await repo.create(
+          Signature(name: 'A', email: 'x@x.com', businessId: 1),
+        ),
         isA<Ok<Signature>>(),
       );
       expect(
-        await repo.create(Signature(name: 'B', email: 'x@x.com', businessId: 1)),
+        await repo.create(
+          Signature(name: 'B', email: 'x@x.com', businessId: 1),
+        ),
         isA<Ok<Signature>>(),
       );
     });
 
     test('same email across different businesses is allowed', () async {
       expect(
-        await repo.create(Signature(name: 'A', email: 'dup@x.com', businessId: 1)),
+        await repo.create(
+          Signature(name: 'A', email: 'dup@x.com', businessId: 1),
+        ),
         isA<Ok<Signature>>(),
       );
       expect(
-        await repo.create(Signature(name: 'B', email: 'dup@x.com', businessId: 2)),
+        await repo.create(
+          Signature(name: 'B', email: 'dup@x.com', businessId: 2),
+        ),
         isA<Ok<Signature>>(),
       );
     });

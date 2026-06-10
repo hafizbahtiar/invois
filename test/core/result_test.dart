@@ -20,7 +20,10 @@ void main() {
       expect(result.isErr, isTrue);
       expect(result.valueOrNull, isNull);
       expect(result.failureOrNull, same(failure));
-      expect(result.fold((v) => 'ok', (f) => 'err:${f.message}'), 'err:missing');
+      expect(
+        result.fold((v) => 'ok', (f) => 'err:${f.message}'),
+        'err:missing',
+      );
     });
 
     test('orThrow throws the AppFailure for Err', () {

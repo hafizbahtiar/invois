@@ -22,7 +22,8 @@ void main() {
   setUp(() {
     store = Store(
       getObjectBoxModel(),
-      directory: 'memory:term-reactivity-${DateTime.now().microsecondsSinceEpoch}',
+      directory:
+          'memory:term-reactivity-${DateTime.now().microsecondsSinceEpoch}',
     );
     repo = TermRepository(TermLocalSource.withDependencies(store: store));
   });
@@ -32,7 +33,9 @@ void main() {
   test('watchTerms emits after create, update, and delete', () async {
     final emissions = <List<Term>>[];
     final sub = repo.watchTerms(const TermQuery()).listen(emissions.add);
-    await Future<void>.delayed(const Duration(milliseconds: 20)); // initial emit
+    await Future<void>.delayed(
+      const Duration(milliseconds: 20),
+    ); // initial emit
 
     // create -> appears
     final created =

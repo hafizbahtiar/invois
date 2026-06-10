@@ -14,8 +14,7 @@ class SimpleInvoiceOverview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invoices =
-        ref.watch(invoiceListProvider).value ?? const <Invoice>[];
+    final invoices = ref.watch(invoiceListProvider).value ?? const <Invoice>[];
     final settingState = ref.watch(settingsProvider);
     final defaultCurrency = settingState.currencyCode;
     final filteredInvoices = invoices

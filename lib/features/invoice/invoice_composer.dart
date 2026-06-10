@@ -56,7 +56,10 @@ class InvoiceComposer {
     required double rate,
     String currencyCode = 'MYR',
   }) {
-    return Money(subtotalCents, currencyCode: currencyCode).percent(rate).minorUnits;
+    return Money(
+      subtotalCents,
+      currencyCode: currencyCode,
+    ).percent(rate).minorUnits;
   }
 
   /// Inverse of [discountFromRate]: the percentage an explicit discount
@@ -103,7 +106,8 @@ class InvoiceComposer {
     String currencyCode = 'MYR',
   }) {
     final subtotal = subtotalCentsOverride ?? subtotalCents(lines);
-    final discount = discountAmountCents ??
+    final discount =
+        discountAmountCents ??
         discountFromRate(
           subtotalCents: subtotal,
           rate: discountRate,

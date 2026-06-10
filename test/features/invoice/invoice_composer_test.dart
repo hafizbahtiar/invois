@@ -42,7 +42,10 @@ void main() {
   group('InvoiceComposer.rateFromDiscount', () {
     test('derives the rate from an explicit discount amount', () {
       expect(
-        InvoiceComposer.rateFromDiscount(subtotalCents: 2000, discountCents: 500),
+        InvoiceComposer.rateFromDiscount(
+          subtotalCents: 2000,
+          discountCents: 500,
+        ),
         25.0,
       );
     });
@@ -81,24 +84,27 @@ void main() {
   });
 
   group('InvoiceComposer.compose', () {
-    test('full spine: subtotal -> discount -> multi-tax -> total -> balance', () {
-      final totals = InvoiceComposer.compose(
-        lines: const [
-          ComposerLine(unitPriceCents: 10000, quantity: 1), // 10000
-          ComposerLine(unitPriceCents: 5000, quantity: 2), //  10000
-        ],
-        discountRate: 10, // 10% of 20000 = 2000
-        taxRates: const [6], // 6% of (20000-2000)=18000 -> 1080
-        paidAmountCents: 5000,
-      );
+    test(
+      'full spine: subtotal -> discount -> multi-tax -> total -> balance',
+      () {
+        final totals = InvoiceComposer.compose(
+          lines: const [
+            ComposerLine(unitPriceCents: 10000, quantity: 1), // 10000
+            ComposerLine(unitPriceCents: 5000, quantity: 2), //  10000
+          ],
+          discountRate: 10, // 10% of 20000 = 2000
+          taxRates: const [6], // 6% of (20000-2000)=18000 -> 1080
+          paidAmountCents: 5000,
+        );
 
-      expect(totals.subtotalCents, 20000);
-      expect(totals.discountAmountCents, 2000);
-      expect(totals.taxAmountCents, 1080);
-      expect(totals.totalCents, 19080); // 20000 - 2000 + 1080
-      expect(totals.paidAmountCents, 5000);
-      expect(totals.balanceDueCents, 14080); // 19080 - 5000
-    });
+        expect(totals.subtotalCents, 20000);
+        expect(totals.discountAmountCents, 2000);
+        expect(totals.taxAmountCents, 1080);
+        expect(totals.totalCents, 19080); // 20000 - 2000 + 1080
+        expect(totals.paidAmountCents, 5000);
+        expect(totals.balanceDueCents, 14080); // 19080 - 5000
+      },
+    );
 
     test('explicit discount amount takes precedence over rate', () {
       final totals = InvoiceComposer.compose(

@@ -7,8 +7,14 @@ void main() {
   group('InvoiceGenerator.sanitizeFileName', () {
     test('replaces path separators and illegal characters', () {
       expect(InvoiceGenerator.sanitizeFileName('INV/2024/001'), 'INV-2024-001');
-      expect(InvoiceGenerator.sanitizeFileName(r'INV\2024\001'), 'INV-2024-001');
-      expect(InvoiceGenerator.sanitizeFileName('INV:2024*001?'), 'INV-2024-001');
+      expect(
+        InvoiceGenerator.sanitizeFileName(r'INV\2024\001'),
+        'INV-2024-001',
+      );
+      expect(
+        InvoiceGenerator.sanitizeFileName('INV:2024*001?'),
+        'INV-2024-001',
+      );
     });
 
     test('keeps already-safe names intact', () {
