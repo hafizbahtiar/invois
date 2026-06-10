@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/invoice/invoice_quantity_input.dart';
+import 'package:invois/features/invoice/domain/invoice_quantity_input.dart';
 
 /// Step 4C-4D-1: pure quantity parser/formatter.
 void main() {

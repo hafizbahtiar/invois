@@ -2,12 +2,12 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
-import 'package:invois/features/invoice/invoice_payment.dart';
+import 'package:invois/features/invoice/domain/invoice_payment.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
 import 'invoice_model.dart';
-import 'invoice_numbering.dart';
+import '../domain/invoice_numbering.dart';
 import 'invoice_query.dart';
 
 class InvoiceLocalSource {

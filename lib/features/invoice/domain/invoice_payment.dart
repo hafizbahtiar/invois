@@ -1,4 +1,4 @@
-import 'data/invoice_model.dart';
+import '../data/invoice_model.dart';
 
 /// Immutable result of reconciling an invoice's payment fields. All amounts are
 /// in integer minor units (cents) — the S3 money spine.

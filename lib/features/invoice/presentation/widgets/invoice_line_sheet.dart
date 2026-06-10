@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:invois/core/money/money.dart';
-import 'package:invois/features/shared/widgets/app_bottom_sheet.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/app_bottom_sheet.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
 
-import '../../invoice_form_line.dart';
-import '../../invoice_quantity_input.dart';
+import '../../domain/invoice_form_line.dart';
+import '../../domain/invoice_quantity_input.dart';
 
 /// Outcome of [InvoiceLineSheet.show]: a built/edited [line], or a request to
 /// remove the existing line. Plain dismissal (drag down, tap outside, Cancel)

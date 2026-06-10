@@ -1,4 +1,4 @@
-import 'invoice_model.dart';
+import '../data/invoice_model.dart';
 
 /// Parsed parts of a full invoice number: everything before the trailing
 /// digits is the prefix scope, the digits are the sequence.

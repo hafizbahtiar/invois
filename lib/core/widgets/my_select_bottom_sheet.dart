@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
+import 'package:invois/core/widgets/my_selector_field.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class MySelectBottomSheet<T> extends StatefulWidget {

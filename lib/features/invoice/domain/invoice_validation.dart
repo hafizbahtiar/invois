@@ -1,5 +1,5 @@
-import '../invoice_form_line.dart';
-import 'invoice_model.dart';
+import 'invoice_form_line.dart';
+import '../data/invoice_model.dart';
 import 'invoice_numbering.dart';
 
 class InvoiceValidation {

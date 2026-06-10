@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:invois/features/invoice/pdf/invoice_generator.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
 
 import '../../providers/invoice_providers.dart';
 

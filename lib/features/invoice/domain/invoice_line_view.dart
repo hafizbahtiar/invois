@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-import 'data/invoice_line_model.dart';
-import 'data/invoice_model.dart';
+import '../data/invoice_line_model.dart';
+import '../data/invoice_model.dart';
 import 'invoice_line_math.dart';
 
 /// A stable read view of an invoice line.

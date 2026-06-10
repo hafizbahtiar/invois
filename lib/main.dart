@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/generate_route.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/generate_route.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/features/invoice/data/invoice_money_backfill.dart';
-import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:invois/features/settings/providers/settings_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {

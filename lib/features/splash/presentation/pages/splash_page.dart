@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/constants/custom_image.dart';
 
 class SplashPage extends StatefulWidget {

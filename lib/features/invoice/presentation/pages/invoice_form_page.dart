@@ -5,25 +5,25 @@ import 'package:invois/core/money/money.dart';
 import 'package:invois/core/utils/currency_utils.dart';
 import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
-import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:invois/features/settings/providers/settings_notifier.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_query.dart';
 import 'package:invois/features/signature/providers/signature_providers.dart';
-import 'package:invois/features/shared/widgets/form_section_header.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_date_picker_field.dart';
-import 'package:invois/features/shared/widgets/my_dropdown_menu.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/form_section_header.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_date_picker_field.dart';
+import 'package:invois/core/widgets/my_dropdown_menu.dart';
+import 'package:invois/core/widgets/my_selector_field.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 
-import '../../invoice_composer.dart';
-import '../../invoice_form_line.dart';
-import '../../invoice_payment.dart';
-import '../../invoice_quantity_input.dart';
+import '../../domain/invoice_composer.dart';
+import '../../domain/invoice_form_line.dart';
+import '../../domain/invoice_payment.dart';
+import '../../domain/invoice_quantity_input.dart';
 import '../../providers/invoice_notifier.dart';
 import '../../providers/invoice_state.dart';
 import '../../data/invoice_model.dart';
@@ -573,7 +573,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
     ref.read(invoiceFormProvider.notifier).clearSignature();
   }
 
-  Future<void> _showAddItemDialog({InvoiceFormLine? existingLine}) async {
+  Future<void> _showLineItemSheet({InvoiceFormLine? existingLine}) async {
     if (_isReadOnly) return;
 
     final result = await InvoiceLineSheet.show(
@@ -1387,7 +1387,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
                   _formatMoneyCents(line.lineTotalCents),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                onTap: () => _showAddItemDialog(existingLine: line),
+                onTap: () => _showLineItemSheet(existingLine: line),
                 onLongPress: () => _confirmRemoveLine(line),
               );
             },
@@ -1410,7 +1410,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
           const SizedBox(height: 16),
           Center(
             child: ElevatedButton.icon(
-              onPressed: () => _showAddItemDialog(),
+              onPressed: () => _showLineItemSheet(),
               icon: const Icon(Icons.add),
               label: const Text('Add Item'),
             ),

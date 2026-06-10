@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/shared/widgets/app_bottom_sheet.dart';
+import 'package:invois/core/widgets/app_bottom_sheet.dart';
 
 /// Pumps a button that opens [open] when tapped, then taps it.
 Future<void> _openVia(

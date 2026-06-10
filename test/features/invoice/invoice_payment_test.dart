@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
-import 'package:invois/features/invoice/invoice_payment.dart';
+import 'package:invois/features/invoice/domain/invoice_payment.dart';
 
 /// Step 2 (P1-002): locks in the payment reconciliation rules that keep
 /// paid/balance/paymentStatus consistent — the inconsistency the audit found

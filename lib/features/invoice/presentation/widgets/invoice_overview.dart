@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invois/core/utils/currency_utils.dart';
-import 'package:invois/features/setting/providers/settings_notifier.dart';
+import 'package:invois/features/settings/providers/settings_notifier.dart';
 import '../../providers/invoice_providers.dart';
 import '../../data/invoice_model.dart';
 

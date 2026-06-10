@@ -14,11 +14,11 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import '../../core/models/address_model.dart';
 import '../../features/business/data/business_model.dart';
 import '../../features/client/data/client_model.dart';
 import '../../features/invoice/data/invoice_line_model.dart';
 import '../../features/invoice/data/invoice_model.dart';
-import '../../features/shared/models/address_model.dart';
 import '../../features/signature/data/signature_model.dart';
 import '../../features/tax/data/tax_model.dart';
 import '../../features/term/data/term_model.dart';

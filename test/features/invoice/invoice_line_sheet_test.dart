@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/invoice/invoice_form_line.dart';
+import 'package:invois/features/invoice/domain/invoice_form_line.dart';
 import 'package:invois/features/invoice/presentation/widgets/invoice_line_sheet.dart';
-import 'package:invois/features/shared/widgets/app_bottom_sheet.dart';
+import 'package:invois/core/widgets/app_bottom_sheet.dart';
 
 /// Pumps an app (optionally with a simulated keyboard inset), opens
 /// [InvoiceLineSheet.show], settles, and returns a getter for the result the

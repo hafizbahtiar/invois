@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/core/error/failure_mapper.dart';
+import 'package:invois/core/result/failure_mapper.dart';
 import 'package:invois/core/providers/objectbox_providers.dart';
 import 'package:invois/core/result/app_failure.dart';
 import 'package:invois/core/result/result.dart';
@@ -10,7 +10,7 @@ import 'invoice_line_model.dart';
 
 import 'invoice_local_source.dart';
 import 'invoice_model.dart';
-import 'invoice_numbering.dart';
+import '../domain/invoice_numbering.dart';
 import 'invoice_query.dart';
 
 /// DI: one local source bound to the app-wide [storeProvider].

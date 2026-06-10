@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
-import 'package:invois/features/invoice/data/invoice_numbering.dart';
+import 'package:invois/features/invoice/domain/invoice_numbering.dart';
 
 void main() {
   Invoice invoice(

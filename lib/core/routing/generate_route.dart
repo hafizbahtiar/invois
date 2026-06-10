@@ -8,10 +8,10 @@ import 'package:invois/features/invoice/presentation/pages/invoice_form_page.dar
 import 'package:invois/features/invoice/presentation/pages/invoice_preview_page.dart';
 import 'package:invois/features/signature/signature.dart';
 
-import 'package:invois/features/shared/pages/no_route_page.dart';
-import 'package:invois/features/home/pages/home_page.dart';
-import 'package:invois/features/setting/presentation/pages/settings_page.dart';
-import 'package:invois/features/splash/splash_page.dart';
+import 'package:invois/core/routing/no_route_page.dart';
+import 'package:invois/features/home/presentation/pages/home_page.dart';
+import 'package:invois/features/settings/presentation/pages/settings_page.dart';
+import 'package:invois/features/splash/presentation/pages/splash_page.dart';
 import 'package:invois/features/tax/tax.dart';
 import 'package:invois/features/term/term.dart';
 import '../../../core/utils/safe_parse.dart';

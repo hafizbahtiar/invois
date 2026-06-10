@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
-import 'package:invois/features/invoice/invoice_composer.dart';
-import 'package:invois/features/invoice/invoice_line_view.dart';
+import 'package:invois/features/invoice/domain/invoice_composer.dart';
+import 'package:invois/features/invoice/domain/invoice_line_view.dart';
 
 void main() {
   group('InvoiceLineReader.subtotalCentsFromLines', () {

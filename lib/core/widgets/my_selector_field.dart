@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:invois/features/shared/widgets/my_multi_select_bottom_sheet.dart';
-import 'package:invois/features/shared/widgets/my_select_bottom_sheet.dart';
+import 'package:invois/core/widgets/my_multi_select_bottom_sheet.dart';
+import 'package:invois/core/widgets/my_select_bottom_sheet.dart';
 
 class MySelectorField<T> extends StatelessWidget {
   final String label;

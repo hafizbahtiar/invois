@@ -8,9 +8,9 @@ import 'package:invois/features/invoice/data/invoice_line_model.dart';
 import 'package:invois/features/invoice/data/invoice_local_source.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 import 'package:invois/features/invoice/data/invoice_repository.dart';
-import 'package:invois/features/invoice/invoice_form_line.dart';
-import 'package:invois/features/invoice/invoice_line_builder.dart';
-import 'package:invois/features/invoice/invoice_line_view.dart';
+import 'package:invois/features/invoice/domain/invoice_form_line.dart';
+import 'package:invois/features/invoice/domain/invoice_line_builder.dart';
+import 'package:invois/features/invoice/domain/invoice_line_view.dart';
 
 /// Line-only write mechanism (`replaceInvoiceLines` + `InvoiceLineBuilder`).
 /// Requires native `libobjectbox`:

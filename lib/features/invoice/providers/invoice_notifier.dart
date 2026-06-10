@@ -13,13 +13,13 @@ import 'package:invois/features/signature/data/signature_repository.dart';
 import 'package:invois/features/tax/data/tax_model.dart';
 import 'package:invois/features/term/data/term_model.dart';
 
-import '../invoice_form_line.dart';
-import '../invoice_line_builder.dart';
+import '../domain/invoice_form_line.dart';
+import '../domain/invoice_line_builder.dart';
 import 'invoice_state.dart';
 import '../data/invoice_model.dart';
-import '../data/invoice_numbering.dart';
+import '../domain/invoice_numbering.dart';
 import '../data/invoice_repository.dart';
-import '../data/invoice_validation.dart';
+import '../domain/invoice_validation.dart';
 
 class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   final InvoiceRepository _repository;
@@ -32,7 +32,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
   //============================================
 
   Future<void> init(int? invoiceId, FormType type) async {
-    resetItems();
+    resetLines();
     if (invoiceId != null && invoiceId > 0) {
       await getInvoiceById(invoiceId);
     } else {
@@ -168,7 +168,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
         : state.copyWith(signature: signature);
   }
 
-  void resetItems() {
+  void resetLines() {
     state = state.copyWith(lines: []);
   }
 

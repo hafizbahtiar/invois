@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/core/constants/list_type.dart';
-import 'package:invois/features/shared/widgets/my_empty_state.dart';
-import 'package:invois/features/shared/widgets/my_filter_section.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/my_empty_state.dart';
+import 'package:invois/core/widgets/my_filter_section.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 import 'package:invois/core/result/app_failure.dart';
-import 'package:invois/features/shared/widgets/simple_list.dart';
+import 'package:invois/core/widgets/simple_list.dart';
 import '../../data/tax_model.dart';
 
 import '../../providers/tax_providers.dart';

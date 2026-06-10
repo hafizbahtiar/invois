@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:invois/configs/routes/routes_name.dart';
+import 'package:invois/core/routing/routes_name.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_filter_type.dart';
 import 'package:invois/core/utils/currency_utils.dart';
@@ -12,11 +12,11 @@ import 'package:invois/features/invoice/presentation/widgets/invoice_overview.da
 import 'package:invois/features/invoice/presentation/widgets/invoice_status_chip.dart';
 import 'package:invois/features/invoice/providers/invoice_providers.dart';
 import 'package:invois/features/invoice/data/invoice_query.dart';
-import 'package:invois/features/shared/widgets/my_bottom_sheet.dart';
-import 'package:invois/features/shared/widgets/my_empty_state.dart';
-import 'package:invois/features/shared/widgets/my_filter_section.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/my_bottom_sheet.dart';
+import 'package:invois/core/widgets/my_empty_state.dart';
+import 'package:invois/core/widgets/my_filter_section.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});

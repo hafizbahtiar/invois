@@ -1,4 +1,4 @@
-import 'data/invoice_line_model.dart';
+import '../data/invoice_line_model.dart';
 import 'invoice_form_line.dart';
 
 /// Builds [InvoiceLine] snapshots for persistence.

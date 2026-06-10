@@ -4,12 +4,12 @@ import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/tax_type.dart';
 import 'package:invois/core/utils/safe_parse.dart';
 import 'package:invois/features/business/business.dart';
-import 'package:invois/features/shared/widgets/form_section_header.dart';
-import 'package:invois/features/shared/widgets/my_action_button.dart';
-import 'package:invois/features/shared/widgets/my_selector_field.dart';
-import 'package:invois/features/shared/widgets/my_snackbar.dart';
-import 'package:invois/features/shared/widgets/my_text_field.dart';
-import 'package:invois/features/shared/widgets/my_tile.dart';
+import 'package:invois/core/widgets/form_section_header.dart';
+import 'package:invois/core/widgets/my_action_button.dart';
+import 'package:invois/core/widgets/my_selector_field.dart';
+import 'package:invois/core/widgets/my_snackbar.dart';
+import 'package:invois/core/widgets/my_text_field.dart';
+import 'package:invois/core/widgets/my_tile.dart';
 
 import '../../providers/tax_notifier.dart';
 import '../../providers/tax_providers.dart';

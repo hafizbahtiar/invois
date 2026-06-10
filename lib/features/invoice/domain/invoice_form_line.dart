@@ -1,4 +1,4 @@
-import 'data/invoice_line_model.dart';
+import '../data/invoice_line_model.dart';
 import 'invoice_line_math.dart';
 
 /// In-memory invoice form row. This is a plain Dart draft, not an ObjectBox

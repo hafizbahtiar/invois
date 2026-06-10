@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invois/features/invoice/invoice_line_math.dart';
+import 'package:invois/features/invoice/domain/invoice_line_math.dart';
 
 /// Pure quantity/line-total rules (no store needed).
 void main() {

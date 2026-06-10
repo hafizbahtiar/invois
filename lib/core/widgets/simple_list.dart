@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:invois/features/shared/widgets/my_empty_state.dart';
+import 'package:invois/core/widgets/my_empty_state.dart';
 
 /// A simple, reusable, and composable list widget for most use cases.
 ///
