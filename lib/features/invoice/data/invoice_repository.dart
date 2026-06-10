@@ -85,7 +85,7 @@ class InvoiceRepository {
   }
 
   // ============================================================
-  // Imperative — Result (S1)
+  // Imperative — Result
   // ============================================================
 
   Future<Result<void>> delete(int id) async {

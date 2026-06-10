@@ -19,7 +19,7 @@ class Signature extends Equatable {
   final String? signatureData;
 
   /// Canonical render-ready PNG bytes embedded directly into PDFs (ADR-0004).
-  /// Null for legacy rows captured before S4 — those fall back to rendering
+  /// Null for legacy rows captured before the PNG migration — those fall back to rendering
   /// [signatureData] points at PDF time.
   @Property(type: PropertyType.byteVector)
   final Uint8List? imageBytes;

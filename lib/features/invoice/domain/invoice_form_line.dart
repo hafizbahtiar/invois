@@ -75,7 +75,7 @@ class InvoiceFormLine {
 
   /// Subtotal (cents) = Σ of each form line's `unitPriceCents × quantityMilli`
   /// (half-up at the cent via [InvoiceLineMath.lineTotalCents]). The
-  /// authoritative source for the form's live + stored subtotal (Step 4C-4D-2C).
+  /// authoritative source for the form's live + stored subtotal.
   static int subtotalCents(List<InvoiceFormLine> lines) {
     var total = 0;
     for (final line in lines) {
@@ -87,7 +87,7 @@ class InvoiceFormLine {
     return total;
   }
 
-  /// Resolve the form-line list for a loaded invoice. Stage 4E-4 is line-only.
+  /// Resolve the form-line list for a loaded invoice (lines are the only source).
   static List<InvoiceFormLine> resolve({required List<InvoiceLine> lines}) {
     final sorted = [...lines]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));

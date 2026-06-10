@@ -22,7 +22,7 @@ import 'package:invois/features/signature/data/signature_model.dart';
 
 /// Generates PDF invoices.
 ///
-/// S5: a single [pw.MultiPage] flows content across pages automatically (the
+/// A single [pw.MultiPage] flows content across pages automatically (the
 /// items table splits and repeats its header row), replacing the previous
 /// manual single-/multi-page pagination heuristics. Fonts are bundled
 /// (offline-first) via [loadInvoiceFonts].
@@ -42,7 +42,7 @@ class InvoiceGenerator {
     final fontItalic = fonts.italic;
 
     // Prefer the canonical stored PNG (ADR-0004); fall back to rendering the
-    // legacy JSON drawing points for rows captured before S4.
+    // legacy JSON drawing points for rows captured before the PNG migration.
     final Uint8List? signatureImage =
         signature?.imageBytes ?? await _renderSignatureImage(signature);
 

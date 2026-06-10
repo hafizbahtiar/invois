@@ -20,7 +20,7 @@ class QuantityParseResult {
 }
 
 /// Pure parser/formatter bridging the form's quantity text field and the
-/// integer `quantityMilli` spine (Step 4C-4D-1). No Flutter/ObjectBox deps.
+/// integer `quantityMilli` spine. No Flutter/ObjectBox deps.
 ///
 /// Rules (documented + tested):
 /// - Dot decimal only; comma is **rejected** (locale ambiguity).

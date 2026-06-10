@@ -94,7 +94,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
             .getSignatureById(signatureId);
       }
 
-      // Load line snapshots, taxes, and terms. Stage 4E-4 is line-only.
+      // Load line snapshots, taxes, and terms (InvoiceLine is the only line source).
       final taxes = invoice.taxes.toList();
       final terms = invoice.terms.toList();
       final linesRelation = invoice.lines.toList();
@@ -274,7 +274,7 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
 
     final savedInvoice = (result as Ok<Invoice>).value;
 
-    // Stage 4E-4: persist only Invoice.lines from the authoritative form lines,
+    // Persist only Invoice.lines from the authoritative form lines,
     // preserving quantityMilli exactly.
     await _repository.replaceInvoiceLines(
       savedInvoice.id!,

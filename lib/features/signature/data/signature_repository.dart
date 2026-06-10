@@ -21,9 +21,8 @@ final signatureRepositoryProvider = Provider<SignatureRepository>(
 /// Single signature repository (ADR-0002). Replaces SignatureListRepository +
 /// SignatureFormRepository.
 ///
-/// Note (S2): this is the repository/reactive/template migration only — the
-/// signature *data pipeline* (points JSON vs rendered PNG) is intentionally left
-/// unchanged here and addressed in S4.
+/// The signature *data pipeline* (legacy points JSON vs rendered PNG) lives in
+/// the model/service layer, not here.
 class SignatureRepository {
   final SignatureLocalSource _local;
 

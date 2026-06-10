@@ -14,21 +14,22 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-/// Run the S3 money backfill at most once per install (P2-004).
+/// Run the legacy invoice money backfill at most once per install (P2-004).
 ///
 /// The backfill is idempotent but scans every invoice before `runApp`. After
 /// one complete pass nothing is left to convert — every write path dual-writes
-/// cents — so later launches skip the scan. (Restoring a pre-S3 database
+/// cents — so later launches skip the scan. (Restoring a pre-migration database
 /// backup over an existing install would need this flag cleared; see
 /// doc/audits.)
 Future<void> _runMoneyBackfillOnce() async {
+  // Persisted key — keeps its historical name so existing installs stay gated.
   const doneFlag = 's3_money_backfill_done_v1';
   final prefs = await SharedPreferences.getInstance();
   if (prefs.getBool(doneFlag) ?? false) return;
 
-  final report = S3MoneyBackfill(ObjectBoxDatabase.instance).run();
+  final report = LegacyInvoiceMoneyBackfill(ObjectBoxDatabase.instance).run();
   if (report.hasChanges) {
-    debugPrint('S3 money backfill completed: $report');
+    debugPrint('Legacy invoice money backfill completed: $report');
   }
   await prefs.setBool(doneFlag, true);
 }

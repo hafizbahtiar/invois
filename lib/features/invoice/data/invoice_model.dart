@@ -180,8 +180,8 @@ class Invoice extends Equatable {
   final double balanceDue;
   final String? currency;
 
-  // Stage A S3: additive integer minor-unit fields. These remain nullable
-  // until the migration backfills existing rows and read paths switch over.
+  // Integer minor-unit money fields. Nullable because rows written before
+  // the money migration are backfilled lazily (see invoice_money_backfill).
   int? subtotalCents;
   int? discountAmountCents;
   int? taxAmountCents;

@@ -2,11 +2,11 @@ import 'package:invois/core/database/objectbox.g.dart';
 import 'package:invois/core/money/money.dart';
 import 'package:invois/features/invoice/data/invoice_model.dart';
 
-class S3MoneyBackfillReport {
+class LegacyInvoiceMoneyBackfillReport {
   final int invoicesScanned;
   final int invoicesUpdated;
 
-  const S3MoneyBackfillReport({
+  const LegacyInvoiceMoneyBackfillReport({
     required this.invoicesScanned,
     required this.invoicesUpdated,
   });
@@ -15,25 +15,26 @@ class S3MoneyBackfillReport {
 
   @override
   String toString() {
-    return 'S3MoneyBackfillReport('
+    return 'LegacyInvoiceMoneyBackfillReport('
         'invoicesScanned: $invoicesScanned, '
         'invoicesUpdated: $invoicesUpdated)';
   }
 }
 
-/// One-shot, idempotent S3 migration that fills newly added integer money
-/// fields from the legacy double fields.
+/// One-shot, idempotent migration that fills the integer minor-unit money
+/// fields on [Invoice] from the legacy double fields.
 ///
-/// This stage does not switch reads/writes yet; it only prepares existing rows.
-class S3MoneyBackfill {
+/// Kept so old installs (and restored backups) upgrade safely; main.dart gates
+/// it to a single run per install.
+class LegacyInvoiceMoneyBackfill {
   final Store _store;
 
-  const S3MoneyBackfill(this._store);
+  const LegacyInvoiceMoneyBackfill(this._store);
 
   static int centsFromDouble(double value) =>
       Money.fromDouble(value).minorUnits;
 
-  S3MoneyBackfillReport run() {
+  LegacyInvoiceMoneyBackfillReport run() {
     final invoiceBox = _store.box<Invoice>();
 
     var invoicesScanned = 0;
@@ -51,7 +52,7 @@ class S3MoneyBackfill {
       }
     });
 
-    return S3MoneyBackfillReport(
+    return LegacyInvoiceMoneyBackfillReport(
       invoicesScanned: invoicesScanned,
       invoicesUpdated: invoicesUpdated,
     );

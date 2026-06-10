@@ -9,7 +9,7 @@ class ComposerLine {
 }
 
 /// Immutable result of composing an invoice's money fields. All amounts are in
-/// integer minor units (cents) — the S3 money spine.
+/// integer minor units (cents) — the integer minor-unit money spine.
 class InvoiceTotals {
   final int subtotalCents;
   final int discountAmountCents;
@@ -94,7 +94,7 @@ class InvoiceComposer {
   /// [discountRate] (the form lets the user type either; the typed amount wins).
   ///
   /// [subtotalCentsOverride] lets callers supply a subtotal computed elsewhere
-  /// (Step 4C-4C: from `InvoiceLineReader`, so totals share the same line source
+  /// (from `InvoiceLineReader`, so totals share the same line source
   /// as detail/PDF). When null, the subtotal is computed from [lines] as before.
   static InvoiceTotals compose({
     Iterable<ComposerLine> lines = const [],

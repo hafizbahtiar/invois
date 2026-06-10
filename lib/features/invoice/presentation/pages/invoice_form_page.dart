@@ -419,7 +419,7 @@ class _InvoiceFormPageState extends ConsumerState<InvoiceFormPage> {
 
     // Single source of truth for the money spine (see InvoiceComposer). The
     // typed discount amount takes precedence over the rate, matching the form.
-    // Step 4C-4D-2C: subtotal comes from the form lines' authoritative
+    // The subtotal comes from the form lines' authoritative
     // quantityMilli (via the notifier); discount/tax/total/balance still flow
     // through the composer.
     final totals = InvoiceComposer.compose(
