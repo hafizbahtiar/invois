@@ -241,17 +241,31 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
     case RoutesName.invoiceDetail:
       final invoiceId = argsParser.getInt('invoiceId');
+      // A missing/invalid id falls through to the not-found page instead of
+      // crashing on a null force-unwrap.
+      if (invoiceId == null || invoiceId <= 0) {
+        return MaterialPageRoute(
+          builder: (_) => const NoRoutePage(),
+          settings: settings,
+        );
+      }
 
       return MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(invoiceId: invoiceId!),
+        builder: (_) => InvoiceDetailPage(invoiceId: invoiceId),
         settings: const RouteSettings(name: RoutesName.invoiceDetail),
       );
 
     case RoutesName.invoicePreview:
       final invoiceId = argsParser.getInt('invoiceId');
+      if (invoiceId == null || invoiceId <= 0) {
+        return MaterialPageRoute(
+          builder: (_) => const NoRoutePage(),
+          settings: settings,
+        );
+      }
 
       return MaterialPageRoute(
-        builder: (_) => InvoicePreviewPage(invoiceId: invoiceId!),
+        builder: (_) => InvoicePreviewPage(invoiceId: invoiceId),
         settings: const RouteSettings(name: RoutesName.invoicePreview),
       );
 
