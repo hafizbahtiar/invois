@@ -7,6 +7,7 @@ import 'package:invois/core/result/result.dart';
 import 'package:invois/features/client/data/client_local_source.dart';
 import 'package:invois/features/client/data/client_model.dart';
 import 'package:invois/features/client/data/client_repository.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 
 /// Step 3C (P1-004): Client email is a contact field, no longer DB-unique.
 /// The repository normalises blank contact values to null.
@@ -70,6 +71,28 @@ void main() {
               .value;
       final fetched = await repo.getClientById(saved.id!);
       expect(fetched?.email, 'c@d.com');
+    });
+  });
+
+  group('Client delete safety', () {
+    test('delete is blocked while invoices reference the client', () async {
+      final saved =
+          (await repo.create(Client(name: 'Referenced Client')) as Ok<Client>)
+              .value;
+      store.box<Invoice>().put(
+        Invoice(
+          invoiceNumber: 'INV-CLIENT-REF',
+          clientId: saved.id,
+          issueDate: DateTime(2026, 1, 1),
+          dueDate: DateTime(2026, 1, 31),
+        ),
+      );
+
+      final result = await repo.delete(saved.id!);
+
+      expect(result, isA<Err<void>>());
+      expect(result.failureOrNull?.message, contains('existing invoices'));
+      expect(await repo.getClientById(saved.id!), isNotNull);
     });
   });
 }

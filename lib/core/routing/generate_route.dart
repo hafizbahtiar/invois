@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:invois/core/constants/form_type.dart';
 import 'package:invois/core/constants/list_type.dart';
+// Safe enum parsing via fromName is used for route arguments below.
 import 'package:invois/features/business/business.dart';
 import 'package:invois/features/client/client.dart';
 import 'package:invois/features/invoice/presentation/pages/invoice_detail_page.dart';
@@ -99,9 +100,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => BusinessFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           businessId: businessId,
         ),
         settings: const RouteSettings(name: RoutesName.businessForm),
@@ -116,9 +115,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => SignatureListPage(
-          listType: (type != null && type.isNotEmpty)
-              ? ListType.values.byName(type)
-              : ListType.list,
+          listType: ListTypeExtension.fromName(type),
         ),
         settings: const RouteSettings(name: RoutesName.signatureList),
       );
@@ -129,9 +126,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => SignatureFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           signatureId: signatureId,
         ),
         settings: const RouteSettings(name: RoutesName.signatureForm),
@@ -146,9 +141,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => TaxListPage(
-          listType: (type != null && type.isNotEmpty)
-              ? ListType.values.byName(type)
-              : ListType.list,
+          listType: ListTypeExtension.fromName(type),
         ),
         settings: const RouteSettings(name: RoutesName.taxList),
       );
@@ -159,9 +152,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => TaxFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           taxId: taxId,
         ),
         settings: const RouteSettings(name: RoutesName.taxForm),
@@ -176,9 +167,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => TermListPage(
-          listType: (type != null && type.isNotEmpty)
-              ? ListType.values.byName(type)
-              : ListType.list,
+          listType: ListTypeExtension.fromName(type),
         ),
         settings: const RouteSettings(name: RoutesName.termList),
       );
@@ -189,9 +178,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => TermFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           termId: termId,
         ),
         settings: const RouteSettings(name: RoutesName.termForm),
@@ -213,9 +200,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => ClientFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           clientId: clientId,
         ),
         settings: const RouteSettings(name: RoutesName.clientForm),
@@ -231,9 +216,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
       return MaterialPageRoute(
         builder: (_) => InvoiceFormPage(
-          type: (type != null && type.isNotEmpty)
-              ? FormType.values.byName(type)
-              : FormType.add,
+          type: FormTypeExtension.fromName(type),
           invoiceId: invoiceId,
         ),
         settings: const RouteSettings(name: RoutesName.invoiceForm),

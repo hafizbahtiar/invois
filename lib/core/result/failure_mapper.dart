@@ -1,5 +1,6 @@
 import 'package:objectbox/objectbox.dart';
 
+import '../database/database_error_sanitizer.dart';
 import '../result/app_failure.dart';
 
 /// The single place that converts a thrown exception into a typed [AppFailure].
@@ -12,7 +13,7 @@ AppFailure mapException(Object error) {
     return UniqueViolation(_fieldFromUnique(error.toString()));
   }
   if (error is ObjectBoxException) {
-    return DatabaseFailure(error.toString());
+    return DatabaseFailure(sanitizeDatabaseError(error));
   }
   return UnexpectedFailure(error);
 }

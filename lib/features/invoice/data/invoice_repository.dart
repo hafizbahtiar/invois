@@ -136,6 +136,41 @@ class InvoiceRepository {
     }
   }
 
+  /// Save an invoice and its line/tax/term relations as one aggregate write.
+  Future<Result<Invoice>> upsertAggregate({
+    required Invoice invoice,
+    required List<InvoiceLine> lines,
+    required List<Tax> taxes,
+    required List<Term> terms,
+  }) async {
+    try {
+      final validation = await _validateInvoiceNumber(invoice);
+      if (validation != null) return Err(validation);
+
+      final now = DateTime.now();
+      final isCreate = invoice.id == null || invoice.id == 0;
+      final prepared = _withDualWrittenMoney(
+        invoice.copyWith(
+          createdAt: isCreate ? now : invoice.createdAt,
+          updatedAt: now,
+        ),
+      );
+
+      final r = await _local.upsertInvoiceAggregate(
+        invoice: prepared,
+        lines: lines,
+        taxes: taxes,
+        terms: terms,
+      );
+      final data = r.data;
+      return (r.success && data != null)
+          ? Ok(data)
+          : Err(DatabaseFailure(r.message ?? 'Failed to save invoice'));
+    } catch (e) {
+      return Err(mapException(e));
+    }
+  }
+
   /// Mark the invoice as sent (status + sentDate). Does not touch payment fields.
   Future<Result<void>> markAsSent(int id) async {
     try {

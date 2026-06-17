@@ -134,7 +134,6 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
   }
 
   void _onDeleteClient(Client client) async {
-    final state = ref.watch(clientFormProvider);
     final result = await ref
         .read(clientFormProvider.notifier)
         .deleteClientById(client.id!);
@@ -145,9 +144,12 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(clientFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Client deleted',
+        message: result
+            ? 'Client deleted'
+            : (error ?? 'Failed to delete client'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -191,9 +193,10 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(clientFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Client saved',
+        message: result ? 'Client saved' : (error ?? 'Failed to save client'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -311,6 +314,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   controller: _nameController,
                   label: 'Name',
                   hint: 'This is your public display name',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.person,
                   keyboardType: TextInputType.name,
                   validator: (value) {
@@ -326,6 +331,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   controller: _companyController,
                   label: 'Company',
                   hint: 'Enter the company name',
+                  maxLength: 200,
+                  showCounter: false,
                   prefixIcon: Icons.phone,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -339,6 +346,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   controller: _descriptionController,
                   label: 'Description (Optional)',
                   hint: 'This is your tax description',
+                  maxLength: 500,
+                  showCounter: false,
                   prefixIcon: Icons.title,
                   maxLines: 3,
                 ),
@@ -384,6 +393,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   controller: _addressController,
                   label: 'Address',
                   hint: 'This is your address',
+                  maxLength: 255,
+                  showCounter: false,
                   keyboardType: TextInputType.streetAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -399,6 +410,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   keyboardType: TextInputType.streetAddress,
                   label: 'Address 2',
                   hint: 'This is your address 2',
+                  maxLength: 255,
+                  showCounter: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Address 2 is required';
@@ -412,6 +425,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   controller: _cityController,
                   label: 'City',
                   hint: 'This is your city',
+                  maxLength: 100,
+                  showCounter: false,
                   keyboardType: TextInputType.streetAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -456,6 +471,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                         keyboardType: TextInputType.streetAddress,
                         label: 'State',
                         hint: 'This is your state',
+                        maxLength: 100,
+                        showCounter: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'State is required';
@@ -479,6 +496,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   keyboardType: TextInputType.phone,
                   label: 'Phone',
                   hint: 'Enter the phone number',
+                  maxLength: 20,
+                  showCounter: false,
                   prefixIcon: Icons.phone,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -494,6 +513,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   keyboardType: TextInputType.emailAddress,
                   label: 'Email',
                   hint: 'Enter the email',
+                  maxLength: 254,
+                  showCounter: false,
                   prefixIcon: Icons.email,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -508,6 +529,8 @@ class _ClientFormPageState extends ConsumerState<ClientFormPage> {
                   keyboardType: TextInputType.url,
                   label: 'Website',
                   hint: 'Enter the website',
+                  maxLength: 2083,
+                  showCounter: false,
                   prefixIcon: Icons.public,
                 ),
                 const SizedBox(height: 16),

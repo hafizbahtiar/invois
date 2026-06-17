@@ -105,7 +105,6 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
   }
 
   void _onDeleteTerm(Term term) async {
-    final state = ref.watch(termFormProvider);
     final result = await ref
         .read(termFormProvider.notifier)
         .deleteTermById(term.id!);
@@ -116,9 +115,10 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(termFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Term deleted',
+        message: result ? 'Term deleted' : (error ?? 'Failed to delete term'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -151,9 +151,10 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(termFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Term saved',
+        message: result ? 'Term saved' : (error ?? 'Failed to save term'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -271,6 +272,8 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
                   controller: _nameController,
                   label: 'Name',
                   hint: 'This is your public display name',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.person,
                   keyboardType: TextInputType.name,
                   validator: (value) {
@@ -303,6 +306,8 @@ class _TermFormPageState extends ConsumerState<TermFormPage> {
                   controller: _descriptionController,
                   label: 'Description (Optional)',
                   hint: 'This is your term description',
+                  maxLength: 500,
+                  showCounter: false,
                   prefixIcon: Icons.title,
                 ),
                 const SizedBox(height: 16),

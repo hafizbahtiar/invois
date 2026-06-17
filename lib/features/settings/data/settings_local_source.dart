@@ -59,7 +59,7 @@ class SettingsLocalSource {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_languageKey, languageCode.code);
     } catch (e) {
-      throw Exception('Failed to update language code: $e');
+      throw Exception('Failed to update language code.');
     }
   }
 
@@ -68,7 +68,7 @@ class SettingsLocalSource {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_themeKey, themeMode.value);
     } catch (e) {
-      throw Exception('Failed to update theme mode: $e');
+      throw Exception('Failed to update theme mode.');
     }
   }
 
@@ -77,7 +77,7 @@ class SettingsLocalSource {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_currencyKey, currencyCode);
     } catch (e) {
-      throw Exception('Failed to update currency: $e');
+      throw Exception('Failed to update currency.');
     }
   }
 
@@ -89,7 +89,7 @@ class SettingsLocalSource {
       await prefs.remove(_currencyKey);
       await prefs.remove(_settingsKey);
     } catch (e) {
-      throw Exception('Failed to reset settings: $e');
+      throw Exception('Failed to reset settings.');
     }
   }
 }

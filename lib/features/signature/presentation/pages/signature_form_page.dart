@@ -158,7 +158,6 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
   }
 
   void _onDeleteSignature(signature_model.Signature signature) async {
-    final state = ref.watch(signatureFormProvider);
     final result = await ref
         .read(signatureFormProvider.notifier)
         .deleteSignature(signature.id!);
@@ -169,9 +168,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(signatureFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Signature deleted',
+        message: result
+            ? 'Signature deleted'
+            : (error ?? 'Failed to delete signature'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -237,9 +239,12 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(signatureFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Signature saved',
+        message: result
+            ? 'Signature saved'
+            : (error ?? 'Failed to save signature'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -357,6 +362,8 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   controller: _nameController,
                   label: 'Name',
                   hint: 'This is your public display name',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.person,
                   keyboardType: TextInputType.name,
                   validator: (value) {
@@ -371,6 +378,8 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   controller: _titleController,
                   label: 'Title (Optional)',
                   hint: 'This is your signature title',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.title,
                 ),
                 const SizedBox(height: 16),
@@ -477,6 +486,8 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   controller: _phoneController,
                   label: 'Phone',
                   hint: 'This is your phone number',
+                  maxLength: 20,
+                  showCounter: false,
                   prefixIcon: Icons.phone,
                   keyboardType: TextInputType.phone,
                   validator: (value) {
@@ -492,6 +503,8 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   controller: _emailController,
                   label: 'Email',
                   hint: 'This is your email address',
+                  maxLength: 254,
+                  showCounter: false,
                   prefixIcon: Icons.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -507,6 +520,8 @@ class _SignatureFormPageState extends ConsumerState<SignatureFormPage> {
                   controller: _websiteController,
                   label: 'Website',
                   hint: 'This is your website',
+                  maxLength: 2083,
+                  showCounter: false,
                   prefixIcon: Icons.web,
                   keyboardType: TextInputType.url,
                   validator: (value) {

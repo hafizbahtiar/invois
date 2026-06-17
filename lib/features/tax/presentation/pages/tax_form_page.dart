@@ -116,7 +116,6 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
   }
 
   void _onDeleteTax(Tax tax) async {
-    final state = ref.watch(taxFormProvider);
     final result = await ref
         .read(taxFormProvider.notifier)
         .deleteTaxById(tax.id!);
@@ -127,9 +126,10 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(taxFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Tax deleted',
+        message: result ? 'Tax deleted' : (error ?? 'Failed to delete tax'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -163,9 +163,10 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(taxFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Tax saved',
+        message: result ? 'Tax saved' : (error ?? 'Failed to save tax'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -283,6 +284,8 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
                   controller: _nameController,
                   label: 'Name',
                   hint: 'This is your public display name',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.person,
                   keyboardType: TextInputType.name,
                   validator: (value) {
@@ -311,6 +314,8 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
                   controller: _descriptionController,
                   label: 'Description (Optional)',
                   hint: 'This is your tax description',
+                  maxLength: 500,
+                  showCounter: false,
                   prefixIcon: Icons.title,
                   keyboardType: TextInputType.multiline,
                   maxLines: 3,
@@ -356,6 +361,8 @@ class _TaxFormPageState extends ConsumerState<TaxFormPage> {
                   controller: _rateController,
                   label: 'Tax Rate',
                   hint: 'Enter the tax rate (e.g., 10 for 10%)',
+                  maxLength: 10,
+                  showCounter: false,
                   prefixIcon: Icons.percent,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {

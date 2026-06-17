@@ -1,4 +1,5 @@
 import 'package:invois/core/database/objectbox.g.dart';
+import 'package:invois/core/database/database_error_sanitizer.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 
@@ -84,9 +85,13 @@ class TermLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to insert term');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'TermLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'TermLocalSource'),
+      );
     }
   }
 
@@ -106,9 +111,13 @@ class TermLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to update term');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'TermLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'TermLocalSource'),
+      );
     }
   }
 

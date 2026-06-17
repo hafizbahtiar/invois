@@ -811,6 +811,13 @@ class InvoiceGenerator {
   }
 
   /// Save the invoice to a file on disk and return the absolute file path.
+  ///
+  /// PDFs are written to a dedicated `invoices/` subfolder inside the app's
+  /// private documents directory (app sandbox) — never to the user-visible
+  /// Downloads folder. This keeps the PDF inside the app sandbox where other
+  /// apps and file managers cannot access it directly. Use [shareInvoice] or
+  /// [printInvoice] for user-facing export; those paths use ephemeral temp
+  /// files managed by the OS share/print sheet.
   static Future<String> saveInvoice({
     required Invoice invoice,
     required Business business,
@@ -826,14 +833,12 @@ class InvoiceGenerator {
       pageFormat: pageFormat,
     );
     final filename = '${_invoiceFileBase(invoice)}.pdf';
-    Directory? directory;
-    try {
-      directory = await getDownloadsDirectory();
-    } catch (_) {
-      directory = null;
+    final baseDir = await getApplicationDocumentsDirectory();
+    final invoicesDir = Directory(p.join(baseDir.path, 'invoices'));
+    if (!await invoicesDir.exists()) {
+      await invoicesDir.create(recursive: true);
     }
-    directory ??= await getApplicationDocumentsDirectory();
-    final file = File(p.join(directory.path, filename));
+    final file = File(p.join(invoicesDir.path, filename));
     await file.writeAsBytes(pdfData);
     return file.path;
   }

@@ -1,5 +1,5 @@
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'objectbox.g.dart';
 
@@ -32,10 +32,13 @@ class ObjectBoxDatabase {
       final dir = await getApplicationDocumentsDirectory();
       // ObjectBox will automatically create the store
       _store = await openStore(directory: dir.path);
-      debugPrint('✅ ObjectBox initialized at ${dir.path}');
+      debugPrint('✅ ObjectBox initialized');
     } catch (e, st) {
-      debugPrint('❌ Failed to initialize ObjectBox: $e');
-      debugPrint(st.toString());
+      // Log the raw error/stack only in debug mode; never expose to users.
+      debugPrint('❌ Failed to initialize ObjectBox');
+      if (kDebugMode) {
+        debugPrint('$e\n$st');
+      }
       rethrow;
     }
   }

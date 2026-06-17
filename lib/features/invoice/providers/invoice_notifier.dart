@@ -262,10 +262,12 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
       return Err(validationFailure);
     }
 
-    // Save the invoice first
-    final result = (updatedInvoice.id == null || updatedInvoice.id == 0)
-        ? await _repository.create(updatedInvoice)
-        : await _repository.update(updatedInvoice);
+    final result = await _repository.upsertAggregate(
+      invoice: updatedInvoice,
+      lines: InvoiceLineBuilder.fromFormLines(state.lines ?? const []),
+      taxes: state.taxes ?? const [],
+      terms: state.terms ?? const [],
+    );
 
     if (result is Err<Invoice>) {
       state = state.copyWith(isLoading: false, error: result.failure.message);
@@ -273,29 +275,6 @@ class InvoiceFormNotifier extends StateNotifier<InvoiceFormState> {
     }
 
     final savedInvoice = (result as Ok<Invoice>).value;
-
-    // Persist only Invoice.lines from the authoritative form lines,
-    // preserving quantityMilli exactly.
-    await _repository.replaceInvoiceLines(
-      savedInvoice.id!,
-      InvoiceLineBuilder.fromFormLines(state.lines ?? const []),
-    );
-
-    // Save taxes — always clear first so removals persist.
-    await _repository.clearTaxesFromInvoice(savedInvoice.id!);
-    if (state.taxes != null && state.taxes!.isNotEmpty) {
-      for (final tax in state.taxes!) {
-        await _repository.addTaxToInvoice(savedInvoice.id!, tax);
-      }
-    }
-
-    // Save terms — always clear first so removals persist.
-    await _repository.clearTermsFromInvoice(savedInvoice.id!);
-    if (state.terms != null && state.terms!.isNotEmpty) {
-      for (final term in state.terms!) {
-        await _repository.addTermToInvoice(savedInvoice.id!, term);
-      }
-    }
 
     state = state.copyWith(isLoading: false, error: null);
     return Ok(savedInvoice);

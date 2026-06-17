@@ -356,10 +356,11 @@ class _ActionSection extends ConsumerWidget {
         signature: data.signature,
       );
     } catch (e) {
+      debugPrint('Failed to share invoice: $e');
       if (!context.mounted) return;
       MySnackBar.show(
         context,
-        message: 'Failed to share invoice: $e',
+        message: 'Failed to share invoice. Please try again.',
         type: MySnackbarType.failed,
       );
     }

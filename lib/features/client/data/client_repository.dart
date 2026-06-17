@@ -75,8 +75,18 @@ class ClientRepository {
 
   Future<Result<void>> delete(int id) async {
     try {
-      await _local.deleteClientById(id);
-      return const Ok(null);
+      if (await _local.hasInvoiceReferences(id)) {
+        return const Err(
+          ValidationFailure(
+            'Cannot delete this client because it is used by existing invoices.',
+          ),
+        );
+      }
+
+      final deleted = await _local.deleteClientById(id);
+      return deleted
+          ? const Ok(null)
+          : const Err(NotFoundFailure('Client not found.'));
     } catch (e) {
       return Err(mapException(e));
     }

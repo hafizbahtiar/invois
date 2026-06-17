@@ -1,6 +1,8 @@
 import 'package:invois/core/database/objectbox.g.dart';
+import 'package:invois/core/database/database_error_sanitizer.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 
 import 'client_model.dart';
 import 'client_query.dart';
@@ -87,9 +89,13 @@ class ClientLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to insert client');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'ClientLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'ClientLocalSource'),
+      );
     }
   }
 
@@ -109,15 +115,31 @@ class ClientLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to update client');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'ClientLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'ClientLocalSource'),
+      );
     }
   }
 
   // Delete client
   Future<bool> deleteClientById(int id) async {
     return _clientBox.remove(id);
+  }
+
+  Future<bool> hasInvoiceReferences(int id) async {
+    final query = _store
+        .box<Invoice>()
+        .query(Invoice_.clientId.equals(id))
+        .build();
+    try {
+      return query.count() > 0;
+    } finally {
+      query.close();
+    }
   }
 
   // Delete client by businessId

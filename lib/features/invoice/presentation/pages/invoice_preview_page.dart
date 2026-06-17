@@ -96,10 +96,11 @@ Future<void> _printInvoice(BuildContext context, InvoiceDetailData data) async {
       signature: data.signature,
     );
   } catch (e) {
+    debugPrint('Failed to print invoice: $e');
     if (context.mounted) {
       MySnackBar.show(
         context,
-        message: 'Failed to print invoice: $e',
+        message: 'Failed to print invoice. Please try again.',
         type: MySnackbarType.failed,
       );
     }
@@ -115,10 +116,11 @@ Future<void> _shareInvoice(BuildContext context, InvoiceDetailData data) async {
       signature: data.signature,
     );
   } catch (e) {
+    debugPrint('Failed to share invoice: $e');
     if (context.mounted) {
       MySnackBar.show(
         context,
-        message: 'Failed to share invoice: $e',
+        message: 'Failed to share invoice. Please try again.',
         type: MySnackbarType.failed,
       );
     }
@@ -133,18 +135,22 @@ Future<void> _saveInvoice(BuildContext context, InvoiceDetailData data) async {
       client: data.client!,
       signature: data.signature,
     );
+    // Log the full path for debugging; show only a generic message to the user
+    // so the filesystem path is not displayed in the UI.
+    debugPrint('Invoice saved to $savedPath');
     if (context.mounted) {
       MySnackBar.show(
         context,
-        message: 'Saved to $savedPath',
+        message: 'Invoice saved to app storage',
         type: MySnackbarType.success,
       );
     }
   } catch (e) {
+    debugPrint('Failed to save invoice: $e');
     if (context.mounted) {
       MySnackBar.show(
         context,
-        message: 'Failed to save invoice: $e',
+        message: 'Failed to save invoice. Please try again.',
         type: MySnackbarType.failed,
       );
     }

@@ -78,8 +78,18 @@ class BusinessRepository {
 
   Future<Result<void>> delete(int id) async {
     try {
-      await _local.deleteBusinessById(id);
-      return const Ok(null);
+      if (await _local.hasInvoiceReferences(id)) {
+        return const Err(
+          ValidationFailure(
+            'Cannot delete this business because it is used by existing invoices.',
+          ),
+        );
+      }
+
+      final deleted = await _local.deleteBusinessById(id);
+      return deleted
+          ? const Ok(null)
+          : const Err(NotFoundFailure('Business not found.'));
     } catch (e) {
       return Err(mapException(e));
     }

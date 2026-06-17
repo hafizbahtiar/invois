@@ -7,6 +7,7 @@ import 'package:invois/core/result/result.dart';
 import 'package:invois/features/business/data/business_local_source.dart';
 import 'package:invois/features/business/data/business_model.dart';
 import 'package:invois/features/business/data/business_repository.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 
 /// Step 3C (P1-004): Business email/phone are contact fields, no longer
 /// DB-unique. Business `name` remains unique (identity). The repository
@@ -90,6 +91,28 @@ void main() {
       final fetched = await repo.getBusinessById(saved.id!);
       expect(fetched?.email, 'a@b.com');
       expect(fetched?.phone, '0123');
+    });
+  });
+
+  group('Business delete safety', () {
+    test('delete is blocked while invoices reference the business', () async {
+      final saved =
+          (await repo.create(Business(name: 'Referenced Biz')) as Ok<Business>)
+              .value;
+      store.box<Invoice>().put(
+        Invoice(
+          invoiceNumber: 'INV-BIZ-REF',
+          businessId: saved.id,
+          issueDate: DateTime(2026, 1, 1),
+          dueDate: DateTime(2026, 1, 31),
+        ),
+      );
+
+      final result = await repo.delete(saved.id!);
+
+      expect(result, isA<Err<void>>());
+      expect(result.failureOrNull?.message, contains('existing invoices'));
+      expect(await repo.getBusinessById(saved.id!), isNotNull);
     });
   });
 }

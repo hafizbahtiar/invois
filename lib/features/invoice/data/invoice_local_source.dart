@@ -1,4 +1,5 @@
 import 'package:invois/core/database/objectbox.g.dart';
+import 'package:invois/core/database/database_error_sanitizer.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
 import 'package:invois/features/invoice/data/invoice_line_model.dart';
@@ -75,9 +76,9 @@ class InvoiceLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to insert invoice');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
     }
   }
 
@@ -91,9 +92,73 @@ class InvoiceLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to update invoice');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
+    }
+  }
+
+  /// Save the invoice header and its owned/selected relations as one aggregate.
+  ///
+  /// This prevents a half-saved invoice where the header exists but lines,
+  /// taxes, or terms failed to persist. The caller passes fully prepared header
+  /// money/status fields; this method owns only persistence atomicity.
+  Future<ObjectBoxResponse<Invoice>> upsertInvoiceAggregate({
+    required Invoice invoice,
+    required List<InvoiceLine> lines,
+    required List<Tax> taxes,
+    required List<Term> terms,
+  }) async {
+    try {
+      final savedInvoice = _store.runInTransaction(TxMode.write, () {
+        final existingLineIds = <int>[];
+        final existingId = invoice.id;
+        if (existingId != null && existingId > 0) {
+          final existing = _invoiceBox.get(existingId);
+          if (existing != null) {
+            existingLineIds.addAll([
+              for (final line in existing.lines)
+                if (line.id != null && line.id! > 0) line.id!,
+            ]);
+          }
+        }
+
+        final savedId = _invoiceBox.put(invoice);
+        if (savedId <= 0) {
+          throw StateError('Failed to save invoice');
+        }
+        invoice.id = savedId;
+
+        final persistedInvoice = _invoiceBox.get(savedId);
+        if (persistedInvoice == null) {
+          throw StateError('Saved invoice could not be reloaded');
+        }
+
+        final lineBox = _store.box<InvoiceLine>();
+        if (existingLineIds.isNotEmpty) {
+          lineBox.removeMany(existingLineIds);
+        }
+        for (final line in lines) {
+          line.invoice.target = persistedInvoice;
+        }
+        if (lines.isNotEmpty) {
+          lineBox.putMany(lines);
+        }
+
+        persistedInvoice.taxes.clear();
+        persistedInvoice.taxes.addAll(taxes);
+        persistedInvoice.terms.clear();
+        persistedInvoice.terms.addAll(terms);
+        _invoiceBox.put(persistedInvoice);
+
+        return _invoiceBox.get(savedId) ?? persistedInvoice;
+      });
+
+      return ObjectBoxResponse.success(savedInvoice);
+    } on Exception catch (e) {
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
+    } on Error catch (e) {
+      return ObjectBoxResponse.failure(message: sanitizeError(e));
     }
   }
 
@@ -357,8 +422,10 @@ class InvoiceLocalSource {
   /// Replace the invoice's [InvoiceLine] snapshots with [lines].
   ///
   /// Deletes the existing owned line rows (no orphans) and writes the fresh set
-  /// with their `invoice` relation set. Idempotent: re-running with the same
-  /// input yields the same rows/count/order.
+  /// with their `invoice` relation set — all inside a single write transaction
+  /// so the remove and put are atomic (a crash between them can't leave the
+  /// invoice with zero lines). Idempotent: re-running with the same input yields
+  /// the same rows/count/order.
   Future<void> replaceInvoiceLines(
     int invoiceId,
     List<InvoiceLine> lines,
@@ -366,18 +433,32 @@ class InvoiceLocalSource {
     final invoice = _invoiceBox.get(invoiceId);
     if (invoice == null) return;
 
-    final lineBox = _store.box<InvoiceLine>();
-    final existing = invoice.lines.toList();
-    if (existing.isNotEmpty) {
-      lineBox.removeMany([for (final l in existing) l.id!]);
-    }
-    if (lines.isEmpty) return;
-    for (final line in lines) {
-      line.invoice.target = invoice;
-    }
-    lineBox.putMany(lines);
+    _store.runInTransaction(TxMode.write, () {
+      final lineBox = _store.box<InvoiceLine>();
+      final existing = invoice.lines.toList();
+      if (existing.isNotEmpty) {
+        lineBox.removeMany([for (final l in existing) l.id!]);
+      }
+      if (lines.isEmpty) return;
+      for (final line in lines) {
+        line.invoice.target = invoice;
+      }
+      lineBox.putMany(lines);
+    });
   }
 
   // Expose invoice box for repository advanced queries
   Box<Invoice> get invoiceBox => _invoiceBox;
+
+  /// Map a database exception/error to a generic user-facing message.
+  ///
+  /// The raw exception string is logged via [debugPrint] for debugging, but
+  /// only a generic message is returned to the caller — preventing internal
+  /// ObjectBox details (store paths, schema names, query internals) from
+  /// reaching the UI.
+  ///
+  /// Public for testability — see `invoice_error_sanitize_test.dart`.
+  static String sanitizeError(Object e) {
+    return sanitizeDatabaseError(e, context: 'InvoiceLocalSource');
+  }
 }

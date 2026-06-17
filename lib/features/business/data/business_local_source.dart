@@ -1,6 +1,8 @@
 import 'package:invois/core/database/objectbox.g.dart';
+import 'package:invois/core/database/database_error_sanitizer.dart';
 import 'package:invois/core/database/objectbox_database.dart';
 import 'package:invois/core/database/objectbox_response.dart';
+import 'package:invois/features/invoice/data/invoice_model.dart';
 
 import 'business_model.dart';
 import 'business_query.dart';
@@ -77,9 +79,13 @@ class BusinessLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to insert business');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'BusinessLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'BusinessLocalSource'),
+      );
     }
   }
 
@@ -96,15 +102,31 @@ class BusinessLocalSource {
         return ObjectBoxResponse.failure(message: 'Failed to update business');
       }
     } on Exception catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'BusinessLocalSource'),
+      );
     } on Error catch (e) {
-      return ObjectBoxResponse.failure(message: e.toString());
+      return ObjectBoxResponse.failure(
+        message: sanitizeDatabaseError(e, context: 'BusinessLocalSource'),
+      );
     }
   }
 
   // Delete business
   Future<bool> deleteBusinessById(int id) async {
     return _businessBox.remove(id);
+  }
+
+  Future<bool> hasInvoiceReferences(int id) async {
+    final query = _store
+        .box<Invoice>()
+        .query(Invoice_.businessId.equals(id))
+        .build();
+    try {
+      return query.count() > 0;
+    } finally {
+      query.close();
+    }
   }
 
   // Delete multiple businesses

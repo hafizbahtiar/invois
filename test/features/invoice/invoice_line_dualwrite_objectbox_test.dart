@@ -152,4 +152,45 @@ void main() {
       1500,
     );
   });
+
+  test('replaceInvoiceLines on non-existent invoice is a no-op', () async {
+    // Should not throw or create orphan line rows for a missing invoice.
+    await repo.replaceInvoiceLines(
+      999999,
+      InvoiceLineBuilder.fromFormLines([
+        formLine('Ghost', quantityMilli: 1000),
+      ]),
+    );
+    expect(store.box<InvoiceLine>().count(), 0);
+  });
+
+  test('replaceInvoiceLines is atomic — invoice survives even if lines fail',
+      () async {
+    final saved = await save('INV-ATOMIC', [
+      formLine('A', quantityMilli: 1000),
+    ]);
+    final invoiceId = saved.id!;
+    final lineCountBefore = store.box<InvoiceLine>().count();
+
+    // Replace with a new set — invoice must remain intact after the swap.
+    await repo.replaceInvoiceLines(
+      invoiceId,
+      InvoiceLineBuilder.fromFormLines([
+        formLine('B', quantityMilli: 2000),
+        formLine('C', quantityMilli: 3000),
+      ]),
+    );
+
+    // Invoice still exists and is readable.
+    final invoice = store.box<Invoice>().get(invoiceId);
+    expect(invoice, isNotNull);
+    // Old line removed, new lines written — count net increased by 1.
+    expect(store.box<InvoiceLine>().count(), lineCountBefore + 1);
+    // Line names match the new set.
+    final names =
+        (invoice!.lines.toList()
+              ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)))
+            .map((l) => l.name);
+    expect(names, ['B', 'C']);
+  });
 }

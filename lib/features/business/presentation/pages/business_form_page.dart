@@ -129,7 +129,6 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
   }
 
   void _onDeleteBusiness(Business business) async {
-    final state = ref.watch(businessFormProvider);
     final result = await ref
         .read(businessFormProvider.notifier)
         .deleteBusiness(business.id!);
@@ -140,9 +139,12 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
       Navigator.pop(context);
     }
     if (mounted) {
+      final error = ref.read(businessFormProvider).error;
       MySnackBar.show(
         context,
-        message: state.error ?? 'Business deleted',
+        message: result
+            ? 'Business deleted'
+            : (error ?? 'Failed to delete business'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -182,7 +184,9 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
       final state = ref.read(businessFormProvider);
       MySnackBar.show(
         context,
-        message: state.error ?? 'Business saved',
+        message: result
+            ? 'Business saved'
+            : (state.error ?? 'Failed to save business'),
         type: result ? MySnackbarType.success : MySnackbarType.failed,
       );
     }
@@ -293,6 +297,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _nameController,
                   label: 'Name',
                   hint: 'This is your public display name',
+                  maxLength: 100,
+                  showCounter: false,
                   prefixIcon: Icons.business,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -306,6 +312,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _descriptionController,
                   label: 'Description (Optional)',
                   hint: 'This is your business description',
+                  maxLength: 500,
+                  showCounter: false,
                   prefixIcon: Icons.description,
                   maxLines: 3,
                 ),
@@ -321,6 +329,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _addressController,
                   label: 'Address',
                   hint: 'This is your address',
+                  maxLength: 255,
+                  showCounter: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Address is required';
@@ -334,6 +344,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _address2Controller,
                   label: 'Address 2',
                   hint: 'This is your address 2',
+                  maxLength: 255,
+                  showCounter: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Address 2 is required';
@@ -347,6 +359,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _cityController,
                   label: 'City',
                   hint: 'This is your city',
+                  maxLength: 100,
+                  showCounter: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'City is required';
@@ -389,6 +403,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                         controller: _stateController,
                         label: 'State',
                         hint: 'This is your state',
+                        maxLength: 100,
+                        showCounter: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'State is required';
@@ -429,6 +445,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _emailController,
                   label: 'Email',
                   hint: 'This is your email address',
+                  maxLength: 254,
+                  showCounter: false,
                   prefixIcon: Icons.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -443,6 +461,8 @@ class _BusinessFormPageState extends ConsumerState<BusinessFormPage> {
                   controller: _websiteController,
                   label: 'Website',
                   hint: 'This is your website',
+                  maxLength: 2083,
+                  showCounter: false,
                   prefixIcon: Icons.web,
                   keyboardType: TextInputType.url,
                 ),

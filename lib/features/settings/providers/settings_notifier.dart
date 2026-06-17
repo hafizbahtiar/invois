@@ -25,7 +25,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         isLoading: false,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load settings. Please try again.',
+      );
     }
   }
 
@@ -36,7 +39,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await _repository.updateLanguageCode(languageCode);
       state = state.copyWith(languageCode: languageCode, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update language. Please try again.',
+      );
     }
   }
 
@@ -47,7 +53,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await _repository.updateThemeMode(themeMode);
       state = state.copyWith(themeMode: themeMode, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update theme. Please try again.',
+      );
     }
   }
 
@@ -58,7 +67,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await _repository.updateCurrency(currencyCode);
       state = state.copyWith(currencyCode: currencyCode, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update currency. Please try again.',
+      );
     }
   }
 
@@ -70,7 +82,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await _repository.resetSettings();
       state = const SettingsState(isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to reset settings. Please try again.',
+      );
     }
   }
 

@@ -1,3 +1,5 @@
+import 'database_error_sanitizer.dart';
+
 /// A generic response wrapper for ObjectBox database operations.
 /// Provides a standard way to handle data, success, and error messages.
 ///
@@ -33,11 +35,15 @@ class ObjectBoxResponse<T> {
   }
 
   /// Creates a response from an exception.
+  ///
+  /// The raw exception is logged via [debugPrint] (debug mode only) but a
+  /// generic message is stored — internal ObjectBox details (store paths,
+  /// schema names, query internals) never reach the UI.
   factory ObjectBoxResponse.fromException(Exception e) {
     return ObjectBoxResponse<T>(
       data: null,
       success: false,
-      message: e.toString(),
+      message: sanitizeDatabaseError(e, context: 'ObjectBoxResponse exception'),
     );
   }
 

@@ -12,6 +12,8 @@ import 'package:invois/features/invoice/data/invoice_repository.dart';
 import 'package:invois/features/signature/data/signature_local_source.dart';
 import 'package:invois/features/signature/data/signature_model.dart';
 import 'package:invois/features/signature/data/signature_repository.dart';
+import 'package:invois/features/tax/data/tax_model.dart';
+import 'package:invois/features/term/data/term_model.dart';
 
 /// Repository / local-source integration tests against a real (in-memory)
 /// ObjectBox store. Tagged `objectbox` because they require the native
@@ -153,6 +155,61 @@ void main() {
 
       expect(fetched?.signatureId, isNull);
     });
+  });
+
+  group('InvoiceRepository aggregate save', () {
+    test(
+      'upsertAggregate writes header, lines, taxes, and terms together',
+      () async {
+        final tax = Tax(name: 'SST', rate: 6);
+        store.box<Tax>().put(tax);
+        final term = Term(name: 'Net 30', content: 'Payment due in 30 days');
+        store.box<Term>().put(term);
+
+        final created = await repo.upsertAggregate(
+          invoice: draft('INV-AGG'),
+          lines: [
+            InvoiceLine(
+              name: 'Design',
+              unitPriceCents: 12500,
+              quantityMilli: 1500,
+            ),
+          ],
+          taxes: [tax],
+          terms: [term],
+        );
+
+        expect(created, isA<Ok<Invoice>>());
+        final saved = (created as Ok<Invoice>).value;
+        final fetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(fetched.lines.length, 1);
+        expect(fetched.lines.single.quantityMilli, 1500);
+        expect(fetched.taxes.length, 1);
+        expect(fetched.terms.length, 1);
+
+        final updated = await repo.upsertAggregate(
+          invoice: fetched.copyWith(reference: 'cleared'),
+          lines: [
+            InvoiceLine(
+              name: 'Build',
+              unitPriceCents: 20000,
+              quantityMilli: 1000,
+            ),
+          ],
+          taxes: const [],
+          terms: const [],
+        );
+
+        expect(updated, isA<Ok<Invoice>>());
+        final refetched = (await repo.getCompleteInvoice(saved.id!))!;
+        expect(refetched.reference, 'cleared');
+        expect(refetched.lines.length, 1);
+        expect(refetched.lines.single.name, 'Build');
+        expect(store.box<InvoiceLine>().count(), 1);
+        expect(refetched.taxes, isEmpty);
+        expect(refetched.terms, isEmpty);
+      },
+    );
   });
 
   group('InvoiceRepository payment lifecycle (P1-002)', () {
